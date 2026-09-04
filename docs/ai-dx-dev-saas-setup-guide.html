@@ -285,7 +285,7 @@ code{
       <tr><td>Q3</td><td>承認の実行場所</td><td><strong>回答済み</strong>：desknet's NEO Workflow</td><td>AppSuite ⇄ NEO の反映方法（手動転記 or API）のみ追加確認</td></tr>
       <tr><td>Q4</td><td>GitHub・Webhookの扱い</td><td><strong>回答済み</strong>：<strong>Webhookが必要なときのみ利用</strong>（API接続として必要な箇所は都度指摘）</td><td>基盤自体の開発はしないため当面不要。監視基盤（自前Web）の開発時に再検討</td></tr>
       <tr><td>Q5</td><td>認証（SSO）</td><td><strong>回答済み</strong>：当面パスワード認証 → 将来SSO</td><td>現行は個別ログイン運用、将来導入時に設計</td></tr>
-      <tr><td>Q6</td><td>Lightblueの機能範囲</td><td><strong>回答済み</strong>：ベンダー確認予定</td><td>確認結果を文書へ反映（次の版）</td></tr>
+      <tr><td>Q6</td><td>Lightblueの機能範囲</td><td><strong>方針決定済み（内容は未確認）</strong>：ナレッジ参照（RAG）・API・Webhook・利用者数上限をベンダーへ確認する</td><td>確認結果を文書へ反映（次の版）</td></tr>
       <tr><td>Q7</td><td>監視ツール</td><td><strong>回答済み</strong>：自前Web構築予定</td><td>本基盤のスコープ外。データ取得方法（API/Webhook）を監視基盤計画側で検討</td></tr>
     </tbody>
   </table>
@@ -360,7 +360,7 @@ Lightblue（次回相談の文脈）
 
   <h3 style="margin:22px 0 10px;font-size:20px;color:var(--navy)">3.0 設定が必要なツール一覧（ツール名・実行者・実行内容）</h3>
   <div class="note" style="margin:0 0 12px">
-    <strong>本計画書で設定するツールは以下の5つ。</strong> 各ツールの設定手順の詳細は、docsフォルダ内の各ツール手順書（<code>AppSuite.html</code> / <code>NEO-Workflow.html</code> / <code>Notion.html</code> / <code>Lightblue.html</code> / <code>Slack.html</code>）に<strong>ELI5（超やさしい手順書）</strong>としてまとめてある。監視基盤（自前Web構築）とGitHub（Webhookが必要なときのみ）は、今回の設定対象外（将来・別途）。
+    <strong>本計画書で設定するツールは以下の5つ。</strong> 各ツールの設定手順の詳細は、docsフォルダ内の各ツール手順書に<strong>ELI5（超やさしい手順書）</strong>としてまとめてある。実際の画面操作・公式マニュアル引用を含む最新版は「公式マニュアル追記版」（<code>AppSuite 設定手順書 公式マニュアル追記版.html</code> / <code>desknet's NEO ワークフロー 設定手順書 公式マニュアル追記版.html</code> / <code>Notion 設定手順書公式マニュアル追記版.html</code> / <code>Lightblue 設定手順書公式マニュアル追記版.html</code> / <code>Slack 設定手順書公式マニュアル追記版.html</code>）を参照する（作業時はこちらを正とし、無印版はELI5の概要版として残す）。複数ツールにまたがるCSV・マスタ投入手順は<code>CSV・ファイル取込設定手順書公式マニュアル統合版.html</code>を参照する。監視基盤（自前Web構築）とGitHub（Webhookが必要なときのみ）は、今回の設定対象外（将来・別途）。
   </div>
   <div class="tw">
   <table>
@@ -534,7 +534,7 @@ Lightblue（次回相談の文脈）
   </table>
   </div>
   <div class="note">
-    <strong>推奨：</strong>最初は「NEO通知＋人間による確認・転記」で回し、運用で「ここは自動化したい」が明確になった箇所だけ、上記の接続を追加する。Webhookが必要になった時点で、接続元（desknet's NEO API等）と接続先（AppSuite／Notion／監視基盤）の対応表とともに具体案を提示する。
+    <strong>推奨：</strong>最初は「NEO通知＋人間による確認・転記」で回し、運用で「ここは自動化したい」が明確になった箇所だけ、上記の接続を追加する。Webhookが必要になった時点で、接続元（desknet's NEO API等）と接続先（AppSuite／Notion／監視基盤）の対応表とともに具体案を提示する。上記の接続を実装する際の受け皿として、<code>AIDX開発基盤インフラ・ネットワーク構成設計書.html</code>にVLAN170（INTEGRATION、Integration Hub、必要時追加）がPhase 3として設計済み。
   </div>
 
   <h3 style="margin:22px 0 10px;font-size:18px">4.4 監視基盤（自前Web構築予定）との関係 — 要確認</h3>
@@ -645,9 +645,9 @@ Lightblue（次回相談の文脈）
       <tr><td>P-3</td><td>NEO ⇄ AppSuite の反映方法</td><td>承認結果（NEO）→ Gate状態（AppSuite）の反映をA. 手動転記で開始 / B. 最初から自動連携（iPaaS等）</td><td></td></tr>
       <tr><td>P-4</td><td>「提案者」の範囲</td><td>アイデアを出すのは3名のみか、3名以外（現場職員等）からの受付も当面の対象にするか</td><td></td></tr>
       <tr><td>P-5</td><td>AI利用ルール・情報管理方針</td><td>何をAIへ入力してよいか（社外秘・個人情報の線引き）の原案と、承認者</td><td></td></tr>
-      <tr><td>P-6</td><td>監視基盤の計画</td><td>自前Web構築の監視基盤を誰が・いつ作るか。要件定義を本計画と別に起票するか（4.4）</td><td></td></tr>
+      <tr><td>P-6</td><td>監視基盤の計画</td><td>自前Web構築の監視基盤を誰が・いつ作るか。要件定義を本計画と別に起票するか（4.4）。ネットワーク受け皿（VLAN160/MONITOR）は<code>AIDX開発基盤インフラ・ネットワーク構成設計書.html</code>でPhase 2として設計済み（アドレス予約のみで未構築）。本項の決定（誰が・いつ）が、そのPhase 2着手の起票条件になる</td><td></td></tr>
       <tr><td>P-7</td><td>将来のSSO</td><td>導入時期・対象（NEO／AppSuite／Lightblue）・ID基盤（Entra ID等）の想定</td><td></td></tr>
-      <tr><td>P-8</td><td>3名の兼任ルール（Authorityの重複可否）</td><td>案件の規模・種別に応じて「1人が複数Authorityを兼ねてよいか」を決める。例：小規模案件は経営企画担当者が上位Gate OwnerとGate 5承認を兼務、大規模・高額案件は別途役員承認。<span class="small"><strong>推奨：案件ランク（高額/全社/社外秘）を定義し、通常案件は3名で完結、高リスク案件のみ役員承認を挟む</strong></span></td><td></td></tr>
+      <tr><td>P-8</td><td>3名の兼任ルール（Authorityの重複可否）</td><td>案件の規模・種別に応じて「1人が複数Authorityを兼ねてよいか」を決める。例：小規模案件は経営企画担当者が上位Gate OwnerとGate 5承認を兼務、大規模・高額案件は別途役員承認。<span class="small"><strong>推奨：案件ランク（高額/全社/社外秘）を定義し、通常案件は3名で完結、高リスク案件のみ役員承認を挟む</strong></span>。<code>ワーキング発足に関する企画書.pptx</code>（スライド9）にリスク区分別の暫定承認者案が既にあるため、本項の決定時に突合・確認する</td><td></td></tr>
       <tr><td>P-9</td><td>パイロット案件で扱うデータのAI入力可否</td><td>例題の現場写真・点検記録に<strong>個人情報・位置情報が含まれる場合</strong>、Lightblue（外部AI）へ入力してよいか。A. マスキング・匿名化して入力 / B. 人物・位置が写らない写真のみ対象 / C. 当面は文字情報のみ。<span class="small"><strong>推奨：A（マスキング処理を案件の要件に含める）</strong></span></td><td></td></tr>
       <tr><td>P-10</td><td>監視基盤の監視項目・通知先の確定</td><td>自前Web監視基盤で何を監視するか（Lightblue利用量・エラー・NEO/AppSuiteの稼働等）と、アラートの通知先（NEO通知 or メール）。<span class="small"><strong>推奨：最初は「Lightblue利用量とエラー」のみ、通知はメールで開始</strong></span></td><td></td></tr>
       <tr><td>P-11</td><td>3名のアカウント・権限レベル</td><td>各SaaS（NEO／AppSuite／Lightblue／Notion）で3名に与える権限（管理者／一般／閲覧）を決める。<span class="small"><strong>推奨：各ツールの管理者は1名（設定変更担当）とし、他2名は通常利用・閲覧。管理者を1名に集中させず担当を分ける</strong></span></td><td></td></tr>
