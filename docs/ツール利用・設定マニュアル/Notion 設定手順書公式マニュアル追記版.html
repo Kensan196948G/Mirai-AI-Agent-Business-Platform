@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notion 設定手順書（ELI5：やさしい手順書）— みらいAIエージェント事業推進基盤</title>
+<style>
+:root{
+  --bg:#f6f8fb;--panel:#fff;--ink:#172033;--muted:#637083;--line:#dfe5ee;
+  --navy:#183153;--blue:#2563eb;--cyan:#0891b2;--green:#15803d;--amber:#b45309;--purple:#7c3aed;--red:#b91c1c;
+  --shadow:0 8px 24px rgba(20,32,51,.08);--radius:18px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;background:var(--bg);color:var(--ink);line-height:1.8}
+a{color:inherit;text-decoration:none}
+.hero{background:radial-gradient(circle at 85% 15%,rgba(2,132,199,.2),transparent 28%),linear-gradient(135deg,#0c1a2a,#164e63 55%,#155e75);color:#fff;padding:56px 24px 44px}
+.hero .wrap{max-width:1080px;margin:auto}
+.eyebrow{display:inline-block;padding:6px 12px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);border-radius:999px;font-size:13px;letter-spacing:.05em}
+h1{font-size:clamp(26px,3.4vw,42px);line-height:1.3;margin:16px 0 10px}
+.hero p{max-width:920px;color:#cffafe;font-size:16.5px;margin:0}
+.hero .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.tag{padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);font-size:13px}
+.topbar{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.95);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.topbar .wrap{max-width:1080px;margin:auto;padding:10px 18px;display:flex;gap:6px;overflow-x:auto}
+.topbar a{flex:0 0 auto;padding:8px 12px;border-radius:10px;color:#42516a;font-size:13px;font-weight:700}
+.topbar a:hover{background:#eef4ff;color:var(--blue)}
+main{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+section{margin:0 0 44px}
+.section-title{display:flex;align-items:center;gap:12px;margin:0 0 16px}
+.section-title .num{width:38px;height:38px;border-radius:12px;background:var(--navy);color:#fff;display:grid;place-items:center;font-weight:800;flex:0 0 auto;font-size:15px}
+.section-title h2{margin:0;font-size:24px;line-height:1.3}
+.section-title .sub{font-size:13px;color:var(--muted);font-weight:700}
+.lead{background:#ecfeff;border:1px solid #cffafe;border-left:5px solid var(--cyan);padding:16px 18px;border-radius:14px;margin:0 0 20px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);margin:0 0 16px}
+.card h3{margin:0 0 8px;font-size:18px}
+.note{border-left:4px solid var(--cyan);background:#ecfeff;padding:12px 14px;border-radius:10px;color:#164e63;margin:12px 0 0}
+.decision{border-left:4px solid var(--green);background:#f0fdf4;padding:12px 14px;border-radius:10px;color:#14532d;margin:12px 0 0}
+.warning{border-left:4px solid var(--amber);background:#fff7ed;padding:12px 14px;border-radius:10px;color:#7c2d12;margin:12px 0 0}
+table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+th,td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:#f1f5f9;text-align:left;font-size:13px;color:#334155}
+tr:last-child td{border-bottom:0}
+.tw{overflow-x:auto;border-radius:12px;background:#fff;border:1px solid var(--line)}
+.tw table{border:none;border-radius:0}
+code{background:#eef2f7;padding:2px 6px;border-radius:6px;font-family:"SFMono-Regular",Consolas,monospace;font-size:.92em}
+.small{font-size:13px;color:var(--muted)}
+.step{display:grid;grid-template-columns:52px 1fr;gap:14px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin:0 0 14px;box-shadow:0 4px 14px rgba(20,32,51,.05)}
+.step-no{width:44px;height:44px;border-radius:12px;background:#0e7490;color:#fff;display:grid;place-items:center;font-weight:900;font-size:17px}
+.step h4{margin:0 0 6px;font-size:16.5px}
+.step p{margin:0;color:#334155;font-size:15px}
+.step .who{display:inline-block;margin-top:8px;font-size:12.5px;font-weight:800;color:#334155;background:#eef2f7;border-radius:999px;padding:4px 10px}
+ul.check{list-style:none;margin:8px 0 0;padding:0}
+ul.check li{padding:4px 0 4px 30px;position:relative;margin:2px 0}
+ul.check li::before{content:"";position:absolute;left:4px;top:8px;width:16px;height:16px;border:2px solid #94a3b8;border-radius:5px;background:#fff}
+ul.plain{margin:8px 0 0;padding-left:1.2em}
+ul.plain li{margin:3px 0}
+.footer{margin-top:48px;border-top:1px solid var(--line);padding-top:22px;color:var(--muted);font-size:13px;text-align:center}
+@media(max-width:640px){.hero{padding-top:40px}.step{grid-template-columns:44px 1fr;padding:13px 14px}.step-no{width:38px;height:38px;font-size:15px}main{padding-left:14px;padding-right:14px}h1{font-size:24px}}
+@media print{.topbar{display:none}body{background:#fff}.card,.step{box-shadow:none}}
+
+/* 公式マニュアル追記 */
+.official{border:2px solid #bfdbfe;background:linear-gradient(180deg,#eff6ff,#fff);}
+.official h3{color:#1d4ed8;}
+.official-badge{display:inline-block;padding:5px 10px;border-radius:999px;background:#dbeafe;color:#1e40af;font-size:12px;font-weight:800;margin-bottom:8px;}
+.path{display:inline-block;background:#0f172a;color:#f8fafc;border-radius:8px;padding:3px 8px;font-family:Consolas,monospace;font-size:.9em;}
+.src{font-size:13px;color:#475569;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;margin-top:12px;}
+.src a{color:#1d4ed8;text-decoration:underline;word-break:break-all;}
+.rec{border-left:4px solid #2563eb;background:#eff6ff;padding:12px 14px;border-radius:10px;color:#1e3a8a;margin:12px 0;}
+.current{border-left:4px solid #7c3aed;background:#f5f3ff;padding:12px 14px;border-radius:10px;color:#4c1d95;margin:12px 0;}
+
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="eyebrow">MIRAI AI AGENT BUSINESS PLATFORM — ELI5 SETUP GUIDE</span>
+    <h1>Notion 設定手順書</h1>
+    <p>Notionは、この基盤の<strong>「知識をためる図書館（Knowledge基盤）」</strong>です。アイデア・決定したこと・企画書・要件・教訓を、<strong>人間がレビューして「これで確定」となった情報だけ</strong>を保存します。あとでAI（Lightblue）がここを参照して、次の相談に役立てます。</p>
+    <div class="meta">
+      <span class="tag">ELI5（やさしい説明）</span><span class="tag">実行者：IT/DX/AIシステム開発者</span>
+      <span class="tag">利用：3名</span><span class="tag">目安：2〜4日</span>
+    </div>
+  </div>
+</header>
+
+<nav class="topbar">
+  <div class="wrap">
+    <a href="#what">これは何？</a>
+    <a href="#who">だれがやる？</a>
+    <a href="#prepare">じゅんび</a>
+    <a href="#structure">つくるもの</a>
+    <a href="#steps">やり方</a>
+    <a href="#official">公式操作</a>
+    <a href="#samples">サンプル</a>
+    <a href="#done">できた？</a>
+    <a href="#caution">ちゅうい</a>
+  </div>
+</nav>
+
+<main>
+
+<section id="what">
+  <div class="section-title"><div class="num">1</div><h2>これは何？</h2></div>
+  <div class="lead">
+    <strong>たとえると：</strong>Notionは「会社の図書館」。本（ページ）には「これは正式に決まった情報」というラベルが付いていて、だれでもあとから読めます。Slackでの雑談や途中のアイデアは「下書き」なので、ここには置きません。<strong>人間が「OK」を出した情報だけを棚に並べます。</strong>
+  </div>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:24%">置くもの</th><th>説明（だれでも分かる言い方）</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Idea DB（アイデア台帳）</strong></td><td>「こんなのあったら便利」を1件ずつ記録するカード箱。14個の項目（提案者・所属・課題・期待効果・MVPなど）を用意</td></tr>
+      <tr><td><strong>Decision Log（決定記録）</strong></td><td>「いつ・だれが・なぜ・こう決めた」を残すノート</td></tr>
+      <tr><td><strong>企画書テンプレート</strong></td><td>企画を出すときの「書き方の型紙」。何度も同じ書式を作らなくて済む</td></tr>
+      <tr><td><strong>要件定義書テンプレート</strong></td><td>「システムに何をしてもらうか」を書く型紙。業務要件と非機能要件に分かれる</td></tr>
+      <tr><td><strong>教訓台帳（Lessons Learned）</strong></td><td>案件が終わった後の「うまくいったこと・失敗したこと」の記録</td></tr>
+      <tr><td><strong>Postmortem（ふりかえり）</strong></td><td>トラブルが起きたときの「原因・影響・対策」の記録用紙</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>ここが大事：</strong>Slackの会話やAIの出力は「そのまま」ここへ入れません。<strong>会話 → AIが整理 → 人間がチェック → Notionに保存</strong>、という順番を必ず守ります。これが「会社として信頼できる知識」だけをためる仕組みです。
+  </div>
+</section>
+
+<section id="who">
+  <div class="section-title"><div class="num">2</div><h2>だれがやるの？</h2></div>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:34%">人</th><th>役割</th></tr></thead>
+    <tbody>
+      <tr><td><strong>IT/DX/AIシステム開発者</strong></td><td>Notionの「棚（データベース）と型紙（テンプレート）」を作る</td></tr>
+      <tr><td><strong>3名（経営企画／建設土木技術・研究／IT・DX・AI開発）</strong></td><td>実際にページを書いたり、確定した情報を登録したりして利用する</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>将来：</strong>全社員のアイデア受付を始めるときは、ここを全社員が閲覧できる形に広げます（運用拡大時に設定）。
+  </div>
+</section>
+
+<section id="prepare">
+  <div class="section-title"><div class="num">3</div><h2>じゅんびするもの</h2></div>
+  <div class="card">
+    <ul class="check">
+      <li>Notionのアカウント（3名分）と、ワークスペースの作成</li>
+      <li>だれが「管理者（設定を変えられる人）」になるかを決める（推奨：IT/DX/AIシステム開発者）</li>
+      <li>置く情報の種類（上の表の6つ）を3名で確認する</li>
+      <li>全体計画書（<code>ai-dx-dev-saas-setup-guide.html</code>）の 3.4 を開いておく</li>
+    </ul>
+  </div>
+</section>
+
+<section id="structure">
+  <div class="section-title"><div class="num">4</div><h2>つくるもの（構造）</h2></div>
+  <div class="card">
+    <p>Notionのワークスペースに、大きく分けて次の場所（ページ）を作ります：</p>
+    <ul class="plain">
+      <li><strong>トップページ（Home）</strong> — 基盤の案内と、各ページへの入り口</li>
+      <li><strong>Knowledge基盤</strong> — Idea DB・Decision Log・教訓台帳などの置き場</li>
+      <li><strong>テンプレート置き場</strong> — 企画書・要件定義書などの型紙（テンプレート）を保存</li>
+      <li><strong>案件ごとのProject Home</strong> — 案件ID（例：<code>DX-2026-0042</code>）ごとに作る、その案件の「ホームページ」。リンク集として使う（今後案件ができたら作る）</li>
+    </ul>
+  </div>
+</section>
+
+<section id="steps">
+  <div class="section-title"><div class="num">5</div><h2>やり方（手順）</h2></div>
+
+  <div class="step">
+    <div class="step-no">1</div>
+    <div>
+      <h4>ワークスペースとトップページを作る</h4>
+      <p>Notionに「Mirai AIエージェント事業推進基盤」のワークスペースを作り、トップページ（Home）に「何をする場所か」の案内と、下の各ページへのリンクを置きます。</p>
+      <span class="who">IT/DX/AIシステム開発者</span>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-no">2</div>
+    <div>
+      <h4>Idea DB（アイデア台帳）のデータベースを作る</h4>
+      <p>「データベース」機能でIdea台帳を作り、列（プロパティ）を14個用意します：Idea ID・提案者・所属・原課題・壁打ち結果・目的・対象者・期待効果・MVP・概算工数・リスク・類似案件・関連Knowledge・ステータス。</p>
+      <span class="who">IT/DX/AIシステム開発者</span>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-no">3</div>
+    <div>
+      <h4>Decision Log・教訓台帳・Postmortemのデータベースを作る</h4>
+      <p>「決定記録」「教訓台帳」「ふりかえり（Postmortem）」のデータベースを作ります。それぞれ、日付・案件ID・決定者（または担当）・内容・理由などの列を用意します。案件IDでほかの台帳とつながるようにします。</p>
+      <span class="who">IT/DX/AIシステム開発者</span>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-no">4</div>
+    <div>
+      <h4>企画書・要件定義書のテンプレート（型紙）を作る</h4>
+      <p>「企画書」と「要件定義書」の型紙をテンプレートとして用意します。<br>
+      ・企画書：背景・目的・As-Is/To-Be・範囲・MVP・KPI・費用・ROI・情報管理・Security・リスク<br>
+      ・要件定義書：業務要件（機能・入力・処理・出力・承認・履歴）＋非機能要件（認証・RBAC・監査ログ・データ保管・AI送信最小化・性能）</p>
+      <span class="who">IT/DX/AIシステム開発者（作成）→ 3名（内容確認）</span>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-no">5</div>
+    <div>
+      <h4>アクセス権を設定する</h4>
+      <p>現段階では<strong>3名＋案件関係者</strong>に閲覧・編集を制限します。社外秘・個人情報を守るため、ページやデータベースごとに「だれが見られるか」を設定します。全社員への公開は、運用拡大時にあらためて設定します。</p>
+      <span class="who">IT/DX/AIシステム開発者</span>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-no">6</div>
+    <div>
+      <h4>テストで1件登録して動きを確かめる</h4>
+      <p>架空のアイデア（例：現場点検報告書の自動作成）をIdea DBに登録し、企画書テンプレートを開いて書けること、案件IDでほかの台帳とつながることを3名で確認します。</p>
+      <span class="who">IT/DX/AIシステム開発者 → 3名（確認）</span>
+    </div>
+  </div>
+
+  <div class="decision">
+    <strong>だいたいの目安：</strong>データベースとテンプレートの作成で2〜3日。3名での確認を入れると計4〜5日ほど見ておくと安心です。
+  </div>
+</section>
+
+
+<section id="official">
+  <div class="section-title"><div class="num">公式</div><h2>Notion公式マニュアルに沿った実画面操作</h2></div>
+  <div class="lead">
+    <strong>この章の目的：</strong>前章までの設計を、Notionの現行公式ヘルプに沿って実際の画面で設定できるようにします。画面名は2026年9月4日時点の公式ヘルプを基準にしています。
+  </div>
+
+  <div class="card official">
+    <span class="official-badge">OFFICIAL STEP 1</span>
+    <h3>Idea DBを新規作成する</h3>
+    <ol>
+      <li>Notionで、Idea DBを置きたいページを開きます。</li>
+      <li>新しいページから作る場合は <span class="path">New page / 新規ページ</span> を選びます。</li>
+      <li><span class="path">Get started with → ••• → Table</span> を選びます。既存ページ内なら <span class="path">/database</span> と入力してデータベースを作成する方法もあります。</li>
+      <li>データベース名を <code>Idea DB</code> とします。</li>
+      <li>右側の <span class="path">＋ / Add property</span> から必要なプロパティを追加します。</li>
+      <li>既存プロパティの種類を変える場合は、プロパティ名 → <span class="path">Edit property → Change type</span> を開きます。</li>
+    </ol>
+    <div class="src"><strong>公式：</strong><a href="https://www.notion.com/help/create-a-database">Notion Help - Create a database</a></div>
+  </div>
+
+  <div class="card official">
+    <span class="official-badge">OFFICIAL STEP 2</span>
+    <h3>Idea DBの14項目をプロパティとして設定する</h3>
+    <p>Notion公式では、Text / Number / Select / Status / Multi-select / Date / Relation / Person / ID などのプロパティ型が用意されています。本基盤では次の割り当てを推奨します。</p>
+    <div class="tw"><table>
+      <thead><tr><th>本基盤の項目</th><th>推奨プロパティ型</th><th>設定メモ</th></tr></thead>
+      <tbody>
+        <tr><td>Idea ID</td><td>Text</td><td><code>IDEA-2026-0001</code> のような社内書式を維持する場合。Notion標準の自動IDを使う場合は <code>ID</code> 型も選択可能。</td></tr>
+        <tr><td>提案者</td><td>Person</td><td>Notionワークスペースのユーザーを割り当てる。</td></tr>
+        <tr><td>所属</td><td>Select</td><td>部署名を選択肢として登録。</td></tr>
+        <tr><td>原課題</td><td>Text</td><td>現状の困りごとを記録。</td></tr>
+        <tr><td>壁打ち結果</td><td>Text</td><td>整理済みの要点のみ。</td></tr>
+        <tr><td>目的</td><td>Text</td><td>達成したい状態。</td></tr>
+        <tr><td>対象者</td><td>Multi-select / Text</td><td>複数対象がある場合はMulti-selectが扱いやすい。</td></tr>
+        <tr><td>期待効果</td><td>Text / Number</td><td>時間削減など数値化する場合はNumberも利用可能。</td></tr>
+        <tr><td>MVP</td><td>Text</td><td>最小検証範囲。</td></tr>
+        <tr><td>概算工数</td><td>Number / Text</td><td>日数で統一できる場合はNumber。</td></tr>
+        <tr><td>リスク</td><td>Text / Multi-select</td><td>機密・個人情報・技術等の分類にMulti-selectも利用可能。</td></tr>
+        <tr><td>類似案件</td><td>Relation</td><td>案件DBを別に持つ場合、Relationで関連付ける。</td></tr>
+        <tr><td>関連Knowledge</td><td>Relation</td><td>Knowledge DBとの関連付けに利用。</td></tr>
+        <tr><td>ステータス</td><td>Status</td><td>例：Idea / Review / 企画候補 / 却下 / 完了。</td></tr>
+      </tbody>
+    </table></div>
+    <div class="rec"><strong>本基盤での推奨：</strong>正式な案件ID・Idea IDの書式が既に決まっている場合は、Notion標準IDに無理に寄せず、Text型で社内共通キーを保持します。</div>
+    <div class="src"><strong>公式：</strong><a href="https://www.notion.com/help/database-properties">Notion Help - Database properties</a></div>
+  </div>
+
+  <div class="card official">
+    <span class="official-badge">OFFICIAL STEP 3</span>
+    <h3>企画書・要件定義書をデータベーステンプレート化する</h3>
+    <p>企画書や要件定義書を「文書DB」の1ページとして管理する場合、Notion公式のデータベーステンプレート機能を使うと、同じ章立てを毎回ワンクリックで作れます。</p>
+    <ol>
+      <li>テンプレートを置くデータベースを開きます。</li>
+      <li>右上の <span class="path">New</span> の右側にあるドロップダウンを開きます。</li>
+      <li><span class="path">+ New template</span> を選択します。</li>
+      <li>テンプレート名を <code>企画書テンプレート</code> または <code>要件定義書テンプレート</code> とします。</li>
+      <li>ページ本文に、既存手順書で定義した「背景・目的・As-Is/To-Be・MVP・KPI…」等の見出しを登録します。</li>
+      <li>利用時は <span class="path">New</span> のドロップダウンから対象テンプレートを選び、新しい文書ページを作成します。</li>
+    </ol>
+    <div class="src"><strong>公式：</strong><a href="https://www.notion.com/help/database-templates">Notion Help - Database templates</a></div>
+  </div>
+
+  <div class="card official">
+    <span class="official-badge">OFFICIAL STEP 4</span>
+    <h3>3名の権限を設定する</h3>
+    <ol>
+      <li>対象ページまたはデータベース右上の <span class="path">共有 / Share</span> を選択します。</li>
+      <li>招待する3名の名前またはメールアドレスを指定します。</li>
+      <li>アクセスレベルを設定して招待します。</li>
+    </ol>
+    <div class="tw"><table>
+      <thead><tr><th>対象</th><th>推奨権限</th><th>理由</th></tr></thead>
+      <tbody>
+        <tr><td>IT/DX/AIシステム開発者（管理担当）</td><td>Full access / フルアクセス</td><td>構造・共有・設定を管理するため。</td></tr>
+        <tr><td>経営企画担当者</td><td>Can edit content / コンテンツ編集</td><td>DBのページと値は編集できるが、プロパティやビュー構造を変更しにくくできる。</td></tr>
+        <tr><td>建設土木技術者・研究者</td><td>Can edit content / コンテンツ編集</td><td>同上。誤ってDB構造を変更するリスクを抑える。</td></tr>
+      </tbody>
+    </table></div>
+    <div class="warning"><strong>外部公開禁止：</strong>本基盤のKnowledgeは社内用です。<code>Anyone on the web with link</code> 等の公開設定は原則使用しません。共有画面で意図せず一般公開されていないことを確認します。</div>
+    <div class="src"><strong>公式：</strong><a href="https://www.notion.com/ja/help/share-your-work">Notionヘルプ - コンテンツの共有</a> ／ <a href="https://www.notion.com/help/intro-to-databases">Notion Help - Intro to databases</a></div>
+  </div>
+
+  <div class="card official">
+    <span class="official-badge">OFFICIAL STEP 5</span>
+    <h3>データベース構造をロックする</h3>
+    <ol>
+      <li>対象データベースを開きます。</li>
+      <li>データベース上部の設定メニューを開きます。</li>
+      <li><span class="path">Lock database</span> を有効にします。</li>
+      <li>利用者がデータ入力はできる一方、ビューやプロパティを誤変更しにくいことを確認します。</li>
+    </ol>
+    <div class="note"><strong>補足：</strong><code>Can edit content</code> 権限も、プロパティ・ビュー・フィルター・並べ替え等の構造変更を制限するのに有効です。ロックと権限を組み合わせると、運用事故をさらに減らせます。</div>
+    <div class="src"><strong>公式：</strong><a href="https://www.notion.com/help/customize-your-database">Notion Help - Customize your database settings</a> ／ <a href="https://www.notion.com/ja/help/intro-to-databases">Notionヘルプ - データベース入門</a></div>
+  </div>
+
+  <div class="card official">
+    <span class="official-badge">OFFICIAL STEP 6</span>
+    <h3>表示ビューを作り、テスト登録する</h3>
+    <ol>
+      <li>データベース名の横にある <span class="path">＋</span> から必要なビューを追加します。例：Table、Board。</li>
+      <li>設定メニューから <span class="path">Filter</span> や <span class="path">Sort</span> を指定します。</li>
+      <li>例として <code>ステータス = 企画候補</code> のビューを作ります。</li>
+      <li><span class="path">New page</span> からテストIdeaを1件登録します。</li>
+      <li>3名それぞれで、閲覧・編集できる範囲とDB構造が保護されていることを確認します。</li>
+    </ol>
+    <div class="decision"><strong>完了条件：</strong>「登録できる」「必要な人だけ見られる」「DB構造を一般利用者が壊しにくい」「テンプレートから企画書を作れる」の4点が確認できればNotion初期設定は完了です。</div>
+    <div class="src"><strong>公式：</strong><a href="https://www.notion.com/help/create-a-database">Notion Help - Create a database</a></div>
+  </div>
+
+  <div class="card">
+    <h3>公式マニュアル参照先（2026-09-04確認）</h3>
+    <ul class="plain">
+      <li><a href="https://www.notion.com/help/create-a-database">Create a database</a></li>
+      <li><a href="https://www.notion.com/help/database-properties">Database properties</a></li>
+      <li><a href="https://www.notion.com/help/database-templates">Database templates</a></li>
+      <li><a href="https://www.notion.com/ja/help/share-your-work">コンテンツの共有</a></li>
+      <li><a href="https://www.notion.com/ja/help/sharing-and-permissions">共有および権限設定</a></li>
+      <li><a href="https://www.notion.com/help/customize-your-database">Customize your database settings</a></li>
+    </ul>
+  </div>
+</section>
+
+<section id="samples">
+  <div class="section-title"><div class="num">6</div><h2>サンプル（記入例）</h2></div>
+  <p style="margin:0 0 12px">ここでは、パイロット案件（例：<strong>現場写真・点検記録からの報告書自動作成</strong>）を例に、Notionへ「どんなふうに記入するか」の例を示します。</p>
+
+  <div class="card">
+    <h3>サンプル1：Idea DB（アイデア台帳）の1件分（記入例）</h3>
+    <div class="tw">
+    <table>
+      <thead><tr><th style="width:22%">項目</th><th>記入例</th></tr></thead>
+      <tbody>
+        <tr><td>Idea ID</td><td><code>IDEA-2026-0001</code></td></tr>
+        <tr><td>提案者／所属</td><td>（例）現場監督／建設土木技術部</td></tr>
+        <tr><td>原課題</td><td>点検時に撮影した写真と手書きメモから、日報・点検報告書を作るのが大変</td></tr>
+        <tr><td>壁打ち結果</td><td>写真整理・メモ転記・帳票作成・上長確認に1件60分かかっている</td></tr>
+        <tr><td>目的</td><td>報告書作成時間を削減し、記録品質と提出速度を上げる</td></tr>
+        <tr><td>対象者</td><td>現場監督・施工管理者・安全管理者</td></tr>
+        <tr><td>期待効果</td><td>1件60分 → 20分</td></tr>
+        <tr><td>MVP</td><td>写真アップロード・AI所見案・Excel/PDF出力</td></tr>
+        <tr><td>概算工数</td><td>PoC 2〜4週間／MVP 1〜2か月</td></tr>
+        <tr><td>リスク</td><td>人物・位置情報の写り込み（要マスキング検討）</td></tr>
+        <tr><td>ステータス</td><td>企画候補へ昇格</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>サンプル2：Decision Log（決定記録）の記入例</h3>
+    <div class="tw">
+    <table>
+      <thead><tr><th style="width:22%">項目</th><th>記入例</th></tr></thead>
+      <tbody>
+        <tr><td>日付</td><td>2026年●月●日</td></tr>
+        <tr><td>案件ID</td><td><code>DX-2026-0042</code></td></tr>
+        <tr><td>決定事項</td><td>MVPの対象は「日常安全点検報告書」に限定する</td></tr>
+        <tr><td>理由</td><td>最初から全帳票を対象にすると検証期間が長くなるため、効果測定しやすい1帳票で始める</td></tr>
+        <tr><td>決定者</td><td>経営企画担当者（3名合意）</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>サンプル3：企画書テンプレートの書き出し例</h3>
+    <ul class="plain">
+      <li><strong>背景：</strong>現場の点検記録は写真＋手書きメモが多く、報告書化に時間がかかっている</li>
+      <li><strong>目的：</strong>報告書作成の時間削減と記録品質の向上</li>
+      <li><strong>As-Is：</strong>1件あたり約60分（写真整理・転記・帳票作成）</li>
+      <li><strong>To-Be：</strong>1件あたり約20分（AIが所見案を作成し、人が確認）</li>
+      <li><strong>KPI：</strong>作成時間／AI所見採用率／利用者満足度</li>
+      <li><strong>MVP範囲：</strong>日常安全点検報告書の自動作成</li>
+      <li><strong>情報管理：</strong>人物・位置情報はマスキングしてAIへ入力</li>
+    </ul>
+  </div>
+</section>
+
+<section id="done">
+  <div class="section-title"><div class="num">7</div><h2>できたか確かめる（完了チェック）</h2></div>
+  <div class="card">
+    <ul class="check">
+      <li>Idea DB・Decision Log・教訓台帳・Postmortemのデータベースが作られた</li>
+      <li>企画書・要件定義書のテンプレートが用意され、3名が内容を確認した</li>
+      <li>テスト案件で「アイデア登録 → 企画書作成」まで動いた</li>
+      <li>アクセス権が3名＋案件関係者に制限されている</li>
+      <li>「確定した情報だけを保存する」運用ルールが3名に共有された（Slackの会話をそのまま入れない）</li>
+      <li>案件ID（例：<code>DX-2026-0042</code>）で関連ページをたどれる</li>
+    </ul>
+  </div>
+</section>
+
+<section id="caution">
+  <div class="section-title"><div class="num">8</div><h2>ちゅういすること</h2></div>
+  <div class="warning">
+    <ul class="plain">
+      <li><strong>生の会話をそのまま入れない：</strong>Slackの全ログやAIの出力を丸ごとNotionに保存するのは禁止。人間レビューを必ず通します。</li>
+      <li><strong>AIは最終確認できない：</strong>「この情報を確定にする」のは必ず人間（3名）の判断です。</li>
+      <li><strong>案件IDでつなぐ：</strong>同じ案件のページには必ず案件ID（例：<code>DX-2026-0042</code>）を付けます。</li>
+      <li><strong>アクセス権の確認：</strong>社外秘・個人情報を含むページは、対象者以外が見られない設定か定期的に確認します。</li>
+      <li><strong>成功も失敗も残す：</strong>教訓台帳には、うまくいったことだけでなく失敗・やめた理由も残します（次の企画に効く）。</li>
+    </ul>
+  </div>
+</section>
+
+<div class="footer">
+  みらい AIエージェント事業推進基盤（Mirai AI Agent Business Platform）— Notion 設定手順書（ELI5）— 公式マニュアル操作追記版<br>
+  関連文書：<code>ai-dx-dev-saas-setup-guide.html</code>（全体計画書）／<code>ai-dx-dev-process.html</code>（プロセス定義）
+</div>
+
+</main>
+</body>
+</html>

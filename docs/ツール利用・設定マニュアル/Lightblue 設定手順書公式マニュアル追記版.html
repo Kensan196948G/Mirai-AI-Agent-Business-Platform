@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lightblue 設定手順書（公式マニュアル追記版・ELI5）— みらいAIエージェント事業推進基盤</title>
+<style>
+:root{
+  --bg:#f6f8fb;--panel:#fff;--ink:#172033;--muted:#637083;--line:#dfe5ee;
+  --navy:#183153;--blue:#2563eb;--cyan:#0891b2;--green:#15803d;--amber:#b45309;--purple:#7c3aed;--red:#b91c1c;
+  --shadow:0 8px 24px rgba(20,32,51,.08);--radius:18px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;background:var(--bg);color:var(--ink);line-height:1.8}
+a{color:inherit;text-decoration:none}
+.hero{background:radial-gradient(circle at 85% 15%,rgba(21,128,61,.2),transparent 28%),linear-gradient(135deg,#052e16,#14532d 55%,#166534);color:#fff;padding:56px 24px 44px}
+.hero .wrap{max-width:1080px;margin:auto}
+.eyebrow{display:inline-block;padding:6px 12px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);border-radius:999px;font-size:13px;letter-spacing:.05em}
+h1{font-size:clamp(26px,3.4vw,42px);line-height:1.3;margin:16px 0 10px}
+.hero p{max-width:920px;color:#dcfce7;font-size:16.5px;margin:0}
+.hero .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.tag{padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);font-size:13px}
+.topbar{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.95);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.topbar .wrap{max-width:1080px;margin:auto;padding:10px 18px;display:flex;gap:6px;overflow-x:auto}
+.topbar a{flex:0 0 auto;padding:8px 12px;border-radius:10px;color:#42516a;font-size:13px;font-weight:700}
+.topbar a:hover{background:#eef4ff;color:var(--blue)}
+main{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+section{margin:0 0 44px}
+.section-title{display:flex;align-items:center;gap:12px;margin:0 0 16px}
+.section-title .num{width:38px;height:38px;border-radius:12px;background:var(--navy);color:#fff;display:grid;place-items:center;font-weight:800;flex:0 0 auto;font-size:15px}
+.section-title h2{margin:0;font-size:24px;line-height:1.3}
+.section-title .sub{font-size:13px;color:var(--muted);font-weight:700}
+.lead{background:#f0fdf4;border:1px solid #dcfce7;border-left:5px solid var(--green);padding:16px 18px;border-radius:14px;margin:0 0 20px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);margin:0 0 16px}
+.card h3{margin:0 0 8px;font-size:18px}
+.note{border-left:4px solid var(--cyan);background:#ecfeff;padding:12px 14px;border-radius:10px;color:#164e63;margin:12px 0 0}
+.decision{border-left:4px solid var(--green);background:#f0fdf4;padding:12px 14px;border-radius:10px;color:#14532d;margin:12px 0 0}
+.warning{border-left:4px solid var(--amber);background:#fff7ed;padding:12px 14px;border-radius:10px;color:#7c2d12;margin:12px 0 0}
+table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+th,td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:#f1f5f9;text-align:left;font-size:13px;color:#334155}
+tr:last-child td{border-bottom:0}
+.tw{overflow-x:auto;border-radius:12px;background:#fff;border:1px solid var(--line)}
+.tw table{border:none;border-radius:0}
+code{background:#eef2f7;padding:2px 6px;border-radius:6px;font-family:"SFMono-Regular",Consolas,monospace;font-size:.92em}
+.small{font-size:13px;color:var(--muted)}
+.step{display:grid;grid-template-columns:52px 1fr;gap:14px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin:0 0 14px;box-shadow:0 4px 14px rgba(20,32,51,.05)}
+.step-no{width:44px;height:44px;border-radius:12px;background:#15803d;color:#fff;display:grid;place-items:center;font-weight:900;font-size:17px}
+.step h4{margin:0 0 6px;font-size:16.5px}
+.step p{margin:0;color:#334155;font-size:15px}
+.step .who{display:inline-block;margin-top:8px;font-size:12.5px;font-weight:800;color:#334155;background:#eef2f7;border-radius:999px;padding:4px 10px}
+ul.check{list-style:none;margin:8px 0 0;padding:0}
+ul.check li{padding:4px 0 4px 30px;position:relative;margin:2px 0}
+ul.check li::before{content:"";position:absolute;left:4px;top:8px;width:16px;height:16px;border:2px solid #94a3b8;border-radius:5px;background:#fff}
+ul.plain{margin:8px 0 0;padding-left:1.2em}
+ul.plain li{margin:3px 0}
+.footer{margin-top:48px;border-top:1px solid var(--line);padding-top:22px;color:var(--muted);font-size:13px;text-align:center}
+@media(max-width:640px){.hero{padding-top:40px}.step{grid-template-columns:44px 1fr;padding:13px 14px}.step-no{width:38px;height:38px;font-size:15px}main{padding-left:14px;padding-right:14px}h1{font-size:24px}}
+@media print{.topbar{display:none}body{background:#fff}.card,.step{box-shadow:none}}
+
+.official{border:2px solid #bbf7d0;background:linear-gradient(180deg,#f0fdf4,#ffffff);border-radius:18px;padding:20px;margin:0 0 18px}
+.official h3{margin:0 0 10px;color:#14532d}
+.status{display:inline-block;font-size:12px;font-weight:800;padding:3px 9px;border-radius:999px;margin-right:6px}
+.status.ok{background:#dcfce7;color:#166534}
+.status.check{background:#fef3c7;color:#92400e}
+.status.company{background:#dbeafe;color:#1d4ed8}
+.path{background:#f8fafc;border:1px solid var(--line);padding:10px 12px;border-radius:10px;margin:8px 0;font-family:"SFMono-Regular",Consolas,monospace;font-size:13px;overflow-wrap:anywhere}
+.source-list{margin:8px 0 0;padding-left:1.3em}
+.source-list li{margin:7px 0}
+.source-list a{color:#0369a1;text-decoration:underline;text-underline-offset:2px}
+.cmt{border-left:4px solid #94a3b8;background:#f8fafc;padding:12px 14px;border-radius:10px;color:#334155;margin:8px 0}
+kbd{background:#111827;color:#fff;border-radius:5px;padding:2px 6px;font-size:.86em;box-shadow:inset 0 -1px 0 rgba(255,255,255,.2)}
+
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="eyebrow">MIRAI AI AGENT BUSINESS PLATFORM — ELI5 SETUP GUIDE</span>
+    <h1>Lightblue 設定手順書</h1>
+    <p>Lightblueは、社員が<strong>「こんなことできないかな？」と気軽に話しかけるAIの窓口</strong>です。この手順書では、AIが「ただ話を聞くだけ」ではなく、<strong>課題・対象者・効果を整理して、次の企画につなげられる相談相手</strong>になるよう、話し方（プロンプト）とルールを整えます。</p>
+    <div class="meta">
+      <span class="tag">ELI5（やさしい説明）</span><span class="tag">実行者：IT/DX/AIシステム開発者</span>
+      <span class="tag">利用：3名（初期）</span><span class="tag">契約：ビジネスプラン</span><span class="tag">公式情報確認：2026-09-04</span>
+    </div>
+  </div>
+</header>
+
+<nav class="topbar">
+  <div class="wrap">
+    <a href="#what">これは何？</a>
+    <a href="#who">だれがやる？</a>
+    <a href="#prepare">じゅんび</a>
+    <a href="#steps">やり方</a>
+    <a href="#official-manual">公式手順</a>
+    <a href="#samples">サンプル</a>
+    <a href="#done">できた？</a>
+    <a href="#caution">ちゅうい</a>
+  </div>
+</nav>
+
+<main>
+
+<section id="what">
+  <div class="section-title"><div class="num">1</div><h2>これは何？</h2></div>
+  <div class="lead">
+    <strong>たとえると：</strong>Lightblueは「相談窓口のベテラン職員」。話を聞きながら、<strong>「それは誰のためのもの？」「今はどうやっているの？」「何分かかっているの？」</strong>と質問して、ぼんやりしたアイデアを「形のある企画のたね」に整えてくれます。答えはAIの案なので、<strong>必ず人間が確認</strong>してから使います。
+  </div>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:30%">整えるもの</th><th>説明</th></tr></thead>
+    <tbody>
+      <tr><td><strong>壁打ちプロンプト</strong></td><td>相談の最初にAIへ渡す「話の聞き方」の指示書。これで質問の質が安定する</td></tr>
+      <tr><td><strong>課題確認項目（10個）</strong></td><td>現状業務・対象者・頻度・工数・データ・保存場所・個人情報・位置情報・既存システム・効果 の10点を必ず聞く</td></tr>
+      <tr><td><strong>AI利用ルール</strong></td><td>「社外秘や個人情報は入力しないで」と、相談の最初に必ず伝える案内文</td></tr>
+      <tr><td><strong>構造化フォーマット</strong></td><td>壁打ちの結果を、NotionのIdea台帳に入る形（14項目）に整える出力の型</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="warning">
+    <strong>公式情報で更新（2026-09-04）：</strong>
+    Lightblueは<strong>RAG（社内データ参照）を標準機能として案内</strong>しており、
+    <strong>NotionとのAPI連携も公式に提供開始済み</strong>です。
+    したがって「Notion連携そのものが未確認」という状態ではありません。
+    ただし、<strong>現在契約中のテナントでの利用可否・権限・最新の画面名・設定導線</strong>は契約内容や継続的なUI更新の影響を受けるため、
+    Lightblueログイン後のHelp Centerで最終確認してください。
+  </div>
+</section>
+
+<section id="who">
+  <div class="section-title"><div class="num">2</div><h2>だれがやるの？</h2></div>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:34%">人</th><th>役割</th></tr></thead>
+    <tbody>
+      <tr><td><strong>IT/DX/AIシステム開発者</strong></td><td>プロンプト・ルール・フォーマットをLightblueに設定する</td></tr>
+      <tr><td><strong>社内経営企画担当者</strong></td><td>AI利用ルール（何を入力してよいか）の内容を承認する</td></tr>
+      <tr><td><strong>3名全員</strong></td><td>テスト相談を行い、「聞きやすい・整理される」を確認する利用者になる</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="prepare">
+  <div class="section-title"><div class="num">3</div><h2>じゅんびするもの</h2></div>
+  <div class="card">
+    <ul class="check">
+      <li>Lightblueのビジネスプラン契約が有効で、3名がログインできる</li>
+      <li>「社外秘・個人情報の入力禁止」の会社ルールの原案（経営企画担当者に確認）</li>
+      <li>NotionのIdea台帳の14項目リスト（Notion手順書で作成済みのもの）</li>
+      <li>Notion連携を使う場合、どのデータベース／ページまでLightblueに参照させるかを3名で決める</li>
+      <li>Lightblueログイン後のHelp Centerで、現在テナントのデータ連携メニュー名・権限条件を確認する</li>
+      <li>全体計画書（<code>ai-dx-dev-saas-setup-guide.html</code>）の 3.5 を開いておく</li>
+    </ul>
+  </div>
+</section>
+
+<section id="steps">
+  <div class="section-title"><div class="num">4</div><h2>やり方（手順）</h2></div>
+
+  <div class="step">
+    <div class="step-no">1</div>
+    <div>
+      <h4>相談の最初に出す「利用ルールの案内文」を用意する</h4>
+      <p>相談が始まったらAIが最初に伝える文を用意します：「ここでの相談は社内のAIです。社外秘の情報・個人情報・位置情報は入力しないでください。」経営企画担当者が内容を確認し「OK」を出します。</p>
+      <span class="who">IT/DX/AIシステム開発者（作成）→ 経営企画担当者（承認）</span>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-no">2</div>
+    <div>
+      <h4>「アイデア壁打ち用プロンプト」を書く</h4>
+      <p>AIへの指示書（プロンプト）を用意します。内容の例：「あなたは社内のアイデア整理の相談役です。まず困りごとを聞いてください。次に下の10項目を順に質問して、最後に『課題・対象者・期待効果・MVP候補』を整理して出力してください。」</p>
+      <span class="who">IT/DX/AIシステム開発者（作成）→ 3名（確認）</span>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-no">3</div>
+    <div>
+      <h4>課題確認の10項目をプロンプトに組み込む</h4>
+      <p>「現状業務・対象者・頻度・工数・データ・保存場所・個人情報・位置情報・既存システム・効果」の10点を、AIが必ず確認するようプロンプトに明記します。これで「何となく便利そう」で終わらせません。</p>
+      <span class="who">IT/DX/AIシステム開発者</span>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-no">4</div>
+    <div>
+      <h4>出力フォーマット（Idea台帳用の型）を決める</h4>
+      <p>相談の最後にAIが、NotionのIdea台帳へそのまま貼れる形（14項目）で整理して出力するよう指示します。人間はその出力を確認・直してからNotionに登録します（AIの出力をそのまま登録しない）。</p>
+      <span class="who">IT/DX/AIシステム開発者</span>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-no">5</div>
+    <div>
+      <h4>Notionの確定KnowledgeをRAGで参照できるようにする</h4>
+      <p>LightblueはRAGとNotion API連携を公式に提供しています。現在テナントのHelp Centerで最新のデータ連携手順を確認し、Notionを接続します。参照対象は<strong>Idea・Decision Log・教訓など、人間レビュー済みの確定情報だけ</strong>に限定し、対象範囲を3名で決めます。</p>
+      <span class="who">IT/DX/AIシステム開発者（設定）→ 3名（範囲の決定）</span>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-no">6</div>
+    <div>
+      <h4>3名でテスト相談を行い、調整する</h4>
+      <p>3名それぞれが実際に相談してみて、「質問が多すぎないか」「最後の整理が分かりやすいか」「禁止事項が最初に伝わるか」を確かめます。違和感があればプロンプトを直します。</p>
+      <span class="who">3名（テスト）→ IT/DX/AIシステム開発者（修正）</span>
+    </div>
+  </div>
+
+  <div class="decision">
+    <strong>だいたいの目安：</strong>プロンプトとルールの作成・テストで2〜3日。RAG/Notion連携は公式提供済みですが、現在テナントの権限確認・接続テストを含め、追加で1〜2日を見込みます。
+  </div>
+</section>
+
+
+<section id="official-manual">
+  <div class="section-title"><div class="num">5</div><h2>公式情報を基にした実設定手順</h2></div>
+
+  <div class="lead">
+    <strong>この章の位置づけ：</strong>
+    株式会社Lightblueの公式ナレッジポータル、公式Help Centerへの導線、公式製品情報・リリース情報を基に、
+    この基盤で必要な設定を実作業レベルへ落とし込んだ手順です。
+    Lightblueは継続的にUIを更新しているため、<strong>ボタン名や配置が異なる場合はログイン後のHelp Centerを正</strong>としてください。
+  </div>
+
+  <div class="official">
+    <h3>5-1. まず公式Help Centerを開く</h3>
+    <p>公式ナレッジポータルには、導入済み利用者向けに「ヘルプページを見る」「動画から利用方法を学ぶ」「アシスタントにきく」の入口があります。設定開始時は、まずここから現在のHelp Centerへ入ります。</p>
+    <div class="path">Lightblue ナレッジポータル → 「ヘルプページを見る」 → ログイン後のHelp Center</div>
+    <p class="small">※Help CenterはWebアプリとして更新されるため、この手順書では固定の古い画面名を断定せず、機能名を基準に説明します。</p>
+  </div>
+
+  <div class="official">
+    <h3>5-2. 「マイアシスタント」で壁打ちAIを作る</h3>
+    <p><span class="status ok">公式確認済み</span>
+    Lightblueの「マイアシスタント」は、<strong>作りたいアシスタントの特徴を入力するとプロンプトを自動生成し、特定業務・知識に特化したAIを作成できる機能</strong>として公式に案内されています。</p>
+
+    <div class="step">
+      <div class="step-no">A</div>
+      <div>
+        <h4>新しいアシスタントを作成する</h4>
+        <p>Lightblueへログインし、現在UIの「マイアシスタント」「アシスタント作成」等に相当するメニューを開き、新規作成を開始します。</p>
+        <span class="who">IT/DX/AIシステム開発者</span>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-no">B</div>
+      <div>
+        <h4>役割を短く説明する</h4>
+        <p>例：<code>社内のDXアイデア整理相談役。利用者の困りごとを質問で具体化し、企画候補として整理する。</code></p>
+        <p>Lightblueが生成したプロンプトをそのまま採用せず、次の「社内ルール」を追記してからテストします。</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-no">C</div>
+      <div>
+        <h4>この基盤用の指示を追記する</h4>
+        <ul class="plain">
+          <li>相談開始時に会社の入力ルールを表示する</li>
+          <li>10項目（現状業務・対象者・頻度・工数・データ・保存場所・個人情報・位置情報・既存システム・効果）を確認する</li>
+          <li>不明な項目を推測で埋めず、「未確認」とする</li>
+          <li>最後にNotion Idea DBの14項目に合わせて構造化する</li>
+          <li>AI自身が承認・確定を行わず、「人間レビュー要」と明記する</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="official">
+    <h3>5-3. NotionをKnowledge（RAG）として接続する</h3>
+    <p><span class="status ok">公式確認済み</span>
+    LightblueはNotionとのAPI連携を公式に発表しており、Notionに蓄積したデータから回答を生成できると説明しています。また、RAGはLightblueの標準的な独自データ活用機能として案内されています。</p>
+
+    <div class="step">
+      <div class="step-no">A</div>
+      <div>
+        <h4>データ連携／Knowledge設定を開く</h4>
+        <p>現在のHelp Centerで「データ連携」「独自データ」「Knowledge」「RAG」等の項目を確認し、Notionを接続対象として選択します。</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-no">B</div>
+      <div>
+        <h4>Notion側で接続を許可する</h4>
+        <p>表示される認可画面に従って接続します。<strong>ワークスペース全体を無条件に渡さず、この基盤で参照させる確定Knowledgeだけ</strong>を対象にします。</p>
+        <div class="path">推奨対象：Idea DB（レビュー済み）／Decision Log／Lessons Learned／承認済みテンプレート</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-no">C</div>
+      <div>
+        <h4>RAGの検索テストをする</h4>
+        <p>Notionにだけ存在するテスト情報を1件用意し、Lightblueへ質問します。回答がKnowledgeに基づいているか、人間が元ページと照合します。</p>
+        <p class="small">テスト例：「DX-TEST-0001のMVP範囲は？」→ Notionの確定ページと一致するか確認。</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="official">
+    <h3>5-4. 3名だけが利用できる公開範囲にする</h3>
+    <p><span class="status ok">公式確認済み</span>
+    Lightblueの公式セキュリティ方針では、アシスタントごとに<strong>「組織全体公開／ユーザーを限定した公開／個人利用」</strong>を選べる公開権限の仕組みが案内されています。</p>
+    <p>初期運用では「ユーザーを限定した公開」を選び、次の3名だけを対象にします。</p>
+    <ul class="plain">
+      <li>経営企画担当者</li>
+      <li>建設土木技術者・研究者</li>
+      <li>IT/DX/AIシステム開発者</li>
+    </ul>
+    <div class="warning">
+      <strong>最小権限：</strong>検証段階で「組織全体公開」にしないでください。全社員展開は別Gateで利用ルール・Knowledge範囲・監査方法を見直してから行います。
+    </div>
+  </div>
+
+  <div class="official">
+    <h3>5-5. 入力ルールは「製品仕様」と「会社ルール」を分ける</h3>
+    <p><span class="status ok">製品仕様</span>
+    Lightblue公式サイトでは、Lightblueに登録したデータはOpenAI社やGPT自体のトレーニングには利用されないと案内されています。</p>
+    <p><span class="status company">会社ルール</span>
+    一方、この基盤では初期段階の情報管理ルールとして<strong>「社外秘・個人情報・位置情報は直接入力しない」</strong>方針を継続します。これはLightblueの能力不足を意味するものではなく、会社側の運用統制です。</p>
+    <p class="small">将来、情報区分ごとのAI投入基準が整備されたら、「全面禁止」から「機密区分・目的・接続先に応じた許可制」へ見直す余地があります。</p>
+  </div>
+
+  <div class="official">
+    <h3>5-6. 受入テスト（最低5パターン）</h3>
+    <div class="tw">
+      <table>
+        <thead><tr><th style="width:7%">No.</th><th style="width:30%">試験</th><th>合格条件</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>通常のアイデア相談</td><td>10項目を自然に確認し、質問過多にならない</td></tr>
+          <tr><td>2</td><td>情報不足の相談</td><td>不足事項を勝手に創作せず、追加質問または「未確認」とする</td></tr>
+          <tr><td>3</td><td>入力禁止情報を含む相談</td><td>会社ルールに従い、具体情報の入力を止め、匿名化・一般化を促す</td></tr>
+          <tr><td>4</td><td>Notion RAG検索</td><td>レビュー済みKnowledgeと回答内容が一致する</td></tr>
+          <tr><td>5</td><td>Idea DB形式への整理</td><td>14項目形式で出力し、人間レビュー要と明記される</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="official">
+    <h3>5-7. 公式情報で「確認済み／テナント確認」を区別する</h3>
+    <div class="tw">
+      <table>
+        <thead><tr><th>項目</th><th style="width:20%">状態</th><th>この手順書での扱い</th></tr></thead>
+        <tbody>
+          <tr><td>マイアシスタント／業務特化AI作成</td><td><span class="status ok">公式確認済み</span></td><td>利用する</td></tr>
+          <tr><td>RAGによる社内データ活用</td><td><span class="status ok">公式確認済み</span></td><td>利用する</td></tr>
+          <tr><td>Notion API連携</td><td><span class="status ok">公式確認済み</span></td><td>利用する。ただし現在テナントの権限を確認</td></tr>
+          <tr><td>3名限定の公開権限</td><td><span class="status ok">公式確認済み</span></td><td>限定公開を設定</td></tr>
+          <tr><td>現在の具体的なボタン名・画面配置</td><td><span class="status check">テナント確認</span></td><td>ログイン後Help Centerを正とする</td></tr>
+          <tr><td>ビジネスプラン固有の契約範囲・API利用条件</td><td><span class="status check">契約確認</span></td><td>管理画面／契約書／ベンダー回答で確認</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>公式参照先（2026-09-04確認）</h3>
+    <ul class="source-list">
+      <li><a href="https://www.lightblue-tech.com/lightblue-portal/" target="_blank" rel="noopener noreferrer">Lightblue ナレッジポータル</a> — Help Center、動画、アシスタントへの公式入口</li>
+      <li><a href="https://lba.web.lightblue-tech.com/help/2408b5ca-6e04-80ef-9719-f8f914458503" target="_blank" rel="noopener noreferrer">Lightblue Help Center</a> — ログイン後／Webアプリ型ヘルプ</li>
+      <li><a href="https://www.lightblue-tech.com/2024/06/04/20240604-news/" target="_blank" rel="noopener noreferrer">公式：マイアシスタント・独自データ連携機能のアップデート</a></li>
+      <li><a href="https://www.lightblue-tech.com/2023/11/15/20231115-news/" target="_blank" rel="noopener noreferrer">公式：Notion連携機能の提供開始</a></li>
+      <li><a href="https://new.lightblue-tech.com/" target="_blank" rel="noopener noreferrer">Lightblue 公式製品ページ</a> — 現行サービス概要・FAQ</li>
+      <li><a href="https://www.lightblue-tech.com/wp-content/uploads/2021/11/Lightblue_Assistant_%E3%82%AF%E3%83%A9%E3%82%A6%E3%83%89%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E6%83%85%E5%A0%B1%E3%82%BB%E3%82%AD%E3%83%A5%E3%83%AA%E3%83%86%E3%82%A3%E6%96%B9%E9%87%9D_20250605.pdf" target="_blank" rel="noopener noreferrer">公式：Lightblue Assistant クラウドサービス情報セキュリティ方針</a></li>
+    </ul>
+    <p class="small">注：本HTMLは外部CSS・JavaScript・画像には依存しません。上記URLは参照用リンクのみです。</p>
+  </div>
+</section>
+
+
+<section id="samples">
+  <div class="section-title"><div class="num">6</div><h2>サンプル（プロンプト・会話・出力の例）</h2></div>
+  <p style="margin:0 0 12px">ここでは、パイロット案件（例：<strong>現場写真・点検記録からの報告書自動作成</strong>）の相談を例に、Lightblueが「どんなふうに動くか」の例を示します。</p>
+
+  <div class="card">
+    <h3>サンプル1：プロンプト（AIへの指示文）の例</h3>
+    <div class="note" style="margin-top:0">
+      <strong>（AIへの指示のイメージ）</strong><br>
+      あなたは社内のアイデア整理の相談役です。最初に「ここでの相談は社内AIです。社外秘・個人情報・位置情報は入力しないでください」と伝えてください。そのうえで困りごとを聞き、次の10項目を順に確認してください：①現状業務 ②対象者 ③頻度 ④工数 ⑤使うデータ ⑥保存場所 ⑦個人情報の有無 ⑧位置情報の有無 ⑨既存システムで代替可否 ⑩期待する効果。最後に「課題・対象者・期待効果・MVP候補・概算工数」の5点に整理して出力してください。
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>サンプル2：相談のやり取り（イメージ）</h3>
+    <div class="cmt"><strong>社員：</strong>「点検のときに撮った写真と手書きのメモから、報告書を自動で作れませんか」</div>
+    <div class="note" style="margin-top:8px"><strong>AI：</strong>「承知しました。まず現在はどのように報告書を作っていますか？（①現状業務）」</div>
+    <div class="cmt"><strong>社員：</strong>「写真を整理して、メモを転記して、Excelで帳票を作って、上長に確認してもらっています。1件1時間くらいです」</div>
+    <div class="note" style="margin-top:8px"><strong>AI：</strong>「ありがとうございます。では誰が主に使いますか？（②対象者）…（以下、10項目の確認が続く）」</div>
+  </div>
+
+  <div class="card">
+    <h3>サンプル3：最後の整理（出力フォーマットの例）</h3>
+    <div class="note" style="margin-top:0">
+      <strong>【整理結果】（Idea台帳に貼れる形）</strong><br>
+      ・課題：写真整理・メモ転記・帳票作成・上長確認に1件60分かかっている<br>
+      ・対象者：現場監督・施工管理者・安全管理者<br>
+      ・期待効果：報告書作成時間 60分 → 20分<br>
+      ・MVP候補：写真アップロード、AI所見案の作成、Excel/PDF出力<br>
+      ・概算工数：PoC 2〜4週間／MVP 1〜2か月<br>
+      ・注意：写真に人物・位置情報が写る可能性があるため、マスキング処理の検討が必要
+    </div>
+    <p class="small" style="margin:8px 0 0">※この出力は「AIの案」です。<strong>必ず人間が確認・修正してから</strong>NotionのIdea DBへ登録します。</p>
+  </div>
+</section>
+
+<section id="done">
+  <div class="section-title"><div class="num">7</div><h2>できたか確かめる（完了チェック）</h2></div>
+  <div class="card">
+    <ul class="check">
+      <li>相談の最初に「社外秘・個人情報は入力しないで」と必ず案内される</li>
+      <li>10項目の課題確認がAIによって行われる</li>
+      <li>壁打ちの結果が、Notion Idea台帳に貼れる形で出力される</li>
+      <li>3名がテスト相談を行い「使いやすい」を確認した</li>
+      <li>AIの出力を人間が確認してから登録する運用が共有された</li>
+      <li>RAG／Notion連携の参照範囲が3名で決まり、現在テナントで接続テストまで完了した</li>
+    </ul>
+  </div>
+</section>
+
+<section id="caution">
+  <div class="section-title"><div class="num">8</div><h2>ちゅういすること</h2></div>
+  <div class="warning">
+    <ul class="plain">
+      <li><strong>秘密情報を入れない：</strong>社外秘・個人情報・位置情報は入力禁止。AIに入力した情報の扱いを過信しない。</li>
+      <li><strong>AIの答えは「案」：</strong>AIの出力は下書き。必ず人間（3名）が確認してからNotionへ登録し、正式な決定は承認フロー（NEO）で行います。</li>
+      <li><strong>参照範囲を守る：</strong>RAGで参照させるのは、人間レビュー済みの確定Knowledgeだけ。Slackの生ログや未確認の下書きは参照させない。</li>
+      <li><strong>利用者は3名（初期）：</strong>全社員への展開は、この基盤の運用が安定してから段階的に行います。</li>
+    </ul>
+  </div>
+</section>
+
+<div class="footer">
+  みらい AIエージェント事業推進基盤（Mirai AI Agent Business Platform）— Lightblue 設定手順書（ELI5）<br>
+  関連文書：<code>ai-dx-dev-saas-setup-guide.html</code>（全体計画書）／<code>Notion.html</code>（Knowledge基盤の手順書）<br>公式情報確認日：2026-09-04（最新UIはLightblueログイン後Help Centerを正とする）
+</div>
+
+</main>
+</body>
+</html>

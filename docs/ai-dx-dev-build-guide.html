@@ -1,0 +1,1632 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>全社員アイデア創出から本番運用・ナレッジ循環までのAI/DX開発プロセス — 構築に必要なもの・構築手順・Phase完了条件・レビュー版</title>
+<style>
+:root{
+  --bg:#f6f8fb;
+  --panel:#ffffff;
+  --ink:#172033;
+  --muted:#637083;
+  --line:#dfe5ee;
+  --navy:#183153;
+  --blue:#2563eb;
+  --cyan:#0891b2;
+  --green:#15803d;
+  --amber:#b45309;
+  --purple:#7c3aed;
+  --red:#b91c1c;
+  --shadow:0 8px 24px rgba(20,32,51,.08);
+  --radius:18px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+  line-height:1.75;
+}
+a{color:inherit;text-decoration:none}
+.hero{
+  background:
+    radial-gradient(circle at 85% 15%, rgba(37,99,235,.18), transparent 28%),
+    linear-gradient(135deg,#10233f,#183153 55%,#164e63);
+  color:#fff;
+  padding:64px 24px 48px;
+}
+.hero .wrap{max-width:1180px;margin:auto}
+.eyebrow{
+  display:inline-block;
+  padding:6px 12px;
+  border:1px solid rgba(255,255,255,.25);
+  background:rgba(255,255,255,.08);
+  border-radius:999px;
+  font-size:13px;
+  letter-spacing:.05em;
+}
+h1{font-size:clamp(28px,3.6vw,48px);line-height:1.25;margin:18px 0 12px}
+.hero p{max-width:960px;color:#dbeafe;font-size:17px;margin:0}
+.hero .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+.tag{
+  padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.1);
+  border:1px solid rgba(255,255,255,.16);font-size:13px
+}
+.topbar{
+  position:sticky;top:0;z-index:30;
+  background:rgba(255,255,255,.94);
+  backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--line);
+}
+.topbar .wrap{
+  max-width:1180px;margin:auto;padding:10px 18px;
+  display:flex;gap:8px;overflow-x:auto
+}
+.topbar a{
+  flex:0 0 auto;
+  padding:8px 12px;border-radius:10px;
+  color:#42516a;font-size:13px;font-weight:700
+}
+.topbar a:hover{background:#eef4ff;color:var(--blue)}
+main{max-width:1180px;margin:0 auto;padding:34px 20px 80px}
+section{margin:0 0 44px}
+.section-title{display:flex;align-items:center;gap:12px;margin:0 0 18px}
+.section-title .num{
+  width:38px;height:38px;border-radius:12px;
+  background:var(--navy);color:#fff;
+  display:grid;place-items:center;font-weight:800;flex:0 0 auto
+}
+.section-title h2{margin:0;font-size:26px;line-height:1.3}
+.section-title .sub{font-size:13px;color:var(--muted);font-weight:700}
+.lead{
+  background:#eef5ff;border:1px solid #d7e7ff;border-left:5px solid var(--blue);
+  padding:18px 20px;border-radius:14px;margin:0 0 22px
+}
+.grid{display:grid;gap:16px}
+.card{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:20px;box-shadow:var(--shadow)
+}
+.card h3{margin:0 0 8px;font-size:18px}
+.card p{margin:0;color:var(--muted)}
+.arch{
+  background:#0f172a;color:#e5eefc;border-radius:20px;padding:24px;overflow:auto;
+  box-shadow:var(--shadow)
+}
+.arch pre{margin:0;font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace;line-height:1.55;font-size:13.5px}
+.phase{
+  background:#fff;border:1px solid var(--line);border-radius:18px;margin:0 0 14px;
+  box-shadow:0 5px 18px rgba(20,32,51,.06);overflow:hidden
+}
+.phase-head{
+  display:grid;grid-template-columns:58px 1fr auto;gap:14px;align-items:center;
+  padding:14px 18px;border-bottom:1px solid var(--line);background:#fbfcfe
+}
+.phase-no{
+  width:46px;height:46px;border-radius:13px;background:var(--navy);color:#fff;
+  display:grid;place-items:center;font-size:15px;font-weight:900
+}
+.phase h3{margin:0;font-size:19px}
+.phase .tool{
+  font-size:12px;font-weight:800;color:#334155;background:#eef2f7;
+  border-radius:999px;padding:6px 11px;white-space:nowrap
+}
+.phase-body{padding:16px 18px 18px}
+.phase-body .sub{
+  display:flex;align-items:center;gap:8px;
+  margin:18px 0 8px;font-size:14px;font-weight:900;color:var(--navy)
+}
+.phase-body .sub:first-child{margin-top:0}
+.phase-body .sub::before{
+  content:"";width:14px;height:14px;border-radius:4px;background:var(--blue);flex:0 0 auto
+}
+.phase-body .sub.need::before{background:var(--blue)}
+.phase-body .sub.step::before{background:var(--purple)}
+.phase-body .sub.done::before{background:var(--green)}
+.phase-body .sub.rev::before{background:var(--amber)}
+table{
+  width:100%;border-collapse:separate;border-spacing:0;
+  background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden
+}
+th,td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:#f1f5f9;text-align:left;font-size:13px;color:#334155}
+tr:last-child td{border-bottom:0}
+.tw{overflow-x:auto;border-radius:14px;background:#fff;border:1px solid var(--line)}
+.tw table{border:none;border-radius:0}
+.flow{
+  background:#f1f5f9;border:1px solid #e2e8f0;border-radius:12px;
+  padding:12px 16px;overflow:auto;margin:6px 0 2px
+}
+.flow pre{margin:0;font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace;font-size:13px;line-height:1.55}
+.note{
+  border-left:4px solid var(--cyan);background:#ecfeff;padding:12px 14px;border-radius:10px;
+  color:#164e63;margin:12px 0 0
+}
+.decision{
+  border-left:4px solid var(--green);background:#f0fdf4;padding:12px 14px;border-radius:10px;
+  color:#14532d;margin:12px 0 0
+}
+.warning{
+  border-left:4px solid var(--amber);background:#fff7ed;padding:12px 14px;border-radius:10px;
+  color:#7c2d12;margin:12px 0 0
+}
+ul.check{list-style:none;margin:8px 0 0;padding:0}
+ul.check li{
+  padding:4px 0 4px 30px;position:relative;margin:2px 0
+}
+ul.check li::before{
+  content:"";position:absolute;left:4px;top:8px;width:16px;height:16px;
+  border:2px solid #94a3b8;border-radius:5px;background:#fff
+}
+ul.plain{margin:8px 0 0;padding-left:1.2em}
+ul.plain li{margin:3px 0}
+.cmt{
+  border:1px dashed #cbd5e1;border-radius:12px;background:#f8fafc;
+  padding:12px 16px;margin:12px 0 0;color:var(--muted);font-size:14px
+}
+.cmt strong{color:#475569}
+code{
+  background:#eef2f7;padding:2px 6px;border-radius:6px;
+  font-family:"SFMono-Regular",Consolas,monospace;font-size:.92em
+}
+.small{font-size:13px;color:var(--muted)}
+.footer{
+  margin-top:48px;border-top:1px solid var(--line);padding-top:22px;
+  color:var(--muted);font-size:13px;text-align:center
+}
+@media(max-width:640px){
+  .hero{padding-top:44px}
+  .phase-head{grid-template-columns:46px 1fr;padding:13px 14px}
+  .phase-head .tool{grid-column:2;justify-self:start}
+  .phase-no{width:40px;height:40px;font-size:13px}
+  main{padding-left:14px;padding-right:14px}
+  h1{font-size:26px}
+}
+@media print{
+  .topbar{display:none}
+  body{background:#fff}
+  .card,.phase,.arch{box-shadow:none}
+  .phase{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <span class="eyebrow">AI / DX DEVELOPMENT PROCESS — BUILD GUIDE</span>
+    <h1>全社員アイデア創出から本番運用・ナレッジ循環までの<br>AI/DX開発プロセス</h1>
+    <p><strong>構築に必要なもの・構築手順・Phase完了条件・レビュー版</strong> ― 全社員からのアイデア受付、企画化、承認、要件定義、開発、テスト、本番運用、効果測定、ナレッジ循環までを一貫したAI/DX開発プロセスとして構築するためのガイド。各Phaseで「何を準備するか」「どう構築するか」「何ができれば完了か」を明確にする。</p>
+    <div class="meta">
+      <span class="tag">Human-in-the-Loop</span><span class="tag">Stage Gate</span>
+      <span class="tag">DevSecOps</span><span class="tag">Continuous Learning</span>
+      <span class="tag">Process Master: AppSuite</span>
+      <span class="tag">監視方針: 特定製品に固定しない（監視ツール）</span>
+    </div>
+  </div>
+</header>
+
+<nav class="topbar">
+  <div class="wrap">
+    <a href="#info">文書情報</a>
+    <a href="#policy">全体方針</a>
+    <a href="#phases">Phase 01〜20</a>
+    <a href="#order">基盤構築順序</a>
+    <a href="#overview">全体像</a>
+    <a href="#loop">Knowledge Loop</a>
+    <a href="#principles">設計原則</a>
+    <a href="#checklist">全体レビュー</a>
+    <a href="#verdict">最終判定</a>
+  </div>
+</nav>
+
+<main>
+
+<section id="info">
+  <div class="section-title"><div class="num">00</div><h2>文書情報</h2></div>
+  <div class="tw">
+  <table>
+    <tbody>
+      <tr><th style="width:26%">文書種別</th><td>AI/DX開発プロセス構築ガイド</td></tr>
+      <tr><th>ステータス</th><td>Draft / Review</td></tr>
+      <tr><th>対象</th><td>全社員・経営企画・業務部門・DX推進・情報システム・セキュリティ・開発担当</td></tr>
+      <tr><th>基本思想</th><td>Human-in-the-Loop / Stage Gate / DevSecOps / Continuous Learning</td></tr>
+      <tr><th>Process Master</th><td>AppSuite</td></tr>
+      <tr><th>Knowledge / Context</th><td>Notion</td></tr>
+      <tr><th>Engineering SoR</th><td>GitHub</td></tr>
+      <tr><th>Approval SoR</th><td>desknet's NEO Workflow</td></tr>
+      <tr><th>Monitoring</th><td>監視ツール（特定製品には固定しない）</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <h3 style="margin:20px 0 10px;font-size:18px">レビュー記録</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>レビュー日</th><th>レビュー者</th><th>対象</th><th>判定</th><th>コメント</th></tr></thead>
+    <tbody>
+      <tr><td>YYYY-MM-DD</td><td></td><td></td><td>未確認 / 要修正 / 承認</td><td></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note" style="margin-top:14px">
+    <strong>文書目的：</strong>各Phaseで「何を準備するか」「どう構築するか」「何ができれば完了か」を明確にし、本基盤の構築を計画・レビュー可能にする。
+    <br><strong>監視方針：</strong>特定製品には固定せず、本書では性能・エラー・セキュリティイベント・AI利用量・コスト等を監視する仕組みを総称して<strong>「監視ツール」</strong>と表記する。
+  </div>
+</section>
+
+<section id="policy">
+  <div class="section-title"><div class="num">01</div><h2>全体方針</h2></div>
+  <p>本基盤では、各ツールの役割を明確に分離する。</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:22%">分類</th><th style="width:26%">必要なもの</th><th>主な用途</th></tr></thead>
+    <tbody>
+      <tr><td>AI窓口</td><td><strong>Lightblue</strong></td><td>全社員の壁打ち、質問、整理、ナレッジ検索</td></tr>
+      <tr><td>Knowledge基盤</td><td><strong>Notion</strong></td><td>Idea、Decision、Requirement、Architecture、Lessons Learned</td></tr>
+      <tr><td>案件管理</td><td><strong>AppSuite</strong></td><td>案件ID、Phase、Gate、責任者、KPI、ROI</td></tr>
+      <tr><td>承認</td><td><strong>desknet's NEO Workflow</strong></td><td>企画、要件、本番リリース等の正式承認</td></tr>
+      <tr><td>コラボレーション</td><td><strong>Slack</strong></td><td>検討、レビュー、通知</td></tr>
+      <tr><td>専門AI</td><td><strong>Claude / Claude Code</strong></td><td>要件、設計、レビュー、実装支援</td></tr>
+      <tr><td>開発管理</td><td><strong>GitHub</strong></td><td>Repository、Issue、PR、Test、Release</td></tr>
+      <tr><td>CI/CD</td><td><strong>GitHub Actions等</strong></td><td>MVP / Staging / Production Deploy</td></tr>
+      <tr><td>Observability</td><td><strong>監視ツール</strong></td><td>性能、エラー、Security Event、AI Cost等の監視</td></tr>
+      <tr><td>認証</td><td><strong>Entra ID等</strong></td><td>SSO、ユーザー認証</td></tr>
+      <tr><td>権限</td><td><strong>RBAC設計</strong></td><td>部署・案件・役割単位のアクセス制御</td></tr>
+      <tr><td>ログ</td><td><strong>監査ログ基盤</strong></td><td>操作、AI利用、Deploy、Security Event</td></tr>
+      <tr><td>共通キー</td><td><strong>案件ID</strong></td><td>全システムを横断して紐付ける</td></tr>
+      <tr><td>テスト基盤</td><td><strong>Staging環境</strong></td><td>UAT前の検証</td></tr>
+      <tr><td>データ</td><td>テストデータ / マスキング済みデータ</td><td>本番データを使わない検証</td></tr>
+      <tr><td>運用文書</td><td>Runbook / FAQ / Manual</td><td>Production運用</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 style="margin:22px 0 10px;font-size:18px">0.1 System of Recordの基本分担</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>情報</th><th>正本</th></tr></thead>
+    <tbody>
+      <tr><td>AIとの相談</td><td>Lightblue</td></tr>
+      <tr><td>アイデア・企画候補</td><td>Notion</td></tr>
+      <tr><td>正式案件</td><td>AppSuite</td></tr>
+      <tr><td>案件ID / Phase / Gate</td><td>AppSuite</td></tr>
+      <tr><td>承認・決裁</td><td>desknet's NEO Workflow</td></tr>
+      <tr><td>日常議論</td><td>Slack</td></tr>
+      <tr><td>決定事項・判断根拠</td><td>Notion</td></tr>
+      <tr><td>企画書・要件定義</td><td>Notion</td></tr>
+      <tr><td>ソースコード</td><td>GitHub</td></tr>
+      <tr><td>Issue / PR / Test</td><td>GitHub</td></tr>
+      <tr><td>Deployment</td><td>GitHub CI/CD</td></tr>
+      <tr><td>Monitoring</td><td>監視ツール</td></tr>
+      <tr><td>KPI / ROI数値</td><td>AppSuite / BI</td></tr>
+      <tr><td>Lessons Learned</td><td>Notion</td></tr>
+      <tr><td>AIが検索する確定知識</td><td>Notion → Lightblue</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 style="margin:22px 0 10px;font-size:18px">0.2 共通案件ID</h3>
+  <p>全システムを次のような案件IDで関連付ける。</p>
+  <div class="flow"><pre>DX-YYYY-NNNN</pre></div>
+  <p>例：</p>
+  <div class="flow"><pre>AppSuite
+DX-2026-0042
+
+Notion
+DX-2026-0042 Project Home
+
+GitHub
+dx-2026-0042-site-report-ai
+
+Workflow
+DX-2026-0042 本番リリース申請
+
+BI
+DX-2026-0042 KPI Dashboard</pre></div>
+
+  <div class="warning" style="margin-top:14px"><strong>全体レビュー観点</strong>
+    <ul class="check">
+      <li>各ツールの責務が重複していない</li>
+      <li>正本となるシステムが情報種別ごとに明確</li>
+      <li>案件IDでシステム横断トレースが可能</li>
+      <li>AIが直接「会社としての確定情報」を上書きしない</li>
+      <li>Human Reviewを通した情報のみKnowledgeとして再利用する</li>
+      <li>権限・監査ログ・情報管理方針が定義されている</li>
+    </ul>
+  </div>
+</section>
+
+<section id="phases">
+  <div class="section-title"><div class="num">02</div><h2>Phase 01〜20 構築詳細</h2><span class="sub">各Phase：必要なもの → 構築手順 → 完了条件 → レビュー観点</span></div>
+
+  <!-- Phase 01 -->
+  <article class="phase">
+    <div class="phase-head"><div class="phase-no">01</div><h3>全社員からアイデア受付</h3><div class="tool">使用：Lightblue</div></div>
+    <div class="phase-body">
+      <div class="sub need">必要なもの</div>
+      <div class="tw">
+      <table>
+        <thead><tr><th style="width:28%">項目</th><th>内容</th></tr></thead>
+        <tbody>
+          <tr><td>Lightblue</td><td>全社員利用可能なAI環境</td></tr>
+          <tr><td>AI利用ルール</td><td>社外秘・個人情報等の入力ルール</td></tr>
+          <tr><td>初期プロンプト</td><td>アイデア壁打ち用</td></tr>
+          <tr><td>Notion検索連携</td><td>過去事例・ルール参照</td></tr>
+          <tr><td>利用者情報</td><td>所属部署等</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="sub step">構築手順</div>
+      <div class="flow"><pre>社員
+ ↓
+Lightblue
+ ↓
+困りごと・アイデア
+ ↓
+AI壁打ち開始</pre></div>
+      <div class="sub done">完了条件</div>
+      <p>正式案件化前の<strong>自由な相談環境</strong>が動作していること。</p>
+      <div class="sub rev">レビュー観点</div>
+      <ul class="check">
+        <li>全社員が利用できる</li>
+        <li>AI利用ルールが提示される</li>
+        <li>入力禁止情報が明確</li>
+        <li>Notionの参照範囲が権限管理されている</li>
+        <li>このPhaseでは正式案件登録を行わない</li>
+      </ul>
+      <div class="cmt"><strong>レビューコメント：</strong></div>
+    </div>
+  </article>
+
+  <!-- Phase 02 -->
+  <article class="phase">
+    <div class="phase-head"><div class="phase-no">02</div><h3>課題明確化</h3><div class="tool">使用：Lightblue + Notion</div></div>
+    <div class="phase-body">
+      <div class="sub need">必要なもの</div>
+      <p>Lightblue側に以下の確認項目を持たせる。</p>
+      <div class="tw">
+      <table>
+        <thead><tr><th style="width:28%">確認項目</th><th>内容</th></tr></thead>
+        <tbody>
+          <tr><td>現状業務</td><td>現在どう処理しているか</td></tr>
+          <tr><td>対象者</td><td>誰が使うか</td></tr>
+          <tr><td>頻度</td><td>日次・月次等</td></tr>
+          <tr><td>工数</td><td>現在何時間かかるか</td></tr>
+          <tr><td>データ</td><td>何を利用するか</td></tr>
+          <tr><td>保存場所</td><td>現在どこに保存されているか</td></tr>
+          <tr><td>個人情報</td><td>含まれるか</td></tr>
+          <tr><td>位置情報</td><td>含まれるか</td></tr>
+          <tr><td>既存システム</td><td>代替できないか</td></tr>
+          <tr><td>効果</td><td>時間・費用・品質等</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="sub step">構築手順</div>
+      <div class="flow"><pre>社員の相談
+ ↓
+Lightblue
+ ↓
+Notion検索
+ ↓
+過去類似案件確認
+ ↓
+追加質問
+ ↓
+As-Is明確化
+ ↓
+期待To-Be整理</pre></div>
+      <div class="sub done">完了条件</div>
+      <p>「何となく便利そう」ではなく、<strong>課題・対象者・現状工数・期待効果が説明可能</strong>になっていること。</p>
+      <div class="sub rev">レビュー観点</div>
+      <ul class="check">
+        <li>As-Isが具体化されている</li>
+        <li>To-Beが具体化されている</li>
+        <li>定量的な現状値を取得できる</li>
+        <li>既存システムによる代替可否を確認している</li>
+        <li>情報・個人情報・位置情報等の初期リスク確認がある</li>
+      </ul>
+      <div class="cmt"><strong>レビューコメント：</strong></div>
+    </div>
+  </article>
+
+  <!-- Phase 03 -->
+  <article class="phase">
+    <div class="phase-head"><div class="phase-no">03</div><h3>アイデア構造化</h3><div class="tool">使用：Lightblue → Notion Idea DB</div></div>
+    <div class="phase-body">
+      <div class="sub need">必要なもの</div>
+      <p>Notionに <strong>Idea DB</strong> を構築する。</p>
+      <div class="tw">
+      <table>
+        <thead><tr><th style="width:28%">フィールド</th><th>内容</th></tr></thead>
+        <tbody>
+          <tr><td>Idea ID</td><td>アイデア識別子</td></tr>
+          <tr><td>提案者</td><td>発案者</td></tr>
+          <tr><td>所属</td><td>部署</td></tr>
+          <tr><td>原課題</td><td>最初の困りごと</td></tr>
+          <tr><td>壁打ち結果</td><td>AI整理</td></tr>
+          <tr><td>目的</td><td>解決したいこと</td></tr>
+          <tr><td>対象者</td><td>利用者</td></tr>
+          <tr><td>期待効果</td><td>工数・品質等</td></tr>
+          <tr><td>MVP</td><td>最小実装範囲</td></tr>
+          <tr><td>概算工数</td><td>PoC / MVP</td></tr>
+          <tr><td>リスク</td><td>情報・技術等</td></tr>
+          <tr><td>類似案件</td><td>過去案件</td></tr>
+          <tr><td>関連Knowledge</td><td>Notionページ</td></tr>
+          <tr><td>Status</td><td>検討中等</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="sub step">構築手順</div>
+      <div class="flow"><pre>Lightblue壁打ち結果
+       ↓
+AIによる構造化
+       ↓
+Notion Idea DB
+       ↓
+人間レビュー
+       ↓
+Idea確定</pre></div>
+      <div class="sub done">完了条件</div>
+      <p>アイデアがNotion上で<strong>再利用可能な構造化情報</strong>になっていること。</p>
+      <div class="sub rev">レビュー観点</div>
+      <ul class="check">
+        <li>Idea IDが採番されている</li>
+        <li>原課題とAI整理後の内容を区別して保持できる</li>
+        <li>人間レビュー済みである</li>
+        <li>類似案件・関連Knowledgeを参照できる</li>
+        <li>MVP仮説が記録されている</li>
+      </ul>
+      <div class="cmt"><strong>レビューコメント：</strong></div>
+    </div>
+  </article>
+
+  <!-- Phase 04 -->
+  <article class="phase">
+    <div class="phase-head"><div class="phase-no">04</div><h3>企画候補登録</h3><div class="tool">使用：Notion → AppSuite</div></div>
+    <div class="phase-body">
+      <p>ここから正式な案件管理プロセスへ移行する。</p>
+      <div class="sub need">必要なもの</div>
+      <p>AppSuiteに <strong>DX企画候補台帳</strong> を構築する。最低限、以下を保持する。</p>
+      <div class="flow"><pre>企画概要
+対象部署
+課題
+期待KPI
+概算費用
+想定効果
+リスク
+類似事例
+AXWG等のコメント
+Status</pre></div>
+      <div class="sub step">構築手順</div>
+      <div class="flow"><pre>Notion Idea
+ ↓
+AXWG等による確認
+ ↓
+案件化判断
+ ├─ NG → Notion Ideaとして保存
+ └─ OK
+      ↓
+   AppSuite</pre></div>
+      <div class="sub done">完了条件</div>
+      <p>正式に検討すべき案件だけがAppSuiteへ昇格すること。</p>
+      <div class="sub rev">レビュー観点</div>
+      <ul class="check">
+        <li>案件化基準が定義されている</li>
+        <li>不採用IdeaもNotionに保持される</li>
+        <li>AppSuiteには正式検討対象のみ登録される</li>
+        <li>KPI・費用・効果・リスクが初期登録される</li>
+      </ul>
+      <div class="cmt"><strong>レビューコメント：</strong></div>
+    </div>
+  </article>
+
+  <!-- Phase 05 -->
+  <article class="phase">
+    <div class="phase-head"><div class="phase-no">05</div><h3>案件ID発番</h3><div class="tool">使用：AppSuite</div></div>
+    <div class="phase-body">
+      <div class="sub need">必要なもの</div>
+      <p>案件番号採番ルール。例：</p>
+      <div class="flow"><pre>DX-2026-0042</pre></div>
+      <div class="sub step">構築手順</div>
+      <p>AppSuiteで案件IDを発番し、以下へ共通キーとして展開する。</p>
+      <div class="flow"><pre>AppSuite
+Notion
+Slack
+Workflow
+GitHub
+成果物
+BI</pre></div>
+      <div class="sub done">完了条件</div>
+      <p>案件に関する全成果物を <code>DX-2026-0042</code> のような案件IDから追跡できる状態。</p>
+      <div class="sub rev">レビュー観点</div>
+      <ul class="check">
+        <li>案件IDが重複しない</li>
+        <li>年度・連番等の採番規則が明確</li>
+        <li>全関連システムに案件IDを保持できる</li>
+        <li>案件IDから成果物へ逆引きできる</li>
+      </ul>
+      <div class="cmt"><strong>レビューコメント：</strong></div>
+    </div>
+  </article>
+
+  <!-- Phase 06 -->
+  <article class="phase">
+    <div class="phase-head"><div class="phase-no">06</div><h3>企画検討</h3><div class="tool">使用：Slack + Claude + Notion</div></div>
+    <div class="phase-body">
+      <div class="sub need">必要なもの</div>
+      <p>Notion側に以下を準備する。</p>
+      <div class="flow"><pre>Decision Log
+Meeting Notes
+Open Issues
+Action Items</pre></div>
+      <div class="sub step">構築手順</div>
+      <div class="flow"><pre>Slackで議論
+ ↓
+Claudeで整理
+ ↓
+決定事項
+未決事項
+Action
+ ↓
+人間レビュー
+ ↓
+Notion</pre></div>
+      <div class="warning">Slack全ログをそのままNotionへ保存しない。
+        <div class="flow" style="margin-top:8px"><pre>Raw Conversation
+ ↓
+AI整理
+ ↓
+Human Review
+ ↓
+確定Knowledge</pre></div>
+      </div>
+      <div class="sub done">完了条件</div>
+      <p>「誰かがSlackで言っていた」ではなく、<strong>正式なDecisionとしてNotionに残っている</strong>こと。</p>
+      <div class="sub rev">レビュー観点</div>
+      <ul class="check">
+        <li>Raw Conversationと確定Knowledgeを分離している</li>
+        <li>DecisionのOwnerが明確</li>
+        <li>未決事項とActionが区別されている</li>
+        <li>AI要約を人間が確認している</li>
+        <li>意思決定理由を後から追跡できる</li>
+      </ul>
+      <div class="cmt"><strong>レビューコメント：</strong></div>
+    </div>
+  </article>
+
+  <!-- Phase 07 -->
+  <article class="phase">
+    <div class="phase-head"><div class="phase-no">07</div><h3>企画審査</h3><div class="tool">使用：Notion + Workflow + AppSuite</div></div>
+    <div class="phase-body">
+      <div class="sub need">必要なもの</div>
+      <p>企画書テンプレートに最低限以下を持たせる。</p>
+      <div class="flow"><pre>背景
+目的
+As-Is
+To-Be
+対象範囲
+MVP
+KPI
+費用
+ROI
+情報管理
+Security
+Risk
+Decision Log</pre></div>
+      <div class="sub step">構築手順</div>
+      <div class="flow"><pre>Notion企画書
+ ↓
+人間確認
+ ↓
+Workflow申請
+ ↓
+承認 / 差戻し
+ ↓
+AppSuite Gate更新</pre></div>
+      <div class="sub done">完了条件</div>
+      <p>承認履歴がWorkflowに存在し、AppSuiteが以下の状態となっていること。</p>
+      <div class="flow"><pre>企画Gate：Approved</pre></div>
+      <div class="sub rev">レビュー観点</div>
+      <ul class="check">
+        <li>企画書テンプレートが標準化されている</li>
+        <li>Workflowに承認履歴が残る</li>
+        <li>差戻し理由が記録される</li>
+        <li>AppSuite GateとWorkflow結果が一致する</li>
+        <li>AI出力のみで自動承認されない</li>
+      </ul>
+      <div class="cmt"><strong>レビューコメント：</strong></div>
+    </div>
+  </article>
+
+  <!-- Phase 08 -->
+  <article class="phase">
+    <div class="phase-head"><div class="phase-no">08</div><h3>要件定義</h3><div class="tool">使用：Claude + Slack + Notion</div></div>
+    <div class="phase-body">
+      <div class="sub need">必要なもの</div>
+      <p>NotionにRequirements領域を用意する。</p>
+      <p><strong>業務要件</strong></p>
+      <div class="flow"><pre>機能
+入力
+処理
+出力
+承認
+履歴</pre></div>
+      <p><strong>非機能要件</strong></p>
+      <div class="flow"><pre>認証
+RBAC
+監査ログ
+データ保管
+Security
+AI送信データ最小化
+性能
+可用性</pre></div>
+      <div class="sub step">構築手順</div>
+      <p>Claudeが以下を参照して要件定義案を作成する。</p>
+      <div class="flow"><pre>Lightblue相談
+＋
+Idea DB
+＋
+Decision Log
+＋
+企画承認結果
+＋
+確定済みSlack議論
+＋
+類似案件</pre></div>
+      <p>その後、人間による確認・修正を行う。</p>
+      <div class="flow"><pre>AI生成
+ ↓
+担当者レビュー
+ ↓
+修正
+ ↓
+Notion Requirements</pre></div>
+      <div class="sub done">完了条件</div>
+      <p>Notionに <strong>Living Documentとして要件定義書</strong> が存在すること。</p>
+      <div class="sub rev">レビュー観点</div>
+      <ul class="check">
+        <li>業務要件と非機能要件を分離している</li>
+        <li>要件の根拠を追跡できる</li>
+        <li>セキュリティ・監査ログ・権限要件が含まれる</li>
+        <li>AI送信データ最小化方針がある</li>
+        <li>Version管理されている</li>
+      </ul>
+      <div class="cmt"><strong>レビューコメント：</strong></div>
+    </div>
+  </article>
+
+  <!-- Phase 09 -->
+  <article class="phase">
+    <div class="phase-head"><div class="phase-no">09</div><h3>要件承認</h3><div class="tool">使用：Notion + AppSuite + Workflow</div></div>
+    <div class="phase-body">
+      <div class="sub need">必要なもの</div>
+      <p>承認者を明確化する。</p>
+      <div class="flow"><pre>業務責任者
+PO
+情報システム責任者
+セキュリティ責任者</pre></div>
+      <p>Notion側では以下を保持する。</p>
+      <div class="flow"><pre>Version
+Status
+Owner
+Approved Date</pre></div>
+      <div class="sub step">構築手順</div>
+      <div class="flow"><pre>Requirements確定
+ ↓
+Workflow
+ ↓
+各責任者承認
+ ↓
+AppSuite Gate更新</pre></div>
+      <div class="sub done">完了条件</div>
+      <div class="flow"><pre>必須要件       Approved
+情報管理方針   Approved
+KPI            Approved
+MVP予算        Approved</pre></div>
+      <div class="sub rev">レビュー観点</div>
+      <ul class="check">
+        <li>承認者の役割が明確</li>
+        <li>SOD上、作成者と承認者が適切に分離されている</li>
+        <li>承認対象Versionが固定される</li>
+        <li>AppSuiteのGateが承認結果と同期する</li>
+      </ul>
+      <div class="cmt"><strong>レビューコメント：</strong></div>
+    </div>
+  </article>
+
+  <!-- Phase 10 -->
+  <article class="phase">
+    <div class="phase-head"><div class="phase-no">10</div><h3>開発案件化</h3><div class="tool">使用：GitHub + Notion</div></div>
+    <div class="phase-body">
+      <div class="sub need">必要なもの</div>
+      <p>GitHub Organization配下にRepositoryを作成する。例：</p>
+      <div class="flow"><pre>dx-2026-0042-site-report-ai</pre></div>
+      <p>Issue例：</p>
+      <div class="flow"><pre>Authentication
+RBAC
+Photo API
+AI API
+Report
+PDF / Excel
+Audit Log
+CI/CD
+Monitoring</pre></div>
+      <div class="sub step">構築手順</div>
+      <div class="flow"><pre>要件承認
+ ↓
+GitHub Repository作成
+ ↓
+GitHub Project作成
+ ↓
+Issue分解
+ ↓
+Notion Project Homeからリンク</pre></div>
+      <div class="sub done">完了条件</div>
+      <p>要件から開発Issueまでトレーサビリティが成立していること。</p>
+      <div class="sub rev">レビュー観点</div>
+      <ul class="check">
+        <li>Repository名に案件IDが含まれる</li>
+        <li>Issueが要件と紐付いている</li>
+        <li>Architecture / ADRへの導線がある</li>
+        <li>開発ルール・Branchルールが定義されている</li>
+      </ul>
+      <div class="cmt"><strong>レビューコメント：</strong></div>
+    </div>
+  </article>
+
+  <!-- Phase 11 -->
+  <article class="phase">
+    <div class="phase-head"><div class="phase-no">11</div><h3>MVP開発</h3><div class="tool">使用：Claude Code + GitHub + Notion</div></div>
+    <div class="phase-body">
+      <div class="sub need">必要なもの</div>
+      <div class="flow"><pre>Git Repository
+Branchルール
+Issue
+Pull Request
+Coding Rule
+Test Rule
+Architecture
+ADR</pre></div>
+      <div class="sub step">構築手順</div>
+      <div class="flow"><pre>Issue
+ ↓
+Branch
+ ↓
+Claude Code支援
+ ↓
+実装
+ ↓
+Test
+ ↓
+Pull Request
+ ↓
+Review
+ ↓
+Merge</pre></div>
+      <p>Notionにはコードそのものではなく、以下のような<strong>「なぜそうしたか」</strong>を残す。</p>
+      <div class="flow"><pre>Architecture
+モデル選定理由
+Security判断
+ADR</pre></div>
+      <div class="sub done">完了条件</div>
+      <p>MVP対象機能がIssue / PR単位で追跡可能であること。</p>
+      <div class="sub rev">レビュー観点</div>
+      <ul class="check">
+        <li>AI生成コードも通常コードと同等にレビューされる</li>
+        <li>Issue単位で実装される</li>
+        <li>PRレビューを必須化している</li>
+        <li>Architectureと実装の整合性を確認できる</li>
+        <li>重要な技術判断がADRとして保存される</li>
+      </ul>
+      <div class="cmt"><strong>レビューコメント：</strong></div>
+    </div>
+  </article>
+
+  <!-- Phase 12 -->
+  <article class="phase">
+    <div class="phase-head"><div class="phase-no">12</div><h3>テスト</h3><div class="tool">使用：GitHub CI/CD + Notion</div></div>
+    <div class="phase-body">
+      <div class="sub need">必要なもの</div>
+      <p>CI/CDで以下を実行する。</p>
+      <div class="flow"><pre>Lint
+Unit Test
+Integration Test
+Dependency Scan
+Secret Scan
+Container Scan</pre></div>
+      <p>AIアプリの場合はさらに以下を評価する。</p>
+      <div class="flow"><pre>禁止表現
+不適切表現
+AI出力品質</pre></div>
+      <div class="sub step">構築手順</div>
+      <div class="flow"><pre>Pull Request
+ ↓
+CI
+ ├─ Lint
+ ├─ Unit
+ ├─ Integration
+ ├─ Vulnerability Scan
+ └─ AI Test
+ ↓
+Pass
+ ↓
+Merge</pre></div>
+      <div class="sub done">完了条件</div>
+      <p>GitHubが詳細Test Resultの正本になっていること。Notionには以下を保存する。</p>
+      <div class="flow"><pre>Test Strategy
+Test Summary
+Known Issues
+重要判断</pre></div>
+      <div class="sub rev">レビュー観点</div>
+      <ul class="check">
+        <li>自動テストがPRと連動している</li>
+        <li>Secret Scanを実施する</li>
+        <li>脆弱性チェックを実施する</li>
+        <li>AI品質評価が定義されている</li>
+        <li>Known Issuesが明文化されている</li>
+      </ul>
+      <div class="cmt"><strong>レビューコメント：</strong></div>
+    </div>
+  </article>
+
+  <!-- Phase 13 -->
+  <article class="phase">
+    <div class="phase-head"><div class="phase-no">13</div><h3>MVP評価</h3><div class="tool">使用：Slack + AppSuite + Notion</div></div>
+    <div class="phase-body">
+      <div class="sub need">必要なもの</div>
+      <p>KPI測定項目。例：</p>
+      <div class="flow"><pre>作成時間
+AI所見採用率
+利用者満足度
+試行件数</pre></div>
+      <div class="sub step">構築手順</div>
+      <div class="flow"><pre>MVP利用
+ ↓
+利用者Feedback → Slack
+ ↓
+数値 → AppSuite
+ ↓
+分析 → Notion</pre></div>
+      <div class="sub done">完了条件</div>
+      <p>MVPを<strong>感想ではなくKPIで継続 / 改善 / 停止判断</strong>できること。</p>
+      <div class="sub rev">レビュー観点</div>
+      <ul class="check">
+        <li>KPIのBaselineがある</li>
+        <li>MVP前後を比較できる</li>
+        <li>定量評価と定性Feedbackを分離している</li>
+        <li>継続 / 改善 / 停止の判定基準がある</li>
+      </ul>
+      <div class="cmt"><strong>レビューコメント：</strong></div>
+    </div>
+  </article>
+
+  <!-- Phase 14 -->
+  <article class="phase">
+    <div class="phase-head"><div class="phase-no">14</div><h3>Staging</h3><div class="tool">使用：GitHub + CI/CD + Notion</div></div>
+    <div class="phase-body">
+      <div class="sub need">必要なもの</div>
+      <div class="flow"><pre>Staging環境
+テストアカウント
+テスト現場
+マスキング済み画像
+テストデータ
+CI/CD</pre></div>
+      <div class="sub step">構築手順</div>
+      <div class="flow"><pre>main
+ ↓
+CI/CD
+ ↓
+Staging Deploy
+ ↓
+Smoke Test
+ ↓
+UAT準備</pre></div>
+      <div class="decision"><strong>重要条件：本番データを使用しない。</strong></div>
+      <div class="sub done">完了条件</div>
+      <p>Notionに以下が揃っていること。</p>
+      <div class="flow"><pre>Staging構成
+テストデータ方針
+制約
+UAT手順</pre></div>
+      <div class="sub rev">レビュー観点</div>
+      <ul class="check">
+        <li>ProductionとStagingが分離されている</li>
+        <li>本番データを利用していない</li>
+        <li>マスキング済みテストデータを利用している</li>
+        <li>Deploy手順が自動化されている</li>
+        <li>UAT実施準備が完了している</li>
+      </ul>
+      <div class="cmt"><strong>レビューコメント：</strong></div>
+    </div>
+  </article>
+
+  <!-- Phase 15 -->
+  <article class="phase">
+    <div class="phase-head"><div class="phase-no">15</div><h3>業務受入試験（UAT）</h3><div class="tool">使用：AppSuite + Notion</div></div>
+    <div class="phase-body">
+      <div class="sub need">必要なもの</div>
+      <div class="flow"><pre>UAT Scenario
+Expected Result
+Actual Result
+Pass / Fail
+Bug
+Priority
+担当者
+受入判定</pre></div>
+      <div class="sub step">構築手順</div>
+      <div class="flow"><pre>利用部門
+ ↓
+業務シナリオ実行
+ ↓
+AppSuite記録
+ ↓
+不具合修正
+ ↓
+再試験
+ ↓
+業務責任者判定</pre></div>
+      <div class="sub done">完了条件</div>
+      <p>例：</p>
+      <div class="flow"><pre>重大障害：0
+高優先度不具合：解消
+業務責任者：受入可</pre></div>
+      <div class="sub rev">レビュー観点</div>
+      <ul class="check">
+        <li>実業務シナリオで確認している</li>
+        <li>UAT結果がAppSuiteに残る</li>
+        <li>不具合Priorityの基準がある</li>
+        <li>業務責任者が最終受入判定を行う</li>
+      </ul>
+      <div class="cmt"><strong>レビューコメント：</strong></div>
+    </div>
+  </article>
+
+  <!-- Phase 16 -->
+  <article class="phase">
+    <div class="phase-head"><div class="phase-no">16</div><h3>本番承認</h3><div class="tool">使用：Workflow + AppSuite + Notion</div></div>
+    <div class="phase-body">
+      <div class="sub need">必要なもの</div>
+      <p>Notion Project Homeに以下を集約する。</p>
+      <div class="flow"><pre>UAT Result
+Security Review
+Monitoring Design
+Rollback Plan
+Runbook
+User Manual</pre></div>
+      <div class="sub step">構築手順</div>
+      <div class="flow"><pre>UAT完了
+ ↓
+Release判定資料作成
+ ↓
+Workflow
+ ↓
+本番承認
+ ↓
+AppSuite Production Gate</pre></div>
+      <div class="sub done">Gate条件</div>
+      <div class="flow"><pre>UAT完了
+重大不具合なし
+Security確認完了
+監視設計完了
+Rollback確認済み
+責任者承認</pre></div>
+      <div class="sub done">完了条件</div>
+      <p>本番リリースに必要な証跡・計画・承認がすべて揃い、Production GateがApprovedであること。</p>
+      <div class="sub rev">レビュー観点</div>
+      <ul class="check">
+        <li>UAT完了を確認している</li>
+        <li>Security Reviewが完了している</li>
+        <li>Monitoring Designが定義されている</li>
+        <li>Rollback Planが検証されている</li>
+        <li>Runbook / User Manualが準備されている</li>
+        <li>Workflowで正式承認されている</li>
+      </ul>
+      <div class="cmt"><strong>レビューコメント：</strong></div>
+    </div>
+  </article>
+
+  <!-- Phase 17 -->
+  <article class="phase">
+    <div class="phase-head"><div class="phase-no">17</div><h3>Production</h3><div class="tool">使用：GitHub CI/CD + AppSuite + Notion + 監視ツール</div></div>
+    <div class="phase-body">
+      <div class="sub need">必要なもの</div>
+      <div class="flow"><pre>Release Tag
+Production Pipeline
+Production Environment
+Rollback
+Monitoring
+Runbook
+FAQ
+Manual
+監視ツール</pre></div>
+      <div class="sub step">構築手順</div>
+      <div class="flow"><pre>Approved Release Tag
+ ↓
+CI/CD
+ ↓
+Production Deploy
+ ↓
+Health Check
+ ↓
+監視ツールによるMonitoring開始</pre></div>
+      <div class="sub done">正本</div>
+      <div class="tw">
+      <table>
+        <thead><tr><th>情報</th><th>正本</th></tr></thead>
+        <tbody>
+          <tr><td>Release</td><td>GitHub</td></tr>
+          <tr><td>Deployment</td><td>GitHub CI/CD</td></tr>
+          <tr><td>本番日</td><td>AppSuite</td></tr>
+          <tr><td>Version</td><td>AppSuite</td></tr>
+          <tr><td>Architecture</td><td>Notion</td></tr>
+          <tr><td>Runbook</td><td>Notion</td></tr>
+          <tr><td>Manual</td><td>Notion</td></tr>
+          <tr><td>Monitoring</td><td>監視ツール</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="sub done">完了条件</div>
+      <p>承認済みReleaseがProductionへDeployされ、Health Checkおよび監視開始まで正常に完了していること。</p>
+      <div class="sub rev">レビュー観点</div>
+      <ul class="check">
+        <li>承認済みRelease TagのみDeployできる</li>
+        <li>Deploy履歴を追跡できる</li>
+        <li>Health Checkが定義されている</li>
+        <li>Rollback可能である</li>
+        <li>監視ツールで正常性を確認できる</li>
+      </ul>
+      <div class="cmt"><strong>レビューコメント：</strong></div>
+    </div>
+  </article>
+
+  <!-- Phase 18 -->
+  <article class="phase">
+    <div class="phase-head"><div class="phase-no">18</div><h3>DevOps</h3><div class="tool">使用：監視ツール + Slack + GitHub + Notion</div></div>
+    <div class="phase-body">
+      <div class="sub need">必要な監視項目</div>
+      <div class="flow"><pre>Login
+写真Upload
+AI API
+帳票出力
+Error
+CPU
+Memory
+Security Event
+AI Cost</pre></div>
+      <p>案件・システムに応じて必要な監視項目を追加する。</p>
+      <div class="sub step">構築手順</div>
+      <p><strong>通常時</strong></p>
+      <div class="flow"><pre>Application
+ ↓
+Metrics / Logs / Events
+ ↓
+監視ツール
+ ↓
+正常性・性能・セキュリティ・AI Cost監視</pre></div>
+      <p><strong>障害時</strong></p>
+      <div class="flow"><pre>監視ツール
+ ↓
+Alert
+ ↓
+Slack
+ ↓
+GitHub Issue / Incident
+ ↓
+対応
+ ↓
+復旧
+ ↓
+Postmortem
+ ↓
+Notion</pre></div>
+      <div class="sub done">完了条件</div>
+      <p>障害について以下まで残せること。</p>
+      <div class="flow"><pre>原因
+影響
+対応
+再発防止
+Lessons Learned</pre></div>
+      <div class="sub rev">レビュー観点</div>
+      <ul class="check">
+        <li>監視対象と閾値が定義されている</li>
+        <li>Alert先が明確</li>
+        <li>Incident管理手順がある</li>
+        <li>Security Eventを監視できる</li>
+        <li>AI利用量・コストを確認できる</li>
+        <li>PostmortemをKnowledge化できる</li>
+      </ul>
+      <div class="cmt"><strong>レビューコメント：</strong></div>
+    </div>
+  </article>
+
+  <!-- Phase 19 -->
+  <article class="phase">
+    <div class="phase-head"><div class="phase-no">19</div><h3>効果測定</h3><div class="tool">使用：AppSuite + BI + Notion</div></div>
+    <div class="phase-body">
+      <div class="sub need">必要なKPI</div>
+      <div class="flow"><pre>月間件数
+平均時間
+AI採用率
+差戻し率
+利用者数
+削減工数
+Cost
+ROI</pre></div>
+      <div class="sub step">構築手順</div>
+      <div class="flow"><pre>Productionデータ
+ ↓
+AppSuite / BI
+ ↓
+KPI / ROI
+ ↓
+分析
+ ↓
+Notion</pre></div>
+      <p>役割を以下のように分離する。</p>
+      <div class="flow"><pre>AppSuite / BI
+＝ What happened
+
+Notion
+＝ Why it happened</pre></div>
+      <div class="sub done">完了条件</div>
+      <p>単なる「導入した」で終わらず、<strong>導入効果を数字と理由の両方で説明できること。</strong></p>
+      <div class="sub rev">レビュー観点</div>
+      <ul class="check">
+        <li>KPIを定期取得できる</li>
+        <li>ROIを算出できる</li>
+        <li>導入前Baselineとの比較がある</li>
+        <li>効果が出た理由 / 出なかった理由をNotionに残す</li>
+        <li>次の改善案へ接続できる</li>
+      </ul>
+      <div class="cmt"><strong>レビューコメント：</strong></div>
+    </div>
+  </article>
+
+  <!-- Phase 20 -->
+  <article class="phase">
+    <div class="phase-head"><div class="phase-no">20</div><h3>ナレッジ化</h3><div class="tool">使用：Notion + Lightblue RAG</div></div>
+    <div class="phase-body">
+      <p>本Phaseは、AI/DX開発プロセスを一度きりの案件で終わらせず、組織知として次の企画へ戻すための重要Phaseである。</p>
+      <div class="sub need">必要なKnowledge分類</div>
+      <div class="tw">
+      <table>
+        <thead><tr><th style="width:22%">分類</th><th>保存内容</th></tr></thead>
+        <tbody>
+          <tr><td>Business</td><td>企画書、As-Is / To-Be、KPI、ROI、Feedback</td></tr>
+          <tr><td>Governance</td><td>審査、承認条件、Security、Risk</td></tr>
+          <tr><td>Engineering</td><td>Requirement、Architecture、ADR、Test</td></tr>
+          <tr><td>AI</td><td>Prompt、RAG、良い生成、修正例、禁止表現</td></tr>
+          <tr><td>Lessons Learned</td><td>成功・失敗・不採用設計・注意点</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="sub step">構築手順</div>
+      <div class="flow"><pre>案件完了
+ ↓
+各システム情報収集
+ ↓
+AI整理
+ ↓
+Human Review
+ ↓
+Notion Knowledge
+ ↓
+Lightblue RAG
+ ↓
+次の社員相談</pre></div>
+      <div class="sub done">完了条件</div>
+      <p>次の社員が類似相談を行った際に、Lightblueが以下を参照できること。</p>
+      <div class="flow"><pre>過去企画
+過去Requirement
+過去Risk
+過去KPI
+過去Lessons Learned</pre></div>
+      <p>これによって以下の循環を完成させる。</p>
+      <div class="flow"><pre>Idea
+ ↓
+Project
+ ↓
+Development
+ ↓
+Production
+ ↓
+Knowledge
+ ↓
+次のIdea</pre></div>
+      <div class="sub rev">レビュー観点</div>
+      <ul class="check">
+        <li>確定KnowledgeとRaw情報を分離している</li>
+        <li>Human Review済み情報のみRAG対象にする</li>
+        <li>成功事例だけでなく失敗・不採用理由も保存する</li>
+        <li>Knowledgeにアクセス権を設定する</li>
+        <li>次のAI相談から再利用できる</li>
+      </ul>
+      <div class="cmt"><strong>レビューコメント：</strong></div>
+    </div>
+  </article>
+</section>
+
+<section id="order">
+  <div class="section-title"><div class="num">03</div><h2>システム基盤を構築する順番</h2><span class="sub">20の業務Phaseとは別に、システム基盤自体は以下の順序で構築する</span></div>
+  <div class="arch"><pre>
+STEP 1
+ID・マスタ設計
+────────────────
+案件ID
+部署
+社員
+Role
+Phase
+Gate
+Status
+
+        ↓
+
+STEP 2
+Knowledge基盤
+────────────────
+Notion
+Idea DB
+Decision Log
+Requirements
+Architecture / ADR
+Lessons Learned
+
+        ↓
+
+STEP 3
+Process基盤
+────────────────
+AppSuite
+案件台帳
+Phase
+Gate
+KPI
+ROI
+
+        ↓
+
+STEP 4
+Governance
+────────────────
+desknet's NEO Workflow
+企画承認
+要件承認
+本番承認
+
+        ↓
+
+STEP 5
+AI受付
+────────────────
+Lightblue
+壁打ち
+Notion検索
+Idea構造化
+
+        ↓
+
+STEP 6
+Collaboration
+────────────────
+Slack
+Claude
+AI整理
+Decision生成
+
+        ↓
+
+STEP 7
+Engineering
+────────────────
+GitHub
+Repository
+Issue
+PR
+CI/CD
+Security Scan
+
+        ↓
+
+STEP 8
+Environment
+────────────────
+MVP
+Staging
+Production
+
+        ↓
+
+STEP 9
+Operations
+────────────────
+監視ツール
+Alert
+Incident
+DevOps
+
+        ↓
+
+STEP 10
+Knowledge Loop
+────────────────
+KPI
+ROI
+Postmortem
+Lessons Learned
+      ↓
+Notion
+      ↓
+Lightblue RAG
+  </pre></div>
+</section>
+
+<section id="overview">
+  <div class="section-title"><div class="num">04</div><h2>最終的に構築する全体像</h2></div>
+  <div class="arch"><pre>
+                         ┌─────────────────────┐
+                         │       全社員         │
+                         └──────────┬──────────┘
+                                    │
+                                    ▼
+                         ┌─────────────────────┐
+                         │     Lightblue       │
+                         │ AI相談 / RAG / 壁打ち │
+                         └──────────┬──────────┘
+                                    │
+                                    ▼
+                         ┌─────────────────────┐
+                         │       Notion        │
+                         │ Knowledge / Context │
+                         └──────────┬──────────┘
+                                    │
+                                    ▼
+                         ┌─────────────────────┐
+                         │      AppSuite       │
+                         │ Process Master      │
+                         └──────────┬──────────┘
+                                    │
+                                    ▼
+                    ┌───────────────────────────┐
+                    │ desknet's NEO Workflow    │
+                    │ Gate / Approval           │
+                    └─────────────┬─────────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │ Slack + Claude   │
+                         │ 検討 / 設計支援   │
+                         └────────┬─────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │      GitHub      │
+                         │ Code / PR / Test │
+                         └────────┬─────────┘
+                                  │
+                                  ▼
+                    MVP → Staging → UAT → Production
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │    監視ツール      │
+                         │ Observability    │
+                         └────────┬─────────┘
+                                  │
+                                  ▼
+                               DevOps
+                                  │
+                    ┌─────────────┴─────────────┐
+                    ▼                           ▼
+              AppSuite / BI                  Notion
+              KPI / ROI                 Lessons Learned
+                    │                           │
+                    └─────────────┬─────────────┘
+                                  ▼
+                              Lightblue
+                                  │
+                                  ▼
+                              次のIdea
+  </pre></div>
+</section>
+
+<section id="loop">
+  <div class="section-title"><div class="num">05</div><h2>Knowledge Feedback Loop</h2></div>
+  <div class="arch"><pre>
+全社員
+  ↓
+Lightblue
+AI壁打ち
+  ↓
+Notion
+Idea / Knowledge
+  ↓
+AXWG等
+  ↓
+AppSuite
+正式案件
+  ↓
+desknet's NEO Workflow
+審査・承認
+  ↓
+Notion
+要件・意思決定
+  ↓
+Claude
+  ↓
+GitHub
+開発・テスト
+  ↓
+MVP / UAT
+  ↓
+Production
+  ↓
+監視ツール / DevOps
+  ↓
+AppSuite / BI
+KPI・ROI
+  ↓
+Notion
+Lessons Learned
+  ↓
+Lightblue
+  ↓
+次のアイデア
+  </pre></div>
+</section>
+
+<section id="principles">
+  <div class="section-title"><div class="num">06</div><h2>設計原則</h2></div>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:30%">ツール</th><th>原則</th></tr></thead>
+    <tbody>
+      <tr><td>1. Slack</td><td><strong>「話す場所」</strong> — 自由な相談・議論・レビュー・通知を行う。</td></tr>
+      <tr><td>2. Lightblue</td><td><strong>「考えるAI」</strong> — 壁打ち・整理・検索・企画化を支援する。</td></tr>
+      <tr><td>3. Notion</td><td><strong>「覚える場所」</strong> — 人間レビュー済みの確定Knowledgeを保存する。</td></tr>
+      <tr><td>4. AppSuite</td><td><strong>「案件を管理する場所」</strong> — Phase・Gate・責任者・KPI・ROIを管理する。</td></tr>
+      <tr><td>5. desknet's NEO Workflow</td><td><strong>「会社として承認する場所」</strong> — 申請・承認・差戻し・決裁を管理する。</td></tr>
+      <tr><td>6. Claude</td><td><strong>「専門的に考えるAI」</strong> — 要件・設計・レビュー・開発を支援する。</td></tr>
+      <tr><td>7. GitHub</td><td><strong>「作る場所」</strong> — Issue・Code・PR・Test・Releaseを管理する。</td></tr>
+      <tr><td>8. 監視ツール</td><td><strong>「見守る仕組み」</strong> — 性能・可用性・エラー・Security Event・AI Cost等を継続監視する。</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="quote" style="padding:22px;border-radius:18px;background:linear-gradient(135deg,#eff6ff,#f5f3ff);border:1px solid #dbeafe;text-align:center;font-size:20px;font-weight:900;color:#1e3a8a;margin-top:22px">
+    最重要原則
+    <div class="flow" style="margin-top:12px;background:#fff;border-color:#c7d2fe"><pre>Conversation
+ ↓
+AI整理
+ ↓
+Human Review
+ ↓
+Notion Knowledge</pre></div>
+  </div>
+  <div class="lead" style="margin-top:18px">
+    Slack上の古い発言、誤解、途中案、雑談をAIが同等のKnowledgeとして扱わないようにする。<br>
+    <strong>会社として信頼できるKnowledgeのみをNotionへ蓄積する。</strong><br>
+    そのKnowledgeをLightblue、Claude、将来のAI Agentが再利用することで、開発プロセス自体が継続的に賢くなる循環型AX基盤を形成する。
+  </div>
+</section>
+
+<section id="checklist">
+  <div class="section-title"><div class="num">07</div><h2>全体レビュー用チェックリスト</h2></div>
+
+  <div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+    <div class="card"><h3>Governance</h3>
+      <ul class="check">
+        <li>Phaseごとの責任者が明確</li>
+        <li>Gateごとの承認者が明確</li>
+        <li>SOD（職務分掌）が定義されている</li>
+        <li>AI単独で正式承認される工程がない</li>
+        <li>差戻し・再承認ルールが定義されている</li>
+      </ul>
+    </div>
+    <div class="card"><h3>Knowledge</h3>
+      <ul class="check">
+        <li>NotionをKnowledge / Contextの中心としている</li>
+        <li>Raw Conversationをそのまま確定Knowledgeにしない</li>
+        <li>Decision Logを残す</li>
+        <li>Lessons Learnedを残す</li>
+        <li>RAG対象Knowledgeを人間が確認する</li>
+      </ul>
+    </div>
+    <div class="card"><h3>Process</h3>
+      <ul class="check">
+        <li>AppSuiteをProcess Masterとしている</li>
+        <li>案件IDが全システム共通キーになっている</li>
+        <li>Phase / Gate / Statusを追跡できる</li>
+        <li>KPI / ROIを案件単位で管理できる</li>
+      </ul>
+    </div>
+    <div class="card"><h3>Engineering</h3>
+      <ul class="check">
+        <li>GitHubをEngineering SoRとしている</li>
+        <li>Issue / PR / Test / Releaseが追跡可能</li>
+        <li>CI/CDが定義されている</li>
+        <li>Security Scanが含まれる</li>
+        <li>StagingとProductionが分離されている</li>
+        <li>Rollbackが設計されている</li>
+      </ul>
+    </div>
+    <div class="card"><h3>Security</h3>
+      <ul class="check">
+        <li>SSO / 認証方式が定義されている</li>
+        <li>RBACが定義されている</li>
+        <li>監査ログが取得できる</li>
+        <li>AIへの送信データ最小化が設計されている</li>
+        <li>個人情報・機密情報の取り扱いが明確</li>
+        <li>Stagingで本番データを利用しない</li>
+      </ul>
+    </div>
+    <div class="card"><h3>Operations / Monitoring</h3>
+      <ul class="check">
+        <li>監視ツールの役割が定義されている</li>
+        <li>監視対象が定義されている</li>
+        <li>Alert条件が定義されている</li>
+        <li>Incident対応フローが定義されている</li>
+        <li>Postmortemを実施できる</li>
+        <li>AI Costを把握できる</li>
+      </ul>
+    </div>
+    <div class="card" style="grid-column:1/-1"><h3>Business Value</h3>
+      <ul class="check" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 24px">
+        <li>導入前Baselineがある</li>
+        <li>KPIを継続測定できる</li>
+        <li>ROIを算出できる</li>
+        <li>利用者Feedbackを収集できる</li>
+        <li>効果測定結果を次の改善へ利用できる</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="verdict">
+  <div class="section-title"><div class="num">08</div><h2>最終レビュー判定</h2></div>
+  <div class="tw">
+  <table>
+    <thead><tr><th>項目</th><th>判定</th><th>コメント</th></tr></thead>
+    <tbody>
+      <tr><td>全体アーキテクチャ</td><td>未確認 / 要修正 / 承認</td><td></td></tr>
+      <tr><td>Phase 01〜05</td><td>未確認 / 要修正 / 承認</td><td></td></tr>
+      <tr><td>Phase 06〜10</td><td>未確認 / 要修正 / 承認</td><td></td></tr>
+      <tr><td>Phase 11〜15</td><td>未確認 / 要修正 / 承認</td><td></td></tr>
+      <tr><td>Phase 16〜20</td><td>未確認 / 要修正 / 承認</td><td></td></tr>
+      <tr><td>Security</td><td>未確認 / 要修正 / 承認</td><td></td></tr>
+      <tr><td>DevOps / Monitoring</td><td>未確認 / 要修正 / 承認</td><td></td></tr>
+      <tr><td>Knowledge Loop</td><td>未確認 / 要修正 / 承認</td><td></td></tr>
+      <tr><td>本番構築着手可否</td><td>未確認 / 条件付き可 / 承認</td><td></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="lead" style="margin-top:18px">
+    <strong>レビュー後の次工程：</strong>本書のレビュー完了後は、Phase 01〜20をさらに以下の実装項目へ分解し、<strong>構築WBS</strong>へ展開する。
+  </div>
+  <div class="flow"><pre>必要アカウント
+DB / テーブル
+AppSuite項目
+Notion DB項目
+Slack連携
+AI連携
+API連携
+認証 / RBAC
+担当者
+承認者
+成果物
+テスト項目
+完了条件
+依存関係</pre></div>
+  <p>これにより、本書を「構想レビュー資料」から「実装計画・構築管理資料」へ接続する。</p>
+</section>
+
+<div class="footer">
+  AI/DX開発プロセス 構築ガイド — みらい AIエージェント事業推進基盤（Mirai AI Agent Business Platform）<br>
+  構築に必要なもの・構築手順・Phase完了条件・レビュー版（Draft / Review）
+</div>
+</main>
+</body>
+</html>

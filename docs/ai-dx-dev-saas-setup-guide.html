@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>みらいAIエージェント事業推進基盤 — SaaS構築・設定計画書（レビュー版 v0.5）</title>
+<style>
+:root{
+  --bg:#f6f8fb;
+  --panel:#ffffff;
+  --ink:#172033;
+  --muted:#637083;
+  --line:#dfe5ee;
+  --navy:#183153;
+  --blue:#2563eb;
+  --cyan:#0891b2;
+  --green:#15803d;
+  --amber:#b45309;
+  --purple:#7c3aed;
+  --red:#b91c1c;
+  --shadow:0 8px 24px rgba(20,32,51,.08);
+  --radius:18px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+  line-height:1.75;
+}
+a{color:inherit;text-decoration:none}
+.hero{
+  background:
+    radial-gradient(circle at 85% 15%, rgba(37,99,235,.18), transparent 28%),
+    linear-gradient(135deg,#10233f,#183153 55%,#164e63);
+  color:#fff;
+  padding:64px 24px 48px;
+}
+.hero .wrap{max-width:1180px;margin:auto}
+.eyebrow{
+  display:inline-block;
+  padding:6px 12px;
+  border:1px solid rgba(255,255,255,.25);
+  background:rgba(255,255,255,.08);
+  border-radius:999px;
+  font-size:13px;
+  letter-spacing:.05em;
+}
+h1{font-size:clamp(28px,3.6vw,48px);line-height:1.25;margin:18px 0 12px}
+.hero p{max-width:960px;color:#dbeafe;font-size:17px;margin:0}
+.hero .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+.tag{
+  padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.1);
+  border:1px solid rgba(255,255,255,.16);font-size:13px
+}
+.topbar{
+  position:sticky;top:0;z-index:30;
+  background:rgba(255,255,255,.94);
+  backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--line);
+}
+.topbar .wrap{
+  max-width:1180px;margin:auto;padding:10px 18px;
+  display:flex;gap:8px;overflow-x:auto
+}
+.topbar a{
+  flex:0 0 auto;
+  padding:8px 12px;border-radius:10px;
+  color:#42516a;font-size:13px;font-weight:700
+}
+.topbar a:hover{background:#eef4ff;color:var(--blue)}
+main{max-width:1180px;margin:0 auto;padding:34px 20px 80px}
+section{margin:0 0 44px}
+.section-title{display:flex;align-items:center;gap:12px;margin:0 0 18px}
+.section-title .num{
+  width:38px;height:38px;border-radius:12px;
+  background:var(--navy);color:#fff;
+  display:grid;place-items:center;font-weight:800;flex:0 0 auto
+}
+.section-title h2{margin:0;font-size:26px;line-height:1.3}
+.section-title .sub{font-size:13px;color:var(--muted);font-weight:700}
+.lead{
+  background:#eef5ff;border:1px solid #d7e7ff;border-left:5px solid var(--blue);
+  padding:18px 20px;border-radius:14px;margin:0 0 22px
+}
+.grid{display:grid;gap:16px}
+.card{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:20px;box-shadow:var(--shadow)
+}
+.card h3{margin:0 0 8px;font-size:18px}
+.card p{margin:0;color:var(--muted)}
+.arch{
+  background:#0f172a;color:#e5eefc;border-radius:20px;padding:24px;overflow:auto;
+  box-shadow:var(--shadow)
+}
+.arch pre{margin:0;font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace;line-height:1.55;font-size:13.5px}
+table{
+  width:100%;border-collapse:separate;border-spacing:0;
+  background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden
+}
+th,td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:#f1f5f9;text-align:left;font-size:13px;color:#334155}
+tr:last-child td{border-bottom:0}
+.tw{overflow-x:auto;border-radius:14px;background:#fff;border:1px solid var(--line)}
+.tw table{border:none;border-radius:0}
+.note{
+  border-left:4px solid var(--cyan);background:#ecfeff;padding:12px 14px;border-radius:10px;
+  color:#164e63;margin:12px 0 0
+}
+.decision{
+  border-left:4px solid var(--green);background:#f0fdf4;padding:12px 14px;border-radius:10px;
+  color:#14532d;margin:12px 0 0
+}
+.warning{
+  border-left:4px solid var(--amber);background:#fff7ed;padding:12px 14px;border-radius:10px;
+  color:#7c2d12;margin:12px 0 0
+}
+ul.check{list-style:none;margin:8px 0 0;padding:0}
+ul.check li{
+  padding:4px 0 4px 30px;position:relative;margin:2px 0
+}
+ul.check li::before{
+  content:"";position:absolute;left:4px;top:8px;width:16px;height:16px;
+  border:2px solid #94a3b8;border-radius:5px;background:#fff
+}
+ul.plain{margin:8px 0 0;padding-left:1.2em}
+ul.plain li{margin:3px 0}
+.cmt{
+  border:1px dashed #cbd5e1;border-radius:12px;background:#f8fafc;
+  padding:12px 16px;margin:12px 0 0;color:var(--muted);font-size:14px
+}
+.cmt strong{color:#475569}
+code{
+  background:#eef2f7;padding:2px 6px;border-radius:6px;
+  font-family:"SFMono-Regular",Consolas,monospace;font-size:.92em
+}
+.small{font-size:13px;color:var(--muted)}
+.footer{
+  margin-top:48px;border-top:1px solid var(--line);padding-top:22px;
+  color:var(--muted);font-size:13px;text-align:center
+}
+@media(max-width:640px){
+  .hero{padding-top:44px}
+  main{padding-left:14px;padding-right:14px}
+  h1{font-size:26px}
+}
+@media print{
+  .topbar{display:none}
+  body{background:#fff}
+  .card,.arch{box-shadow:none}
+}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="eyebrow">AI / DX DEVELOPMENT PROCESS — SAAS SETUP GUIDE</span>
+    <h1>みらいAIエージェント事業推進基盤<br>SaaS構築・設定計画書（レビュー版 v0.5）</h1>
+    <p><strong>既存SaaS上での構築・設定計画</strong> ― 基盤の自前アプリ開発は行わず、Lightblue / AppSuite / desknet's NEO（Workflow含む）/ Notion 等の既存SaaS上にテンプレート・マスタ・フロー・連携を設定して構築するための計画書。全体プロセスは<strong>全社員のアイデア受付</strong>（Knowledge Feedback Loop）に準拠し、<strong>Slack上での議論・レビューは3名</strong>（経営企画担当者／建設土木技術者・研究者／IT・DX・AIシステム開発者）で行う。</p>
+    <div class="meta">
+      <span class="tag">Human-in-the-Loop</span><span class="tag">Stage Gate</span>
+      <span class="tag">既存SaaS活用</span><span class="tag">Knowledge: Notion</span>
+      <span class="tag">承認: NEO Workflow</span>
+      <span class="tag">Slack議論: 3名のみ</span>
+    </div>
+  </div>
+</header>
+
+<nav class="topbar">
+  <div class="wrap">
+    <a href="#info">文書情報</a>
+    <a href="#summary">サマリ</a>
+    <a href="#status">現状と前提</a>
+    <a href="#overview">全体像</a>
+    <a href="#needs">必要なもの一覧</a>
+    <a href="#webhook">API / Webhook判定</a>
+    <a href="#steps">実施順序</a>
+    <a href="#review">レビュー観点</a>
+    <a href="#decision">確認事項</a>
+    <a href="#glossary">用語集</a>
+  </div>
+</nav>
+
+<main>
+
+<section id="info">
+  <div class="section-title"><div class="num">00</div><h2>文書情報</h2></div>
+  <div class="tw">
+  <table>
+    <tbody>
+      <tr><th style="width:24%">文書種別</th><td>SaaS構築・設定計画書（レビュー版 v0.5）</td></tr>
+      <tr><th>ステータス</th><td>Draft / レビュー中（P-1〜P-12 回答待ち。Q1〜Q7は回答済み）</td></tr>
+      <tr><th>レビュー対象者・関係者</th><td>レビュー・Slack上での議論の参加者は<strong>社内経営企画担当者 / 社内建設土木技術者・研究者 / IT/DX/AIシステム開発者 の3名のみ</strong>（他の方は含めない）。プロセス全体は<strong>全社員のアイデア受付</strong>を前提（既存文書のKnowledge Feedback Loopに準拠）</td></tr>
+      <tr><th>基本思想</th><td>Human-in-the-Loop / Stage Gate / 既存SaaS活用 / Continuous Learning</td></tr>
+      <tr><th>Process Master</th><td>AppSuite（構築済み・機能確認済み）</td></tr>
+      <tr><th>承認（Gate正本）</th><td>desknet's NEO Workflow</td></tr>
+      <tr><th>Knowledge基盤</th><td><strong>Notion（導入決定）</strong>：Idea / 確定Knowledge / 要件・意思決定 / Lessons Learned</td></tr>
+      <tr><th>Collaboration・通知</th><td>desknet's NEO（通知）／Slack上での議論は上記3名のみ</td></tr>
+      <tr><th>AI窓口</th><td>Lightblue（ビジネスプラン契約中・機能範囲はベンダー確認予定）</td></tr>
+      <tr><th>認証</th><td>現状：各SaaSのログイン/パスワード認証 → 将来：SSO化を予定</td></tr>
+      <tr><th>監視</th><td>自前でWebベース構築予定（本計画のスコープ外。連携論点は第4.4節）</td></tr>
+      <tr><th>前提</th><td>基盤自体の自前アプリ開発なし。必要な連携はSaaS標準機能・API・Webhookで実現（Webhookは必要と判断した箇所のみ。第4章）</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <h3 style="margin:20px 0 10px;font-size:18px">レビュー記録</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>レビュー日</th><th>レビュー者</th><th>対象</th><th>判定</th><th>コメント</th></tr></thead>
+    <tbody>
+      <tr><td>YYYY-MM-DD</td><td>社内経営企画担当者</td><td>全体</td><td>未確認 / 要修正 / 承認</td><td></td></tr>
+      <tr><td>YYYY-MM-DD</td><td>社内建設土木技術者/研究者</td><td>全体</td><td>未確認 / 要修正 / 承認</td><td></td></tr>
+      <tr><td>YYYY-MM-DD</td><td>IT/DX/AIシステム開発者</td><td>全体</td><td>未確認 / 要修正 / 承認</td><td></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note" style="margin-top:14px">
+    <strong>3名の位置づけ（既存文書の3 Authorityに対応）：</strong>社内経営企画担当者＝Business Authority（事業価値・ROI・継続/停止判断）、社内建設土木技術者/研究者＝Domain Authority（業務妥当性・技術受入・UAT判定）、IT/DX/AIシステム開発者＝Engineering Authority（システム・AI・セキュリティ・実装・運用）。
+  </div>
+  <div class="note">
+    <strong>文書の位置づけ：</strong>本ドキュメントは <code>docs/ai-dx-dev-build-guide.html</code>（Draft版）の次工程「Phase 01〜20を実装項目へ分解し、構築WBSへ展開する」に対応する<strong>既存SaaS上での構築・設定計画書</strong>です。Markdown正本：<code>docs/ai-dx-dev-saas-setup-guide.md</code>。
+  </div>
+</section>
+
+<section id="summary">
+  <div class="section-title"><div class="num">0</div><h2>経営・レビュー者向けサマリ</h2><span class="sub">1枚で読む</span></div>
+  <div class="lead">
+    <strong>何を作るか：</strong>全社員のアイデアを「アイデア → 企画 → 承認 → 開発 → 本番 → 効果測定 → ナレッジ」のルールで回し、<strong>3名（経営企画／建設土木技術・研究／IT・DX・AI開発＝3 Authorityの担い手）が審査・承認・運用するための業務基盤（仕組みと設定）</strong>。コードは書かず、会社で契約済みのSaaSを組み合わせて設定する。<strong>Slack上での議論は3名のみで行う</strong>（他の方は含めない）。
+  </div>
+  <h3 style="margin:0 0 10px;font-size:18px">今回必要なもの（大枠）</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:6%">#</th><th style="width:40%">必要なもの</th><th style="width:24%">どこに作る</th><th>状態</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>案件ID・部署・役割・Phase・Gate・Status のマスタ</td><td>AppSuite マスタDB</td><td>構築済み（内容の突合確認が次工程）</td></tr>
+      <tr><td>2</td><td>アイデア台帳 → 企画候補台帳 → 案件台帳 の段階的台帳</td><td>AppSuite（＋Idea DBはNotion）</td><td>一部構築済み（案件台帳の最終項目定義を確認）</td></tr>
+      <tr><td>3</td><td>Gate 1〜5 の承認フロー（申請・段階承認・差戻し・履歴）</td><td><strong>desknet's NEO Workflow</strong>（正本）＋AppSuite（Gate状態）</td><td>承認の実行場所は<strong>決定済み（NEO Workflow）</strong>。フロー定義が次工程</td></tr>
+      <tr><td>4</td><td>知識基盤（Idea / 決定事項 / 要件 / 教訓をためる場所）</td><td><strong>Notion（導入決定）</strong></td><td><strong>決定済み：Notion を導入しKnowledge基盤を構築</strong>（第3.4節）</td></tr>
+      <tr><td>5</td><td>日常議論・案件チャンネル／通知</td><td>Slack（<strong>参加3名のみ</strong>）／<strong>通知＝desknet's NEO</strong></td><td><strong>決定済み：Slack上の議論は3名のみ。通知はNEO</strong></td></tr>
+      <tr><td>6</td><td>AI窓口の壁打ちプロンプト・利用ルール・課題確認項目</td><td>Lightblue</td><td>契約済み（機能範囲はベンダー確認予定・設定が次工程）</td></tr>
+      <tr><td>7</td><td>承認結果や状態変化の「通知・記録の連携」</td><td>SaaS標準連携 or API/Webhook</td><td><strong>第4章で要否を判定</strong></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="decision" style="margin-top:14px">
+    <strong>自前アプリは不要か：</strong>基盤（案件管理フロー）については<strong>不要と判定</strong>（第4章）。「人間が承認・確認する」工程を挟む設計のため、リアルタイム双方向同期より「通知＋記録」で足りる。<strong>ただし監視基盤は自前Web構築予定のため、監視基盤⇄各SaaSのデータ取得方法（API／Webhook）だけは別途検討が必要</strong>（第4.4節）。
+  </div>
+  <div class="warning">
+    <strong>Webhookの扱い（ご方針）：</strong>GitHub等は<strong>Webhookが必要なときのみ利用</strong>。API接続としてWebhookが必要と判断した箇所は、第4章で都度指摘する（例：desknet's NEO API ⇔ Webhook ⇔ 他社製アプリ）。
+  </div>
+  <div class="note">
+    <strong>次にやること：</strong>① 本計画書のレビュー（3名）→ ② 第7章の追加決定ポイントP-1〜P-12を決定 → ③ Notion導入（Knowledge基盤のテンプレート作成）→ ④ 詳細設定手順書の作成 → ⑤ 1件のパイロット案件（例：現場写真・点検記録からの報告書自動作成）で通し検証 → ⑥ 運用開始。
+  </div>
+</section>
+
+<section id="status">
+  <div class="section-title"><div class="num">1</div><h2>現状の確認結果と前提</h2></div>
+  <h3 style="margin:0 0 10px;font-size:18px">1.1 確認済み・決定済み（ご提供情報）</h3>
+  <div class="tw">
+  <table>
+    <tbody>
+      <tr><th style="width:24%">AppSuite</th><td>Workflow機能、マスタDB準備を含め構築済み・機能確認済み。Process Master（案件ID・Phase・Gate・KPI・ROIの台帳）</td></tr>
+      <tr><th>Lightblue</th><td>ビジネスプラン契約中。AI窓口。機能範囲（RAG・API・連携可否）は<strong>ベンダー確認予定（Q6）</strong></td></tr>
+      <tr><th>承認の実行場所（Q3）</th><td><strong>desknet's NEO Workflow</strong> で承認を実行（Gate承認の正本）。承認結果をAppSuiteのGate状態へ反映する運用を設計する</td></tr>
+      <tr><th>通知・議論の場（Q2）</th><td><strong>通知はdesknet's NEO</strong>。<strong>Slack上での議論（日常議論・案件チャンネル等）は3名のみ</strong>：社内経営企画担当者／社内建設土木技術者・研究者／IT/DX/AIシステム開発者（他の方は含めない）</td></tr>
+      <tr><th>認証（Q5）</th><td>現状は desknet's NEO を含め<strong>ログイン/パスワード認証</strong>（SSO未導入）。<strong>将来的にSSO（Entra ID等）を導入予定</strong></td></tr>
+      <tr><th>監視（Q7）</th><td>監視基盤は<strong>自前でWebベース構築予定</strong>（本基盤のスコープ外・別途計画。連携論点は第4.4節）</td></tr>
+      <tr><th>Knowledge基盤（Q1）</th><td><strong>Notionを導入し、NotionでKnowledge基盤（知識をためる場所）を構築する</strong>（Idea / 確定Knowledge / 要件・意思決定 / Lessons Learned）</td></tr>
+      <tr><th>GitHub・Webhook（Q4）</th><td>GitHubは<strong>Webhookが必要なときのみ利用</strong>。API接続としてWebhookが必要と判断した箇所は本計画書で指摘する（例：desknet's NEO API ⇔ Webhook ⇔ 他社製アプリ）</td></tr>
+      <tr><th>方針</th><td>基盤の自前アプリ開発なし。既存SaaSへの設定・連携で構築</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <h3 style="margin:20px 0 10px;font-size:18px">1.2 確認待ち（この計画書のレビューで決定いただく事項）</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:8%">Q</th><th style="width:24%">論点</th><th style="width:36%">状態</th><th>なぜ必要か</th></tr></thead>
+    <tbody>
+      <tr><td>Q1</td><td>Knowledge基盤（知識をためる場所）に何を使うか</td><td><strong>回答済み</strong>：<strong>Notionを導入しKnowledge基盤を構築</strong></td><td>Notion上にIdea DB・企画書・要件・教訓の構造を作る（第3.4節）</td></tr>
+      <tr><td>Q2</td><td>Collaboration（日常議論・通知）</td><td><strong>回答済み</strong>：通知はdesknet's NEO。<strong>Slack上での議論は3名のみ</strong></td><td>通知設計はNEO基準で確定。Slack参加者は3名で確定</td></tr>
+      <tr><td>Q3</td><td>承認の実行場所</td><td><strong>回答済み</strong>：desknet's NEO Workflow</td><td>AppSuite ⇄ NEO の反映方法（手動転記 or API）のみ追加確認</td></tr>
+      <tr><td>Q4</td><td>GitHub・Webhookの扱い</td><td><strong>回答済み</strong>：<strong>Webhookが必要なときのみ利用</strong>（API接続として必要な箇所は都度指摘）</td><td>基盤自体の開発はしないため当面不要。監視基盤（自前Web）の開発時に再検討</td></tr>
+      <tr><td>Q5</td><td>認証（SSO）</td><td><strong>回答済み</strong>：当面パスワード認証 → 将来SSO</td><td>現行は個別ログイン運用、将来導入時に設計</td></tr>
+      <tr><td>Q6</td><td>Lightblueの機能範囲</td><td><strong>回答済み</strong>：ベンダー確認予定</td><td>確認結果を文書へ反映（次の版）</td></tr>
+      <tr><td>Q7</td><td>監視ツール</td><td><strong>回答済み</strong>：自前Web構築予定</td><td>本基盤のスコープ外。データ取得方法（API/Webhook）を監視基盤計画側で検討</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="overview">
+  <div class="section-title"><div class="num">2</div><h2>全体像（この基盤で回す流れ）</h2></div>
+  <div class="lead">
+    <strong>基本的な流れは既存文書（Knowledge Feedback Loop）に準拠する。</strong> 全社員のアイデア受付から始まり、Knowledgeとして次の相談に循環する。<strong>Slack上での議論は3名のみで行う</strong>（他の方は含めない）。
+  </div>
+  <div class="arch"><pre>
+全社員
+  ↓
+Lightblue（AI壁打ち）
+  ↓
+Slack Canvas → Notion（Idea / 確定Knowledge）※Slack上の議論は3名のみ
+  ↓
+AXWG → 3 Authority（経営企画 / 建設土木技術・研究 / IT・DX・AI開発）
+  ↓
+AppSuite（正式案件・Portfolio台帳）
+  ↓
+desknet's NEO Workflow（Gate審査・承認）… 承認は必ず人間
+  ↓
+Notion（要件・意思決定）
+  ↓
+Claude / Claude Code（要件・設計・レビュー・実装支援）
+  ↓
+GitHub（開発・テスト・Release）※Webhookが必要なときのみ利用
+  ↓
+MVP / Staging（UAT）
+  ↓
+Gate 5 → Production RC → Production Deploy
+  ↓
+監視基盤（DevSecOps）→ AppSuite / BI（KPI・ROI）
+  ↓
+Notion（Lessons Learned）
+  ↓
+Lightblue（次回相談の文脈）
+  ↓
+次のアイデア
+  </pre></div>
+  <div class="tw" style="margin-top:16px">
+  <table>
+    <thead><tr><th style="width:22%">レイヤ</th><th style="width:28%">ツール（決定/案）</th><th>役割</th></tr></thead>
+    <tbody>
+      <tr><td>AI Agent Layer</td><td>Lightblue</td><td>全社員向けAI窓口（壁打ち・整理・検索・企画化支援）</td></tr>
+      <tr><td>Knowledge基盤</td><td><strong>Notion（導入決定）</strong></td><td>Idea / 確定Knowledge / 要件・意思決定 / Lessons Learned。人間レビュー済みの確定知識を保存</td></tr>
+      <tr><td>Process / Transaction</td><td>AppSuite</td><td>案件ID・Phase・Gate・責任者・KPI・ROIの台帳（Process Master）</td></tr>
+      <tr><td>Governance（承認の正本）</td><td><strong>desknet's NEO Workflow</strong>（決定済み）</td><td>正式承認・差戻し・審査履歴</td></tr>
+      <tr><td>Collaboration</td><td>Slack（<strong>議論は3名のみ</strong>）＋<strong>desknet's NEO（通知）</strong></td><td>日常議論・レビューは3名。状態変化の通知はNEO</td></tr>
+      <tr><td>専門AI</td><td>Claude / Claude Code</td><td>要件・設計・レビュー・実装支援</td></tr>
+      <tr><td>Engineering</td><td>GitHub（Webhookが必要なときのみ）</td><td>開発・テスト・Release（案件発生時）</td></tr>
+      <tr><td>監視</td><td>自前Web構築予定（別途計画）</td><td>稼働・AI利用量・KPI監視</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="warning">
+    <strong>重要な原則（既存文書から踏襲）：</strong>
+    <ul class="plain" style="margin-top:4px">
+      <li>Slack等での「OK」は正式承認ではない。承認は必ず desknet's NEO Workflow に記録する。</li>
+      <li>AIは承認できない。AI出力は必ず人間レビューを経てNotionのKnowledge化する。</li>
+      <li>案件ID（例：<code>DX-2026-0042</code>）を全成果物の共通キーにする。</li>
+      <li><strong>Slack上での議論は3名のみ</strong>（社内経営企画担当者／社内建設土木技術者・研究者／IT/DX/AIシステム開発者。他の方は含めない）。</li>
+    </ul>
+  </div>
+</section>
+
+<section id="needs">
+  <div class="section-title"><div class="num">3</div><h2>構築に必要なもの 一覧（SaaS別・設定項目）</h2><span class="sub">各Phaseの「必要なもの → 構築手順 → 完了条件」をSaaS設定の観点で実装項目に分解</span></div>
+  <p style="margin:0 0 16px" class="small">設定作業の実施者は IT/DX/AIシステム開発者 を想定し、レビュー・承認は3名体制で行う。</p>
+
+  <h3 style="margin:22px 0 10px;font-size:20px;color:var(--navy)">3.0 設定が必要なツール一覧（ツール名・実行者・実行内容）</h3>
+  <div class="note" style="margin:0 0 12px">
+    <strong>本計画書で設定するツールは以下の5つ。</strong> 各ツールの設定手順の詳細は、docsフォルダ内の各ツール手順書（<code>AppSuite.html</code> / <code>NEO-Workflow.html</code> / <code>Notion.html</code> / <code>Lightblue.html</code> / <code>Slack.html</code>）に<strong>ELI5（超やさしい手順書）</strong>としてまとめてある。監視基盤（自前Web構築）とGitHub（Webhookが必要なときのみ）は、今回の設定対象外（将来・別途）。
+  </div>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:20%">ツール名</th><th style="width:26%">実行者</th><th>実行内容・設定内容</th></tr></thead>
+    <tbody>
+      <tr><td><strong>AppSuite</strong><br><span class="small">案件台帳・マスタ</span></td><td><strong>DX推進部担当者</strong>（設定）＋3名（項目定義の確認）</td><td>・案件ID採番ルール・Phase/Gate/Status等マスタの突合<br>・アイデア→企画候補→案件台帳の段階的台帳の最終項目定義<br>・KPI・ROI記録欄、ダッシュボード設定</td></tr>
+      <tr><td><strong>desknet's NEO Workflow</strong><br><span class="small">承認フロー</span></td><td><strong>DX推進部担当者</strong>（フロー構築）＋3名（承認者として登録）</td><td>・Gate 1〜5の承認フロー定義（申請→段階承認→差戻し）<br>・承認者設定（経営企画／建設土木技術・研究／IT・DX・AI開発）<br>・承認テンプレート（企画書・要件定義書）の添付設定</td></tr>
+      <tr><td><strong>Notion</strong><br><span class="small">Knowledge基盤</span></td><td>IT/DX/AIシステム開発者（構造構築）＋3名（利用・レビュー）</td><td>・Idea DB／Decision Log／企画書・要件定義テンプレート<br>・教訓台帳（Lessons Learned）／Postmortem様式の作成<br>・アクセス権設定（3名＋案件関係者）</td></tr>
+      <tr><td><strong>Lightblue</strong><br><span class="small">AI窓口</span></td><td>IT/DX/AIシステム開発者（設定）＋3名（利用）</td><td>・アイデア壁打ち用プロンプト／課題確認項目（10項目）<br>・AI利用ルールの提示設定／アイデア構造化フォーマット<br>・過去Knowledge参照（Notion連携）の要否確認（Q6）</td></tr>
+      <tr><td><strong>Slack</strong><br><span class="small">議論・案件チャンネル</span></td><td>IT/DX/AIシステム開発者（チャンネル作成）＋3名（参加・議論）</td><td>・案件チャンネルの命名規則・作成（参加3名のみ）<br>・Slack Canvas（検討中ドラフト）の運用準備</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="warning" style="margin-top:12px">
+    <strong>実行の流れ（レビュー・承認を含む）：</strong> 上記の設定はすべて、まず3名で第7章の確認事項（P-1〜P-12）を決定したうえで実施する。設定内容の最終確認・承認は、各ツールの設定後に行う。
+  </div>
+
+  <h3 style="margin:22px 0 10px;font-size:20px;color:var(--navy)">3.1 共通マスタ・案件ID設計（基盤構築順序 STEP 1 相当）</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:22%">必要なもの</th><th>内容</th><th style="width:16%">設定先</th><th style="width:22%">完了条件</th><th style="width:10%">依存</th></tr></thead>
+    <tbody>
+      <tr><td>案件ID採番ルール</td><td><code>DX-YYYY-NNNN</code>（年度＋連番）の採番・重複防止ルール</td><td>AppSuite</td><td>採番ルールが文書化され、台帳で一意になる</td><td>―</td></tr>
+      <tr><td>部署マスタ</td><td>対象部署一覧（3名の所属部署）</td><td>AppSuite マスタDB</td><td>登録済み</td><td>―</td></tr>
+      <tr><td>社員マスタ</td><td>氏名・所属・役割（<strong>3名：経営企画担当者／建設土木技術者・研究者／IT・DX・AIシステム開発者</strong>＋各Gate承認者）</td><td>AppSuite マスタDB</td><td>3名が登録済み</td><td>認証（Q5）</td></tr>
+      <tr><td>Phaseマスタ</td><td>Idea / Planning / Definition / MVP / Staging / Production / Operation</td><td>AppSuite マスタDB</td><td>登録済み</td><td>―</td></tr>
+      <tr><td>Gateマスタ</td><td>Gate 1〜5 の定義・承認者・判定基準</td><td>AppSuite マスタDB</td><td>登録済み</td><td>NEO Workflowの承認者と一致</td></tr>
+      <tr><td>Statusマスタ</td><td>例：申請中 / 承認 / 差戻し / 完了 / 停止</td><td>AppSuite マスタDB</td><td>登録済み</td><td>―</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 style="margin:22px 0 10px;font-size:20px;color:var(--navy)">3.2 AppSuite（Process Master・案件台帳）<span class="small">※構築済みのため「定義の突合・最終化」が中心</span></h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:24%">必要なもの</th><th>内容</th><th style="width:34%">完了条件</th><th>依存</th></tr></thead>
+    <tbody>
+      <tr><td>企画候補台帳</td><td>企画概要・対象部署・課題・期待KPI・概算費用・想定効果・リスク・類似事例・審査コメント・Status</td><td>価値判断のあったIdea（Notion Idea DB）だけが昇格・登録できる</td><td>Notion Idea DB</td></tr>
+      <tr><td>案件台帳（正式案件）</td><td>案件ID・案件名・提案者・責任者（技術／開発／事業）・Phase・Gate状態・期限・KPI・ROI・関連リンク（Notion Project Home等）・Version・本番日・判定（継続/改善/停止）</td><td>案件ライフサイクルを台帳1つで追跡できる</td><td>企画候補台帳</td></tr>
+      <tr><td>案件ID採番機能</td><td>案件登録時に <code>DX-YYYY-NNNN</code> を自動付番（または運用ルール）</td><td>案件IDが全成果物の共通キーになる</td><td>マスタ</td></tr>
+      <tr><td>KPI・ROI記録欄</td><td>Phase毎のKPI値・目標・実績・判定基準</td><td>数値で継続/改善/停止を判断できる</td><td>効果測定（Phase 19）</td></tr>
+      <tr><td>ダッシュボード（あれば）</td><td>案件一覧・Gate状況・ポートフォリオ俯瞰</td><td>経営企画担当者が一覧で確認できる</td><td>―</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 style="margin:22px 0 10px;font-size:20px;color:var(--navy)">3.3 承認フロー（Governance・Gate承認）<span class="small">※実行場所：desknet's NEO Workflow で決定済み</span></h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:20%">必要なもの</th><th>内容</th><th style="width:22%">設定先</th><th>完了条件</th></tr></thead>
+    <tbody>
+      <tr><td>Gate 1 企画承認フロー</td><td>申請 → 経営企画担当者（主）＋建設土木技術・研究者＋IT/DX/AI開発者 の承認 → 差戻し可能</td><td><strong>desknet's NEO Workflow</strong></td><td>承認履歴がNEOに残り、AppSuiteのGate状態と一致する</td></tr>
+      <tr><td>Gate 2 開発承認フロー</td><td>業務受入（建設土木技術・研究者）＋IT/DX/AIシステム開発者 等</td><td>同上</td><td>作成者と承認者が分離されている（SOD）</td></tr>
+      <tr><td>Gate 3 MVP承認フロー</td><td>技術受入（建設土木技術・研究者）＋最終承認（経営企画担当者）</td><td>同上</td><td>MVP評価KPIと紐づく</td></tr>
+      <tr><td>Gate 4 本番移行承認フロー</td><td>受入判定（建設土木技術・研究者）＋移行判定（経営企画担当者）</td><td>同上</td><td>受入・確認結果が添付できる</td></tr>
+      <tr><td>Gate 5 Release承認フロー</td><td>上位Gate Owner（経営企画担当者 or 別途指定）＋IT/DX/AIシステム開発者</td><td>同上</td><td>承認済みバージョン（Release Candidate）が確定する</td></tr>
+      <tr><td>AppSuite Gate状態の反映</td><td>NEOでの承認結果をAppSuiteのGate状態へ反映（手動転記 or API連携）</td><td>AppSuite</td><td>NEOの承認履歴とAppSuiteのGate状態が一致する</td></tr>
+      <tr><td>承認テンプレート</td><td>企画書・要件定義書など、審査に必要な資料の添付様式</td><td><strong>Notion</strong> に格納</td><td>申請時にひな型が使える</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="warning">
+    <strong>追加確認（第7章 P-1）：</strong> Gate 5 の最終承認者（上位Gate Owner＝第4の役割）を3名体制で誰が担うか（経営企画担当者が兼務するか、役員等を別途指定するか）。
+  </div>
+
+  <h3 style="margin:22px 0 10px;font-size:20px;color:var(--navy)">3.4 知識基盤（Knowledge / Context）<span class="small">※決定済み：Notionを導入し構築</span></h3>
+  <p style="margin:0 0 10px">Notion 上に以下の構造・テンプレートを作成する（人間レビュー済みの確定知識のみを格納。検討中ドラフト＝Slack Canvas・3名の議論と分離）。</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:22%">必要なもの</th><th>内容</th><th style="width:18%">設定先</th><th>完了条件</th></tr></thead>
+    <tbody>
+      <tr><td>Idea DB（人間レビュー版）</td><td>検討中ドラフトと確定Ideaを分けて管理</td><td><strong>Notion（導入）</strong></td><td>確定済みIdeaのみKnowledgeとして蓄積される</td></tr>
+      <tr><td>Decision Log</td><td>決定事項・理由・決定者・日付</td><td><strong>Notion（導入）</strong></td><td>後から「なぜそう決めたか」を追跡できる</td></tr>
+      <tr><td>企画書テンプレート</td><td>背景・目的・As-Is/To-Be・範囲・MVP・KPI・費用・ROI・情報管理・Security・Risk</td><td><strong>Notion（導入）</strong></td><td>申請時にひな型が使える</td></tr>
+      <tr><td>要件定義書テンプレート</td><td>業務要件＋非機能要件（認証・RBAC・監査ログ・データ保管・AI送信最小化・性能）</td><td><strong>Notion（導入）</strong></td><td>Living Documentとして更新・Version管理できる</td></tr>
+      <tr><td>教訓台帳（Lessons Learned）</td><td>成功要因・失敗要因・不採用設計・注意点</td><td><strong>Notion（導入）</strong></td><td>案件終了後に蓄積され、次回AIが参照できる</td></tr>
+      <tr><td>Postmortem様式</td><td>原因・影響・対応・再発防止</td><td><strong>Notion（導入）</strong></td><td>障害後に人間確認を経て登録できる</td></tr>
+      <tr><td>アクセス権</td><td>3名＋案件関係者単位の閲覧範囲（全社員のKnowledge閲覧は運用拡大時に設定）</td><td>Notionの権限設定</td><td>社外秘・個人情報を適切に保護できる</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 style="margin:22px 0 10px;font-size:20px;color:var(--navy)">3.5 AI窓口（Lightblue）<span class="small">※契約済み・機能範囲はベンダー確認予定（Q6）</span></h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:22%">必要なもの</th><th>内容</th><th>完了条件</th></tr></thead>
+    <tbody>
+      <tr><td>アイデア壁打ち用プロンプト</td><td>「困りごと」を聞き、課題・対象者・頻度・工数・効果を引き出す初期プロンプト</td><td>社員が自然言語で相談できる（初期利用者は3名）</td></tr>
+      <tr><td>課題確認項目（10項目）</td><td>現状業務・対象者・頻度・工数・データ・保存場所・個人情報・位置情報・既存システム・効果</td><td>AIが毎回ゼロからではなく社内知識を踏まえて質問できる</td></tr>
+      <tr><td>AI利用ルールの提示</td><td>社外秘・個人情報・入力禁止情報のルールを相談開始時に提示</td><td>入力禁止情報が明確</td></tr>
+      <tr><td>アイデア構造化フォーマット</td><td>壁打ち結果 → Idea台帳の項目に整形する出力形式</td><td>AI整理→人間レビュー→台帳登録の流れができる</td></tr>
+      <tr><td>過去Knowledgeの参照</td><td>過去案件・類似案件・ルールを検索して壁打ちに活用（<strong>Q6：ビジネスプランで可能か確認</strong>）</td><td>参照範囲が権限管理されている（Notion権限・Q5）</td></tr>
+      <tr><td>利用者情報の取得</td><td>3名の氏名・所属把握（手入力 or 認証連携）</td><td>提案者・所属が台帳に記録できる（Q5）</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 style="margin:22px 0 10px;font-size:20px;color:var(--navy)">3.6 Collaboration・通知 <span class="small">※通知：desknet's NEO／議論：Slack（3名のみ）で決定済み</span></h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:20%">必要なもの</th><th>内容</th><th style="width:30%">設定先・運用</th><th>完了条件</th></tr></thead>
+    <tbody>
+      <tr><td>通知（状態変化の連絡）</td><td>Gate承認・差戻し・状態変化を関係者（3名）へ通知</td><td><strong>desknet's NEO の通知機能を利用</strong>（メール通知等）</td><td>誰が次に何をすべきか分かる</td></tr>
+      <tr><td>日常議論・案件チャンネル等</td><td><strong>Slack上での議論は3名のみ</strong>：社内経営企画担当者／社内建設土木技術者・研究者／IT/DX/AIシステム開発者（他の方は招待しない運用）</td><td><strong>Slack</strong>（参加3名のみ）</td><td>案件IDと対応が分かる</td></tr>
+      <tr><td>検討ドキュメントの置き場</td><td>検討中ドラフトの共同編集場所（Slack Canvas・3名のみ）</td><td>Slack Canvas → 人間レビュー後 Notion へ</td><td>確定Knowledge（Notion）と分離されている</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 style="margin:22px 0 10px;font-size:20px;color:var(--navy)">3.7 文書・利用者向けガイド（対象：3名＋将来の展開先）</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:22%">必要なもの</th><th>内容</th><th>完了条件</th></tr></thead>
+    <tbody>
+      <tr><td>3名向け利用ガイド</td><td>AI相談の始め方・禁止事項・案件化の流れ・各人の役割</td><td>3名が読んで理解できる</td></tr>
+      <tr><td>用語集</td><td>案件ID / Phase / Gate / 正本 / SOD 等の平易な説明</td><td>3名（非エンジニア職掌含む）が確認できる</td></tr>
+      <tr><td>運用ルール（Runbook相当）</td><td>誰が・いつ・何をするかの一覧</td><td>属人化せず運用できる</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="webhook">
+  <div class="section-title"><div class="num">4</div><h2>API / Webhook 連携の要否（自前アプリ不要の判定）</h2></div>
+  <div class="lead">
+    <strong>判定の結論：基盤（案件管理フロー）の初期構築では、自前アプリ（外部受信サーバ・コード開発）は不要。</strong> ※監視基盤（自前Web構築予定）は別途論点（4.4節）。
+  </div>
+  <h3 style="margin:0 0 10px;font-size:18px">4.1 判定の考え方</h3>
+  <p style="margin:0 0 10px">本基盤の設計原則は <strong>「承認・確定は必ず人間」</strong>（Human-in-the-Loop）です。このため：</p>
+  <div class="tw">
+  <table>
+    <tbody>
+      <tr><th style="width:24%">自動化してよい</th><td>通知（誰が次に何をするか）、状態の転記・同期、定型変換、AIによる下書き生成</td></tr>
+      <tr><th>自動化しない</th><td>Gate承認・差戻し判定・Knowledge化の最終確認（必ず人間）</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 style="margin:22px 0 10px;font-size:18px">4.2 連携パターン別の要否（基盤＝案件管理フロー）</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:24%">連携したいこと</th><th style="width:28%">手段</th><th style="width:18%">自前アプリ（受信サーバ）は必要か</th><th>備考</th></tr></thead>
+    <tbody>
+      <tr><td>① 案件状態変化（Gate承認等）を3名へ知らせる</td><td><strong>desknet's NEO の標準通知／メール通知</strong></td><td><strong>不要</strong></td><td>通知先はNEOで決定済み</td></tr>
+      <tr><td>② AppSuiteの案件情報をKnowledge（Notion）へ反映</td><td>人間が承認結果を転記 or AIが下書き→人間確認</td><td><strong>不要</strong></td><td>双方向リアルタイム同期は「やりたい場合」に追加判断</td></tr>
+      <tr><td>③ AI壁打ち結果をNotion Idea DB／案件台帳へ登録</td><td>AIが下書き→人間レビュー→登録</td><td><strong>不要</strong></td><td>自動登録は任意（後述の「強化したい場合」）</td></tr>
+      <tr><td>④ 承認フロー完了を通知・記録</td><td>desknet's NEO Workflow の通知機能</td><td><strong>不要</strong></td><td>承認は必ずNEO内で完結し、結果をAppSuiteへ反映</td></tr>
+      <tr><td>⑤ LightblueがNotionのKnowledgeを参照（RAG）</td><td>Lightblue標準機能（プラン内）</td><td><strong>不要</strong></td><td><strong>Q6：ビジネスプランで可能かをベンダー確認</strong></td></tr>
+      <tr><td>⑥ NEOの承認結果をAppSuiteのGate状態へ反映</td><td>手動転記（初期）→ 自動化したい場合はAPI/iPaaS（将来）</td><td><strong>不要（初期）</strong></td><td>自動化は任意（下記4.3）</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="decision" style="margin-top:14px">
+    <strong>判定：基盤（案件管理フロー）の初期構築では、自前アプリ（外部受信サーバ・コード開発）は不要。</strong>
+  </div>
+
+  <h3 style="margin:22px 0 10px;font-size:18px">4.3 「Webhookが必要なとき」と「自動化を強化したい場合」に追加するもの</h3>
+  <div class="warning">
+    <strong>ご方針（Q4）：</strong>GitHub等は<strong>Webhookが必要なときのみ利用</strong>。API接続としてWebhookが必要と判断した箇所は都度指摘する。
+  </div>
+  <p style="margin:12px 0 10px">本計画書で現時点に判断できる範囲では、<strong>初期構築で必須のWebhookはない</strong>。ただし、以下の「やりたいこと」が発生した時点でWebhook／API連携が必要になる（その時点で都度、接続構成を指摘する）。</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:34%">やりたいこと</th><th style="width:40%">Webhook/APIが必要になる接続（例）</th><th>追加するもの</th></tr></thead>
+    <tbody>
+      <tr><td>NEO承認 → AppSuite Gate状態を自動更新 → 3名へ通知</td><td>desknet's NEO API ⇔ Webhook ⇔ AppSuite／通知</td><td>ノーコード連携基盤（iPaaS）or Webhook受信サーバ</td></tr>
+      <tr><td>NEO／AppSuite の状態変化をNotionへ自動反映</td><td>desknet's NEO API ⇔ Webhook ⇔ Notion（またはAppSuite API ⇔ Webhook ⇔ Notion）</td><td>iPaaS or Webhook受信サーバ</td></tr>
+      <tr><td>AppSuite ⇄ Knowledge（Notion） の双方向リアルタイム同期</td><td>AppSuite API ⇔ Webhook ⇔ Notion API</td><td>API連携・Webhookの設計</td></tr>
+      <tr><td>監視基盤（自前Web）が各SaaSの状態を受け取る</td><td>各SaaS API ⇔ Webhook ⇔ 監視基盤</td><td>監視基盤側のWebhook受信機能（別途計画・4.4）</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>推奨：</strong>最初は「NEO通知＋人間による確認・転記」で回し、運用で「ここは自動化したい」が明確になった箇所だけ、上記の接続を追加する。Webhookが必要になった時点で、接続元（desknet's NEO API等）と接続先（AppSuite／Notion／監視基盤）の対応表とともに具体案を提示する。
+  </div>
+
+  <h3 style="margin:22px 0 10px;font-size:18px">4.4 監視基盤（自前Web構築予定）との関係 — 要確認</h3>
+  <p style="margin:0 0 10px">監視基盤は <strong>「自前でWebベース構築予定」</strong> のため、基盤自体の自前アプリ不要の判定とは別に、以下を監視基盤計画側で検討する（本計画書のスコープ外・別途計画）。</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:18%">論点</th><th>内容</th></tr></thead>
+    <tbody>
+      <tr><td>監視対象</td><td>案件フローの各工程・AI利用量（Lightblue）・エラー等。既存文書の「監視項目」を参照</td></tr>
+      <tr><td>データの取得方法</td><td>各SaaSの管理画面を人が見る／レポート出力／<strong>API連携／Webhook受信</strong> のいずれで監視基盤へデータを渡すか。<strong>SaaS側にWebhook送信機能やAPIがあるかが分岐点</strong></td></tr>
+      <tr><td>監視基盤⇄NEO</td><td>通知はNEO経由にするか、監視基盤独自の通知にするか</td></tr>
+      <tr><td>本計画との関係</td><td>監視基盤は本計画（案件管理フロー）とは別計画として切り分け、段階F（通し検証）の後に着手を推奨</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="warning">
+    <strong>補足：</strong>監視基盤を自前Webで作る場合、そこで初めて「API・Webhook・サーバ」が必要になる。必要ならこの基盤の「将来オプション（4.3）」と技術構成を共有してよい。
+  </div>
+
+  <h3 style="margin:22px 0 10px;font-size:18px">4.5 ベンダー確認リスト（Q6 の具体化）</h3>
+  <p style="margin:0 0 10px">レビュー時に、以下を各ベンダーへ確認できるようリスト化する。</p>
+  <ul class="plain">
+    <li>Lightblue ビジネスプランで利用可能な機能：ナレッジ参照（RAG）の可否、API提供の有無、Webhook／連携の可否、利用者数の制限（3名運用に十分か）</li>
+    <li>desknet's NEO：外部通知（メール等）の設定方法、AppSuite ⇄ NEO の連携方法（APIの有無）</li>
+    <li>AppSuite：外部連携（API・Webhook）の有無、Knowledge基盤（Notion）との連携可否</li>
+  </ul>
+</section>
+
+<section id="steps">
+  <div class="section-title"><div class="num">5</div><h2>設定の実施順序（段階プラン）</h2></div>
+  <p style="margin:0 0 16px">レビュー承認後、以下の順で設定を進める。各段階の終了時に完了条件を確認する。</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:10%">段階</th><th style="width:36%">作業</th><th style="width:28%">完了条件</th><th>主な成果物</th></tr></thead>
+    <tbody>
+      <tr><td><strong>A. 土台</strong></td><td>マスタ突合・案件IDルール確定・台帳の最終項目定義（3.1・3.2）</td><td>台帳の項目・採番が確定</td><td>台帳定義書</td></tr>
+      <tr><td><strong>B. 承認</strong></td><td><strong>desknet's NEO Workflow</strong> で Gate 1〜5 の承認フロー定義（3.3）</td><td>承認申請が通り、差戻し・履歴が残る</td><td>承認フロー設定</td></tr>
+      <tr><td><strong>C. 知識</strong></td><td><strong>Notion導入</strong>とテンプレート整備（3.4）</td><td>Idea・企画書・要件・教訓のひな型が揃う</td><td>Notion構造・テンプレート一式</td></tr>
+      <tr><td><strong>D. AI窓口</strong></td><td>Lightblueのプロンプト・利用ルール・確認項目設定（3.5・Q6確認後）</td><td>壁打ち→構造化→人間レビューが動く</td><td>AI設定・ガイド</td></tr>
+      <tr><td><strong>E. 通知</strong></td><td><strong>desknet's NEO</strong> による通知設定（3.6・第4章の範囲）</td><td>状態変化が3名に届く</td><td>通知設定</td></tr>
+      <tr><td><strong>F. 通し検証</strong></td><td>パイロット案件1件で Idea→効果測定→Knowledge まで実施</td><td>全Phaseの完了条件を実案件で確認</td><td>パイロット結果・手順書の修正</td></tr>
+      <tr><td><strong>G. 展開</strong></td><td>3名での定常運用開始（全社展開は将来）</td><td>3名が利用開始できる</td><td>利用ガイド</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="review">
+  <div class="section-title"><div class="num">6</div><h2>レビュー観点</h2><span class="sub">3名それぞれの視点</span></div>
+  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr))">
+    <div class="card"><h3>6.1 社内経営企画担当者<br><span class="small">事業・ガバナンスの視点</span></h3>
+      <ul class="check">
+        <li>承認は必ず人間（NEO Workflow）を経由し、AIが承認しない仕組みか</li>
+        <li>経営企画の「継続 / 改善 / 停止」判断に必要なKPI・ROIが取れるか</li>
+        <li>社外秘・個人情報の保護方針が各SaaSの設定で守れるか</li>
+        <li>追加コスト（新規ツール・連携基盤）は発生しないか（または許容範囲か）</li>
+        <li>案件ポートフォリオを俯瞰できるか（AppSuiteダッシュボード）</li>
+        <li>上位Gate Owner（Gate 5最終承認）の担当が明確か（P-1）</li>
+      </ul>
+    </div>
+    <div class="card"><h3>6.2 社内建設土木技術者/研究者<br><span class="small">業務・技術受入の視点</span></h3>
+      <ul class="check">
+        <li>台帳・フローが実業務の案件（例：現場点検報告AI）に沿って回るか</li>
+        <li>業務要件・技術受入（UAT）の確認ポイントが入っているか</li>
+        <li>AI回答の技術的妥当性を確認する工程があるか</li>
+        <li>用語・操作が非エンジニア職掌（研究・技術職）にも分かりやすいか</li>
+      </ul>
+    </div>
+    <div class="card"><h3>6.3 IT/DX/AIシステム開発者<br><span class="small">実装・運用の視点</span></h3>
+      <ul class="check">
+        <li>案件IDで全成果物を追跡できるか</li>
+        <li>承認者・担当者の役割（SOD）に漏れや重複がないか</li>
+        <li>設定作業の担当者と工数は妥当か</li>
+        <li>第4章の「基盤の自前アプリ不要」判定は妥当か</li>
+        <li>監視基盤（自前Web構築予定）との連携論点（4.4）が明確か</li>
+        <li>NEO ⇄ AppSuite のGate状態反映（手動/自動）の運用が定義されているか</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="decision">
+  <div class="section-title"><div class="num">7</div><h2>確認事項（レビューで決定いただきたい点）</h2></div>
+
+  <h3 style="margin:0 0 10px;font-size:18px">7.1 Q1〜Q7 の回答状況</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:6%">Q</th><th style="width:22%">論点</th><th style="width:50%">回答</th><th style="width:22%">状態</th></tr></thead>
+    <tbody>
+      <tr><td>Q1</td><td>Knowledge基盤（知識の正本）</td><td><strong>Notionを導入し、NotionでKnowledge基盤（知識をためる場所）を構築</strong>（Idea / 確定Knowledge / 要件・意思決定 / Lessons Learned）</td><td><strong>決定済み</strong></td></tr>
+      <tr><td>Q2</td><td>Collaboration・通知の場</td><td>通知は<strong>desknet's NEO</strong>。<strong>Slack上での議論は3名のみ</strong>（経営企画／建設土木技術・研究／IT・DX・AI開発）</td><td><strong>決定済み</strong></td></tr>
+      <tr><td>Q3</td><td>承認の実行場所</td><td><strong>desknet's NEO Workflow</strong></td><td><strong>決定済み</strong></td></tr>
+      <tr><td>Q4</td><td>GitHub・Webhookの扱い</td><td><strong>Webhookが必要なときのみ利用</strong>（API接続として必要な箇所は都度指摘。例：desknet's NEO API ⇔ Webhook ⇔ 他社製アプリ）</td><td><strong>決定済み</strong></td></tr>
+      <tr><td>Q5</td><td>認証（SSO）</td><td>当面は各SaaSのログイン/パスワード認証。<strong>将来的にSSO化</strong></td><td>決定済み（当面運用）</td></tr>
+      <tr><td>Q6</td><td>Lightblueの機能範囲</td><td><strong>ベンダー確認予定</strong></td><td>確認後反映</td></tr>
+      <tr><td>Q7</td><td>監視ツール</td><td><strong>自前でWebベース構築予定</strong>（本計画のスコープ外）</td><td>決定済み（別途計画）</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 style="margin:22px 0 10px;font-size:18px">7.2 追加の決定ポイント（他に決めるべき点）</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:6%">P</th><th style="width:18%">論点</th><th style="width:58%">内容</th><th style="width:18%">決定</th></tr></thead>
+    <tbody>
+      <tr><td>P-1</td><td>Gate 5（Release）最終承認者</td><td>既存文書の「上位Gate Owner（第4の役割）」を3名体制で誰が担うか。A. 経営企画担当者が兼務 / B. 役員等を別途指定</td><td></td></tr>
+      <tr><td>P-2</td><td>パイロット案件の選定</td><td>最初に通しで回す案件1件（例：現場写真・点検記録からの報告書自動作成）と、その効果測定KPI（例：作成時間 60分→20分）</td><td></td></tr>
+      <tr><td>P-3</td><td>NEO ⇄ AppSuite の反映方法</td><td>承認結果（NEO）→ Gate状態（AppSuite）の反映をA. 手動転記で開始 / B. 最初から自動連携（iPaaS等）</td><td></td></tr>
+      <tr><td>P-4</td><td>「提案者」の範囲</td><td>アイデアを出すのは3名のみか、3名以外（現場職員等）からの受付も当面の対象にするか</td><td></td></tr>
+      <tr><td>P-5</td><td>AI利用ルール・情報管理方針</td><td>何をAIへ入力してよいか（社外秘・個人情報の線引き）の原案と、承認者</td><td></td></tr>
+      <tr><td>P-6</td><td>監視基盤の計画</td><td>自前Web構築の監視基盤を誰が・いつ作るか。要件定義を本計画と別に起票するか（4.4）</td><td></td></tr>
+      <tr><td>P-7</td><td>将来のSSO</td><td>導入時期・対象（NEO／AppSuite／Lightblue）・ID基盤（Entra ID等）の想定</td><td></td></tr>
+      <tr><td>P-8</td><td>3名の兼任ルール（Authorityの重複可否）</td><td>案件の規模・種別に応じて「1人が複数Authorityを兼ねてよいか」を決める。例：小規模案件は経営企画担当者が上位Gate OwnerとGate 5承認を兼務、大規模・高額案件は別途役員承認。<span class="small"><strong>推奨：案件ランク（高額/全社/社外秘）を定義し、通常案件は3名で完結、高リスク案件のみ役員承認を挟む</strong></span></td><td></td></tr>
+      <tr><td>P-9</td><td>パイロット案件で扱うデータのAI入力可否</td><td>例題の現場写真・点検記録に<strong>個人情報・位置情報が含まれる場合</strong>、Lightblue（外部AI）へ入力してよいか。A. マスキング・匿名化して入力 / B. 人物・位置が写らない写真のみ対象 / C. 当面は文字情報のみ。<span class="small"><strong>推奨：A（マスキング処理を案件の要件に含める）</strong></span></td><td></td></tr>
+      <tr><td>P-10</td><td>監視基盤の監視項目・通知先の確定</td><td>自前Web監視基盤で何を監視するか（Lightblue利用量・エラー・NEO/AppSuiteの稼働等）と、アラートの通知先（NEO通知 or メール）。<span class="small"><strong>推奨：最初は「Lightblue利用量とエラー」のみ、通知はメールで開始</strong></span></td><td></td></tr>
+      <tr><td>P-11</td><td>3名のアカウント・権限レベル</td><td>各SaaS（NEO／AppSuite／Lightblue／Notion）で3名に与える権限（管理者／一般／閲覧）を決める。<span class="small"><strong>推奨：各ツールの管理者は1名（設定変更担当）とし、他2名は通常利用・閲覧。管理者を1名に集中させず担当を分ける</strong></span></td><td></td></tr>
+      <tr><td>P-12</td><td>文書・設定のバックアップと引継ぎ</td><td>本計画書を含む設定資料・テンプレートの保存場所と、担当者不在時の引継ぎ方法。<span class="small"><strong>推奨：社内の共有フォルダ等に設定資料を集約し、バックアップ頻度を決める</strong></span></td><td></td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="glossary">
+  <div class="section-title"><div class="num">付A</div><h2>用語集（非エンジニア向け）</h2></div>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:16%">用語</th><th>説明</th></tr></thead>
+    <tbody>
+      <tr><td>案件ID</td><td>1つの取組（例：現場点検報告書の自動作成）に振る整理番号。<code>DX-2026-0042</code> のように年度＋連番で、台帳・資料・通知すべてをこの番号で紐づける</td></tr>
+      <tr><td>Phase</td><td>案件の進み具合（段階）。アイデア → 企画 → 要件 → MVP → 本番準備 → 本番 → 運用</td></tr>
+      <tr><td>Gate（ゲート）</td><td>次の段階へ進んでよいかの「関所」。Gate 1〜5の承認を経て進む。承認は必ず人（desknet's NEO Workflow）が行う</td></tr>
+      <tr><td>正本</td><td>「正式な記録はここ」と決めた場所。二重管理を防ぐためのルール（承認の正本＝NEO Workflow、案件台帳の正本＝AppSuite）</td></tr>
+      <tr><td>Workflow（ワークフロー）</td><td>申請 → 承認 → 差戻し の流れをシステム上で管理する機能（desknet's NEO Workflow）</td></tr>
+      <tr><td>MVP</td><td>まず一番小さく・速く作って試す範囲（Minimum Viable Product）。効果を確かめてから広げる</td></tr>
+      <tr><td>SOD（職務分掌）</td><td>「企画する人と承認する人を分ける」等、1人で全てを決められないようにする仕組み</td></tr>
+      <tr><td>RAG</td><td>AIが社内の知識（Notion等）を検索して、その内容に基づいて回答する仕組み</td></tr>
+      <tr><td>KPI / ROI</td><td>KPI＝効果を測る数値（例：作成時間）。ROI＝投資に対して得られた効果</td></tr>
+      <tr><td>SSO</td><td>1つのID・パスワードで複数のシステムにログインできる仕組み。将来導入予定</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 style="margin:22px 0 10px;font-size:18px">付録B：既存文書との関係</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:34%">文書</th><th style="width:28%">役割</th><th>本計画書との関係</th></tr></thead>
+    <tbody>
+      <tr><td><code>ai-dx-dev-process.html</code>（＋<code>ai-dx-dev-process.md</code>）</td><td>全体プロセス定義（確定版）</td><td>プロセス定義は変更しない。ただし本計画書の決定（承認=NEO等）は既存文書の「正本」表記と整合する</td></tr>
+      <tr><td><code>ai-dx-dev-build-guide.html</code></td><td>Phase 01〜20の構築内容・完了条件（Draft版）</td><td>本計画書はその「SaaS設定への実装項目分解」。ビルドガイドのレビューも本計画書のレビューと併せて実施</td></tr>
+      <tr><td><code>ai-dx-dev-saas-setup-guide.md</code>（＋本書）</td><td>SaaS構築・設定計画（レビュー版 v0.5）</td><td>レビュー完了後（P-1〜P-12確定後）に詳細設定手順書へ発展</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<div class="footer">
+  みらい AIエージェント事業推進基盤（Mirai AI Agent Business Platform）— SaaS構築・設定計画書 レビュー版 v0.5<br>
+  Markdown正本：<code>docs/ai-dx-dev-saas-setup-guide.md</code>（本HTMLは同期版）
+</div>
+
+</main>
+</body>
+</html>

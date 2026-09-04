@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Slack 設定手順書（ELI5：やさしい手順書）— みらいAIエージェント事業推進基盤</title>
+<style>
+:root{
+  --bg:#f6f8fb;--panel:#fff;--ink:#172033;--muted:#637083;--line:#dfe5ee;
+  --navy:#183153;--blue:#2563eb;--cyan:#0891b2;--green:#15803d;--amber:#b45309;--purple:#7c3aed;--red:#b91c1c;
+  --shadow:0 8px 24px rgba(20,32,51,.08);--radius:18px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;background:var(--bg);color:var(--ink);line-height:1.8}
+a{color:inherit;text-decoration:none}
+.hero{background:radial-gradient(circle at 85% 15%,rgba(180,83,9,.2),transparent 28%),linear-gradient(135deg,#271a05,#78350f 55%,#92400e);color:#fff;padding:56px 24px 44px}
+.hero .wrap{max-width:1080px;margin:auto}
+.eyebrow{display:inline-block;padding:6px 12px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);border-radius:999px;font-size:13px;letter-spacing:.05em}
+h1{font-size:clamp(26px,3.4vw,42px);line-height:1.3;margin:16px 0 10px}
+.hero p{max-width:920px;color:#fef3c7;font-size:16.5px;margin:0}
+.hero .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.tag{padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);font-size:13px}
+.topbar{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.95);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.topbar .wrap{max-width:1080px;margin:auto;padding:10px 18px;display:flex;gap:6px;overflow-x:auto}
+.topbar a{flex:0 0 auto;padding:8px 12px;border-radius:10px;color:#42516a;font-size:13px;font-weight:700}
+.topbar a:hover{background:#eef4ff;color:var(--blue)}
+main{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+section{margin:0 0 44px}
+.section-title{display:flex;align-items:center;gap:12px;margin:0 0 16px}
+.section-title .num{width:38px;height:38px;border-radius:12px;background:var(--navy);color:#fff;display:grid;place-items:center;font-weight:800;flex:0 0 auto;font-size:15px}
+.section-title h2{margin:0;font-size:24px;line-height:1.3}
+.section-title .sub{font-size:13px;color:var(--muted);font-weight:700}
+.lead{background:#fffbeb;border:1px solid #fef3c7;border-left:5px solid var(--amber);padding:16px 18px;border-radius:14px;margin:0 0 20px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);margin:0 0 16px}
+.card h3{margin:0 0 8px;font-size:18px}
+.note{border-left:4px solid var(--cyan);background:#ecfeff;padding:12px 14px;border-radius:10px;color:#164e63;margin:12px 0 0}
+.decision{border-left:4px solid var(--green);background:#f0fdf4;padding:12px 14px;border-radius:10px;color:#14532d;margin:12px 0 0}
+.warning{border-left:4px solid var(--amber);background:#fff7ed;padding:12px 14px;border-radius:10px;color:#7c2d12;margin:12px 0 0}
+table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+th,td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:#f1f5f9;text-align:left;font-size:13px;color:#334155}
+tr:last-child td{border-bottom:0}
+.tw{overflow-x:auto;border-radius:12px;background:#fff;border:1px solid var(--line)}
+.tw table{border:none;border-radius:0}
+code{background:#eef2f7;padding:2px 6px;border-radius:6px;font-family:"SFMono-Regular",Consolas,monospace;font-size:.92em}
+.small{font-size:13px;color:var(--muted)}
+.step{display:grid;grid-template-columns:52px 1fr;gap:14px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin:0 0 14px;box-shadow:0 4px 14px rgba(20,32,51,.05)}
+.step-no{width:44px;height:44px;border-radius:12px;background:#b45309;color:#fff;display:grid;place-items:center;font-weight:900;font-size:17px}
+.step h4{margin:0 0 6px;font-size:16.5px}
+.step p{margin:0;color:#334155;font-size:15px}
+.step .who{display:inline-block;margin-top:8px;font-size:12.5px;font-weight:800;color:#334155;background:#eef2f7;border-radius:999px;padding:4px 10px}
+ul.check{list-style:none;margin:8px 0 0;padding:0}
+ul.check li{padding:4px 0 4px 30px;position:relative;margin:2px 0}
+ul.check li::before{content:"";position:absolute;left:4px;top:8px;width:16px;height:16px;border:2px solid #94a3b8;border-radius:5px;background:#fff}
+ul.plain{margin:8px 0 0;padding-left:1.2em}
+ul.plain li{margin:3px 0}
+.footer{margin-top:48px;border-top:1px solid var(--line);padding-top:22px;color:var(--muted);font-size:13px;text-align:center}
+@media(max-width:640px){.hero{padding-top:40px}.step{grid-template-columns:44px 1fr;padding:13px 14px}.step-no{width:38px;height:38px;font-size:15px}main{padding-left:14px;padding-right:14px}h1{font-size:24px}}
+@media print{.topbar{display:none}body{background:#fff}.card,.step{box-shadow:none}}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="eyebrow">MIRAI AI AGENT BUSINESS PLATFORM — ELI5 SETUP GUIDE</span>
+    <h1>Slack 設定手順書</h1>
+    <p>Slackは、この基盤の<strong>「3名で気軽に話し合うおしゃべり部屋（案件チャンネル）」</strong>です。正式な承認はNEO Workflowで行いますが、その前の<strong>「相談・検討・レビュー」はここで行います</strong>。この基盤の議論に参加するのは<strong>3名のみ</strong>です。</p>
+    <div class="meta">
+      <span class="tag">ELI5（やさしい説明）</span><span class="tag">実行者：IT/DX/AIシステム開発者</span>
+      <span class="tag">参加：3名のみ</span><span class="tag">目安：0.5〜1日</span>
+    </div>
+  </div>
+</header>
+
+<nav class="topbar">
+  <div class="wrap">
+    <a href="#what">これは何？</a>
+    <a href="#who">だれがやる？</a>
+    <a href="#prepare">じゅんび</a>
+    <a href="#steps">やり方</a>
+    <a href="#samples">サンプル</a>
+    <a href="#done">できた？</a>
+    <a href="#caution">ちゅうい</a>
+  </div>
+</nav>
+
+<main>
+
+<section id="what">
+  <div class="section-title"><div class="num">1</div><h2>これは何？</h2></div>
+  <div class="lead">
+    <strong>たとえると：</strong>Slackは「打ち合わせ室」。案件ごとに部屋（チャンネル）を作り、3名がそこで意見を出し合います。部屋での「OK」は<strong>ただの会話</strong>です。正式な「承認」は別の場所（NEO Workflow）で行います。検討中のメモはSlackの「Canvas（キャンバス＝共有メモ）」に書き、<strong>確定したらNotionへ移します</strong>。
+  </div>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:26%">言葉</th><th>説明</th></tr></thead>
+    <tbody>
+      <tr><td><strong>チャンネル</strong></td><td>話題ごとの部屋。案件IDを名前に付けて分かりやすくする</td></tr>
+      <tr><td><strong>Canvas（キャンバス）</strong></td><td>Slackの中で共同で書ける「共有メモ」。検討中のドラフトを書く場所</td></tr>
+      <tr><td><strong>スレッド</strong></td><td>1つの話題に返信をまとめる機能。話が散らばらない</td></tr>
+      <tr><td><strong>通知</strong></td><td>この基盤の「状態が変わったお知らせ」は<strong>desknet's NEO</strong>が担当（Slackではない）</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="warning">
+    <strong>この基盤の鉄則：</strong>Slackでの「OK」「いいね」は正式な承認ではありません。承認・差戻しは必ず desknet's NEO Workflow で行い、その記録を正本とします。
+  </div>
+</section>
+
+<section id="who">
+  <div class="section-title"><div class="num">2</div><h2>だれがやるの？（参加者は3名のみ）</h2></div>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:34%">人</th><th>役割</th></tr></thead>
+    <tbody>
+      <tr><td><strong>IT/DX/AIシステム開発者</strong></td><td>チャンネルを作成し、3名を招待する（管理者として設定）</td></tr>
+      <tr><td><strong>社内経営企画担当者</strong></td><td>参加者：事業価値の視点で検討に加わる</td></tr>
+      <tr><td><strong>社内建設土木技術者/研究者</strong></td><td>参加者：業務・技術の視点で検討に加わる</td></tr>
+      <tr><td><strong>IT/DX/AIシステム開発者</strong></td><td>参加者：システム実現性の視点で検討に加わる</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>参加者は3名のみ：</strong>この基盤のSlackチャンネルには<strong>他の方を招待しません</strong>（経営企画担当者／建設土木技術者・研究者／IT・DX・AIシステム開発者の3名のみ）。将来、全社員へ広げる場合は運用ルールを見直します。
+  </div>
+</section>
+
+<section id="prepare">
+  <div class="section-title"><div class="num">3</div><h2>じゅんびするもの</h2></div>
+  <div class="card">
+    <ul class="check">
+      <li>会社のSlackワークスペースが利用できる（なければ管理者に作成を依頼）</li>
+      <li>3名のアカウントがSlackに登録されている</li>
+      <li>案件チャンネルの名前のルール（命名規則）を決めておく</li>
+      <li>全体計画書（<code>ai-dx-dev-saas-setup-guide.html</code>）の 3.6 を開いておく</li>
+    </ul>
+  </div>
+</section>
+
+<section id="steps">
+  <div class="section-title"><div class="num">4</div><h2>やり方（手順）</h2></div>
+
+  <div class="step">
+    <div class="step-no">1</div>
+    <div>
+      <h4>チャンネルの名前のルールを3名で決める</h4>
+      <p>案件チャンネルの名前は案件IDが分かる形にします。例：<code>proj-2026-042-現場点検報告AI</code>（＝案件ID <code>DX-2026-0042</code> の案件チャンネル）。ルールを1つ決めて、今後すべて同じ形にします。</p>
+      <span class="who">3名（決定）</span>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-no">2</div>
+    <div>
+      <h4>基盤のチャンネルを作る</h4>
+      <p>案件ごとの部屋を作る前に、基盤全体の連絡用チャンネル（例：<code>ai-dx-platform</code>）を1つ作り、3名を招待します。ここでは基盤の運用連絡や進め方の相談をします。</p>
+      <span class="who">IT/DX/AIシステム開発者（作成・招待）</span>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-no">3</div>
+    <div>
+      <h4>案件チャンネルの「ひな形ルール」を文書化する</h4>
+      <p>チャンネルの最初のメッセージ（ピン留め）に、次の案内を書くルールにします：「この部屋は案件DX-2026-0042の検討室です。ここでのOKは正式承認ではありません。正式承認はNEO Workflowで行います。」</p>
+      <span class="who">IT/DX/AIシステム開発者（文書化）→ 3名（確認）</span>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-no">4</div>
+    <div>
+      <h4>Canvas（共有メモ）の使い方を決める</h4>
+      <p>検討中のドラフト（例：アイデアの整理メモ）は、SlackのCanvasに書くことをルールにします。そして<strong>人間レビューが済んで「確定」になったらNotionへ移す</strong>、という流れを3名で共有します。</p>
+      <span class="who">3名（合意）</span>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-no">5</div>
+    <div>
+      <h4>テストで1件、検討の流れを通してみる</h4>
+      <p>ためしに「現場点検報告書の自動作成」の話題をチャンネルで出し、Canvasにメモを書き、3名で意見を出し合う…という流れを試します。問題なければ完了です。</p>
+      <span class="who">3名（テスト）</span>
+    </div>
+  </div>
+
+  <div class="decision">
+    <strong>だいたいの目安：</strong>チャンネル作成とルール決めは0.5〜1日。テスト検討を含めると1〜2日ほど見ておくと安心です。
+  </div>
+</section>
+
+<section id="samples">
+  <div class="section-title"><div class="num">5</div><h2>サンプル（チャンネル名・案内文・Canvasの例）</h2></div>
+  <p style="margin:0 0 12px">ここでは、パイロット案件（例：<strong>現場写真・点検記録からの報告書自動作成</strong> <code>DX-2026-0042</code>）を例に、Slackでの「チャンネルの作り方・使い方」の例を示します。</p>
+
+  <div class="card">
+    <h3>サンプル1：チャンネル名の例</h3>
+    <div class="tw">
+    <table>
+      <thead><tr><th style="width:30%">チャンネル</th><th>説明</th></tr></thead>
+      <tbody>
+        <tr><td><code>ai-dx-platform</code></td><td>基盤全体の連絡用（3名の運用連絡・進め方の相談）</td></tr>
+        <tr><td><code>proj-2026-042-現場点検報告AI</code></td><td>案件 <code>DX-2026-0042</code> の検討室（命名規則：<code>proj-年度-連番-案件名</code>）</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>サンプル2：チャンネルの案内文（ピン留めする文の例）</h3>
+    <div class="cmt" style="margin-top:0">
+      【この部屋のルール】<br>
+      ・対象案件：DX-2026-0042（現場写真・点検記録からの報告書自動作成）<br>
+      ・参加者：経営企画担当者／建設土木技術者・研究者／IT・DX・AIシステム開発者の3名のみ<br>
+      ・ここでの「OK」は正式承認ではありません。正式な承認・差戻しは desknet's NEO Workflow で行います。<br>
+      ・検討中のメモはCanvasに書き、確定した情報はNotionへ移します。
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>サンプル3：Canvas（検討メモ）の書き方の例</h3>
+    <div class="note" style="margin-top:0">
+      <strong>タイトル：</strong>DX-2026-0042 検討メモ（MVP範囲）<br>
+      <strong>メモの内容：</strong><br>
+      ・相談のきっかけ：点検写真と手書きメモからの報告書作成が大変（1件60分）<br>
+      ・話し合って分かったこと：対象は日常安全点検報告書が最初の候補<br>
+      ・決まったこと（仮）：MVPは「写真アップロード＋AI所見案＋帳票出力」<br>
+      ・未決定：人物マスキングの扱い／GPS利用範囲<br>
+      ・次アクション：KPI基準値の設定を経営企画担当者へ依頼
+    </div>
+    <p class="small" style="margin:8px 0 0">※Canvasは検討中のメモです。<strong>3名で「これで確定」となった内容だけをNotionへ移します。</strong></p>
+  </div>
+</section>
+
+<section id="done">
+  <div class="section-title"><div class="num">6</div><h2>できたか確かめる（完了チェック）</h2></div>
+  <div class="card">
+    <ul class="check">
+      <li>基盤のチャンネルが作られ、3名だけが参加している（他の人はいない）</li>
+      <li>案件チャンネルの命名規則が決まり、文書化された</li>
+      <li>チャンネルの案内文（「ここでのOKは正式承認ではない」）が用意された</li>
+      <li>Canvasの使い方（検討中ドラフト → 確定後Notion）が3名に共有された</li>
+      <li>テスト検討で、相談 → メモ整理 → 意見交換 の流れが動いた</li>
+    </ul>
+  </div>
+</section>
+
+<section id="caution">
+  <div class="section-title"><div class="num">7</div><h2>ちゅういすること</h2></div>
+  <div class="warning">
+    <ul class="plain">
+      <li><strong>「OK」は承認じゃない：</strong>Slackで「OK」と言っても正式な承認になりません。承認が必要なときはNEO Workflowで申請を出します。</li>
+      <li><strong>参加者は3名のみ：</strong>案件チャンネルに3名以外を招待しない運用を守ります。</li>
+      <li><strong>生の会話をNotionにそのまま入れない：</strong>会話の結論はAIが整理 → 人間が確認 → Notionへ登録、の順番を守ります。</li>
+      <li><strong>会話が散らかったらスレッド：</strong>1つの話題はスレッドにまとめ、あとで「何が決まったか」を追いやすくします。</li>
+    </ul>
+  </div>
+</section>
+
+<div class="footer">
+  みらい AIエージェント事業推進基盤（Mirai AI Agent Business Platform）— Slack 設定手順書（ELI5）<br>
+  関連文書：<code>ai-dx-dev-saas-setup-guide.html</code>（全体計画書）／<code>Notion.html</code>（Knowledge基盤の手順書）／<code>NEO-Workflow.html</code>（承認の手順書）
+</div>
+
+</main>
+</body>
+</html>

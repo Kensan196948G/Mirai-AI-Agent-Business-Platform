@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI/DX開発基盤 インフラ・ネットワーク構成設計書（承認版）</title>
+<style>
+:root{
+  --bg:#f4f7fb;
+  --panel:#ffffff;
+  --ink:#172033;
+  --muted:#667085;
+  --line:#d8e0eb;
+  --navy:#17345c;
+  --blue:#2563eb;
+  --cyan:#0891b2;
+  --green:#15803d;
+  --amber:#b45309;
+  --red:#b91c1c;
+  --purple:#7c3aed;
+  --slate:#475569;
+  --soft-blue:#eef5ff;
+  --soft-green:#effcf3;
+  --soft-amber:#fff8eb;
+  --soft-red:#fff1f2;
+  --shadow:0 10px 28px rgba(22,34,51,.08);
+  --radius:18px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP","Yu Gothic",Meiryo,sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+  line-height:1.72;
+}
+a{color:inherit;text-decoration:none}
+.hero{
+  color:#fff;
+  background:
+    radial-gradient(circle at 82% 16%, rgba(58,150,255,.20), transparent 30%),
+    linear-gradient(135deg,#0e2039,#17345c 56%,#0f5668);
+  padding:58px 22px 42px;
+}
+.wrap{max-width:1220px;margin:auto}
+.eyebrow{
+  display:inline-block;
+  border:1px solid rgba(255,255,255,.25);
+  background:rgba(255,255,255,.08);
+  border-radius:999px;
+  padding:6px 12px;
+  font-size:12px;font-weight:800;letter-spacing:.08em
+}
+h1{font-size:clamp(28px,4vw,48px);line-height:1.22;margin:17px 0 12px}
+.hero p{max-width:990px;margin:0;color:#dbeafe;font-size:16px}
+.meta{display:flex;flex-wrap:wrap;gap:9px;margin-top:20px}
+.tag{padding:7px 11px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);font-size:12px}
+.approved{display:inline-flex;align-items:center;gap:8px;margin-top:18px;padding:9px 13px;border-radius:12px;background:rgba(22,163,74,.18);border:1px solid rgba(187,247,208,.3);font-weight:800}
+.topnav{
+  position:sticky;top:0;z-index:50;background:rgba(255,255,255,.95);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line)
+}
+.topnav .wrap{display:flex;gap:7px;overflow:auto;padding:9px 16px}
+.topnav a{flex:0 0 auto;padding:8px 11px;border-radius:9px;font-size:12px;font-weight:800;color:#475569}
+.topnav a:hover{background:#eef4ff;color:var(--blue)}
+main{max-width:1220px;margin:auto;padding:30px 18px 70px}
+section{margin-bottom:42px}
+.sec-title{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.sec-no{width:39px;height:39px;display:grid;place-items:center;background:var(--navy);color:#fff;border-radius:12px;font-weight:900}
+h2{margin:0;font-size:25px}
+h3{margin:20px 0 9px;font-size:18px;color:var(--navy)}
+.lead,.note,.decision,.warning,.danger{
+  border-radius:14px;padding:15px 17px;margin:12px 0
+}
+.lead{background:var(--soft-blue);border:1px solid #d5e5ff;border-left:5px solid var(--blue)}
+.note{background:#ecfeff;border-left:5px solid var(--cyan);color:#164e63}
+.decision{background:var(--soft-green);border-left:5px solid var(--green);color:#14532d}
+.warning{background:var(--soft-amber);border-left:5px solid var(--amber);color:#78350f}
+.danger{background:var(--soft-red);border-left:5px solid var(--red);color:#7f1d1d}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.card{
+  background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)
+}
+.card h3{margin:0 0 8px;color:var(--ink)}
+.small{font-size:12px;color:var(--muted)}
+.badge{
+  display:inline-block;padding:4px 9px;border-radius:999px;background:#eef2ff;color:#3730a3;
+  font-size:11px;font-weight:900;margin-bottom:8px
+}
+.table-wrap{overflow-x:auto;background:#fff;border:1px solid var(--line);border-radius:15px}
+table{width:100%;border-collapse:collapse;min-width:760px}
+th,td{padding:11px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:#f1f5f9;color:#334155;text-align:left;font-size:12px}
+tr:last-child td{border-bottom:none}
+code{background:#eef2f7;padding:2px 6px;border-radius:6px;font-family:Consolas,monospace}
+pre{margin:0}
+.arch{
+  background:#0f172a;color:#e5eefc;border-radius:20px;padding:22px;box-shadow:var(--shadow);overflow:auto
+}
+.arch pre{font-family:Consolas,"SFMono-Regular",monospace;font-size:13px;line-height:1.55;white-space:pre}
+.diagram-shell{
+  background:#fff;border:1px solid var(--line);border-radius:20px;padding:18px;box-shadow:var(--shadow);overflow:auto
+}
+svg text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP","Yu Gothic",Meiryo,sans-serif}
+.flow-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0}
+.node{
+  min-width:130px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;text-align:center;font-weight:800
+}
+.node.blue{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}
+.node.green{background:#f0fdf4;border-color:#bbf7d0;color:#166534}
+.node.amber{background:#fff7ed;border-color:#fed7aa;color:#9a3412}
+.node.red{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+.arrow{font-size:22px;color:#64748b;font-weight:900}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:15px;padding:15px}
+.kpi strong{display:block;font-size:24px;color:var(--navy)}
+ul.clean{margin:8px 0 0;padding-left:1.2em}
+ul.clean li{margin:4px 0}
+.phase-list{display:grid;gap:10px}
+.phase{
+  background:#fff;border:1px solid var(--line);border-radius:15px;padding:14px 16px;display:grid;grid-template-columns:110px 1fr;gap:12px
+}
+.phase strong{color:var(--navy)}
+.footer{border-top:1px solid var(--line);margin-top:42px;padding-top:20px;text-align:center;color:var(--muted);font-size:12px}
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0 0}
+.legend span{display:inline-flex;align-items:center;gap:6px;font-size:12px}
+.dot{width:11px;height:11px;border-radius:3px;display:inline-block}
+@media(max-width:900px){
+  .cards{grid-template-columns:1fr 1fr}
+  .kpis{grid-template-columns:1fr 1fr}
+}
+@media(max-width:640px){
+  .cards,.kpis{grid-template-columns:1fr}
+  .phase{grid-template-columns:1fr}
+  main{padding-left:12px;padding-right:12px}
+}
+@media print{
+  .topnav{display:none}
+  body{background:#fff}
+  .card,.diagram-shell,.arch{box-shadow:none}
+  section{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <span class="eyebrow">AI / DX INFRASTRUCTURE & NETWORK — APPROVED ARCHITECTURE</span>
+    <h1>AI/DX開発基盤<br>インフラ・ネットワーク構成設計書</h1>
+    <p>
+      既存会社貸与PCは本社内FortiGate配下の既存社内LANに残し、AI/DXサーバ側のみをVLAN分離する。
+      FortiGateをセキュリティ境界・VLAN間通信制御点とし、管理系とAI開発系を分離。
+      将来はStaging / Production / Monitoring / Backup / Integrationへ段階拡張する。
+    </p>
+    <div class="meta">
+      <span class="tag">既存PCは現行LANのまま</span>
+      <span class="tag">FortiGate中心</span>
+      <span class="tag">VLAN分離</span>
+      <span class="tag">MGMT / AI-DEV</span>
+      <span class="tag">Default Deny</span>
+      <span class="tag">10GbE Backbone</span>
+      <span class="tag">GitHub CI/CD</span>
+      <span class="tag">Future: STG / PROD</span>
+    </div>
+    <div class="approved">✓ 構成方針：承認済み</div>
+  </div>
+</header>
+
+<nav class="topnav">
+  <div class="wrap">
+    <a href="#policy">基本方針</a>
+    <a href="#overview">全体構成</a>
+    <a href="#devices">機器構成</a>
+    <a href="#network">ネットワーク</a>
+    <a href="#vlan">VLAN設計</a>
+    <a href="#firewall">FortiGate</a>
+    <a href="#server">サーバ</a>
+    <a href="#cicd">CI/CD</a>
+    <a href="#monitor">監視・Backup</a>
+    <a href="#future">将来拡張</a>
+    <a href="#build">構築順序</a>
+  </div>
+</nav>
+
+<main>
+
+<section id="policy">
+  <div class="sec-title"><div class="sec-no">01</div><h2>承認済み基本方針</h2></div>
+  <div class="decision">
+    <strong>採用方針：</strong>
+    開発PCは既存会社貸与PCを利用し、本社内FortiGate配下の既存社内ネットワークに置いたままとする。
+    新規にAI/DX用ネットワークを分岐し、サーバ側のみをVLAN分離する。
+  </div>
+  <div class="cards">
+    <div class="card">
+      <span class="badge">Corporate LAN</span>
+      <h3>開発PC</h3>
+      <p>既存会社貸与PC。既存社内LANのIP設計・運用を変更しない。</p>
+    </div>
+    <div class="card">
+      <span class="badge">Security Boundary</span>
+      <h3>FortiGate</h3>
+      <p>既存LANとAI/DX VLAN間の通信制御、IPS、ログ、ポリシーの中心。</p>
+    </div>
+    <div class="card">
+      <span class="badge">Server Segmentation</span>
+      <h3>AI/DX VLAN</h3>
+      <p>管理サーバとAI Devサーバを分離。将来STG/PRODへ拡張。</p>
+    </div>
+  </div>
+
+  <h3>設計上の役割分担</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>構成要素</th><th>役割</th><th>今回の原則</th></tr></thead>
+      <tbody>
+        <tr><td>既存社内LAN</td><td>会社貸与PC・通常業務端末</td><td>既存構成を維持</td></tr>
+        <tr><td>FortiGate</td><td>セキュリティ境界 / VLAN Gateway / Firewall Policy</td><td>VLAN間通信は原則ここを通す</td></tr>
+        <tr><td>L2/L3 Switch</td><td>802.1Q VLAN / Access Port / Trunk</td><td>L3対応品でも当面はVLAN/L2中心</td></tr>
+        <tr><td>MGMT VLAN</td><td>監視・ログ・バックアップ管理等</td><td>一般PCから原則アクセス不可</td></tr>
+        <tr><td>AI-DEV VLAN</td><td>AI/DX開発、MVP、Coding Agent等</td><td>許可端末から必要通信のみ</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="overview">
+  <div class="sec-title"><div class="sec-no">02</div><h2>全体ネットワーク構成</h2></div>
+  <div class="diagram-shell">
+    <svg viewBox="0 0 1180 680" width="100%" role="img" aria-label="AI/DXインフラ全体構成図">
+      <defs>
+        <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L9,3 z" fill="#64748b"/>
+        </marker>
+        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0f172a" flood-opacity=".12"/>
+        </filter>
+      </defs>
+
+      <rect x="440" y="28" width="300" height="74" rx="16" fill="#e0f2fe" stroke="#38bdf8" filter="url(#shadow)"/>
+      <text x="590" y="57" text-anchor="middle" font-size="22" font-weight="800" fill="#0c4a6e">Internet / SaaS</text>
+      <text x="590" y="82" text-anchor="middle" font-size="13" fill="#075985">GitHub / Lightblue / Notion / Slack / Claude / AppSuite / NEO</text>
+
+      <rect x="455" y="145" width="270" height="90" rx="16" fill="#fff7ed" stroke="#fb923c" filter="url(#shadow)"/>
+      <text x="590" y="177" text-anchor="middle" font-size="22" font-weight="800" fill="#9a3412">FortiGate</text>
+      <text x="590" y="201" text-anchor="middle" font-size="13" fill="#9a3412">Firewall / UTM / IPS / Log</text>
+      <text x="590" y="220" text-anchor="middle" font-size="13" fill="#9a3412">VLAN Gateway / Policy Enforcement</text>
+      <line x1="590" y1="102" x2="590" y2="143" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"/>
+
+      <rect x="85" y="290" width="350" height="120" rx="16" fill="#f8fafc" stroke="#94a3b8" filter="url(#shadow)"/>
+      <text x="260" y="322" text-anchor="middle" font-size="20" font-weight="800" fill="#334155">既存会社ネットワーク</text>
+      <text x="260" y="345" text-anchor="middle" font-size="13" fill="#475569">Existing Corporate LAN</text>
+      <rect x="120" y="362" width="130" height="30" rx="8" fill="#fff" stroke="#cbd5e1"/>
+      <text x="185" y="382" text-anchor="middle" font-size="12" font-weight="700" fill="#334155">一般会社貸与PC</text>
+      <rect x="270" y="362" width="130" height="30" rx="8" fill="#eff6ff" stroke="#93c5fd"/>
+      <text x="335" y="382" text-anchor="middle" font-size="12" font-weight="700" fill="#1d4ed8">開発会社貸与PC</text>
+
+      <rect x="700" y="290" width="300" height="92" rx="16" fill="#eef2ff" stroke="#818cf8" filter="url(#shadow)"/>
+      <text x="850" y="322" text-anchor="middle" font-size="20" font-weight="800" fill="#3730a3">L2/L3 Managed Switch</text>
+      <text x="850" y="345" text-anchor="middle" font-size="13" fill="#4338ca">802.1Q VLAN / Trunk / Access / 10GbE</text>
+      <text x="850" y="365" text-anchor="middle" font-size="12" fill="#4338ca">当面はL2/VLAN中心、RoutingはFortiGate</text>
+
+      <line x1="530" y1="235" x2="300" y2="287" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"/>
+      <line x1="650" y1="235" x2="810" y2="287" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"/>
+      <text x="714" y="263" font-size="12" font-weight="700" fill="#475569">802.1Q Trunk</text>
+
+      <rect x="610" y="470" width="230" height="110" rx="16" fill="#f0fdf4" stroke="#4ade80" filter="url(#shadow)"/>
+      <text x="725" y="500" text-anchor="middle" font-size="18" font-weight="800" fill="#166534">VLAN 110</text>
+      <text x="725" y="524" text-anchor="middle" font-size="17" font-weight="800" fill="#166534">MGMT-SERVER</text>
+      <text x="725" y="548" text-anchor="middle" font-size="12" fill="#166534">管理 / 監視 / Log / Backup管理</text>
+      <text x="725" y="567" text-anchor="middle" font-size="12" fill="#166534">例: 10.110.0.0/24</text>
+
+      <rect x="875" y="470" width="230" height="110" rx="16" fill="#eff6ff" stroke="#60a5fa" filter="url(#shadow)"/>
+      <text x="990" y="500" text-anchor="middle" font-size="18" font-weight="800" fill="#1d4ed8">VLAN 120</text>
+      <text x="990" y="524" text-anchor="middle" font-size="17" font-weight="800" fill="#1d4ed8">AI-DEV</text>
+      <text x="990" y="548" text-anchor="middle" font-size="12" fill="#1d4ed8">Ubuntu / Docker / AI Agent / RAG</text>
+      <text x="990" y="567" text-anchor="middle" font-size="12" fill="#1d4ed8">例: 10.120.0.0/24</text>
+
+      <line x1="820" y1="382" x2="742" y2="468" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"/>
+      <line x1="890" y1="382" x2="970" y2="468" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"/>
+
+      <line x1="435" y1="350" x2="610" y2="350" stroke="#2563eb" stroke-width="3" stroke-dasharray="8 7"/>
+      <text x="522" y="338" text-anchor="middle" font-size="12" font-weight="800" fill="#1d4ed8">開発PC→FortiGate Policy→AI-DEV</text>
+
+      <rect x="95" y="486" width="360" height="76" rx="14" fill="#fff1f2" stroke="#fb7185"/>
+      <text x="275" y="515" text-anchor="middle" font-size="16" font-weight="800" fill="#9f1239">重要</text>
+      <text x="275" y="538" text-anchor="middle" font-size="12" fill="#9f1239">既存PCを新規VLANへ移さない</text>
+      <text x="275" y="556" text-anchor="middle" font-size="12" fill="#9f1239">AI/DXサーバ側だけを分離する</text>
+
+      <rect x="400" y="612" width="380" height="42" rx="12" fill="#17345c"/>
+      <text x="590" y="639" text-anchor="middle" font-size="14" font-weight="800" fill="#fff">Default DENY / 必要な通信のみ ALLOW</text>
+    </svg>
+  </div>
+  <div class="legend">
+    <span><i class="dot" style="background:#fff7ed"></i>セキュリティ境界</span>
+    <span><i class="dot" style="background:#eff6ff"></i>AI/DX開発系</span>
+    <span><i class="dot" style="background:#f0fdf4"></i>管理系</span>
+    <span><i class="dot" style="background:#f8fafc"></i>既存社内LAN</span>
+  </div>
+</section>
+
+<section id="devices">
+  <div class="sec-title"><div class="sec-no">03</div><h2>推奨機器構成</h2></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>機器</th><th>数量目安</th><th>推奨仕様・機能</th><th>主目的</th><th>優先度</th></tr></thead>
+      <tbody>
+        <tr><td><strong>FortiGate</strong></td><td>既存活用</td><td>VLAN Sub-interface / Firewall Policy / IPS / VPN / Log</td><td>ネットワーク境界・通信制御</td><td>必須</td></tr>
+        <tr><td><strong>L2/L3 Managed Switch</strong></td><td>1台～</td><td>802.1Q / ACL / SNMPv3 / Syslog / 10GbE SFP+</td><td>AI/DX VLAN分離</td><td>必須</td></tr>
+        <tr><td><strong>AI Dev Server</strong></td><td>1台～</td><td>Ubuntu / 10GbE NIC / GPU必要時 / ECC推奨</td><td>AI開発・MVP・Agent実行</td><td>必須</td></tr>
+        <tr><td><strong>管理サーバ</strong></td><td>1台またはVM</td><td>監視 / ログ / バックアップ管理 / 管理ツール</td><td>管理プレーン</td><td>必須推奨</td></tr>
+        <tr><td><strong>Backup NAS</strong></td><td>1台</td><td>RAID / Snapshot / 10GbE推奨</td><td>VM・設定・データ保護</td><td>必須推奨</td></tr>
+        <tr><td><strong>UPS</strong></td><td>1～2台</td><td>Server / Switch / NAS連動停止</td><td>停電・瞬停保護</td><td>必須推奨</td></tr>
+        <tr><td><strong>10GbE NIC</strong></td><td>Server/NAS分</td><td>SFP+または10GBASE-T</td><td>大容量データ転送</td><td>推奨</td></tr>
+        <tr><td><strong>SFP+ DAC</strong></td><td>必要数</td><td>ラック内短距離</td><td>10GbE接続</td><td>推奨</td></tr>
+        <tr><td><strong>Cat6A</strong></td><td>必要数</td><td>10GbE対応</td><td>新規銅線配線</td><td>推奨</td></tr>
+        <tr><td>Rack / PDU</td><td>1式</td><td>将来拡張余裕</td><td>機器収納・電源</td><td>環境依存</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note"><strong>速度方針：</strong>一般PCは既存1GbE/2.5GbEのままでよく、AI Server / NAS / Switch Backboneを10GbE化する。</div>
+</section>
+
+<section id="network">
+  <div class="sec-title"><div class="sec-no">04</div><h2>ネットワーク構成詳細</h2></div>
+
+  <h3>物理・論理構成</h3>
+  <div class="arch"><pre>
+Internet
+   │
+   ▼
+FortiGate（既存）
+   │
+   ├────────────────────── 既存社内LAN
+   │                         ├─ 一般会社貸与PC
+   │                         └─ 開発会社貸与PC
+   │
+   └─ 802.1Q Trunk
+         │
+         ▼
+      L2/L3 Managed Switch
+         │
+         ├─ Access VLAN110 ── 管理サーバ
+         │
+         └─ Access VLAN120 ── AI Dev Server
+
+開発PC → FortiGate Firewall Policy → VLAN120 AI Dev Server
+管理系  → VLAN110
+VLAN間通信 → 原則 FortiGate 経由
+  </pre></div>
+
+  <h3>Switchポート例</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Switch Port</th><th>接続先</th><th>Mode</th><th>VLAN</th><th>備考</th></tr></thead>
+      <tbody>
+        <tr><td>Port 1</td><td>FortiGate</td><td>Trunk</td><td>110, 120</td><td>802.1Q Tagged</td></tr>
+        <tr><td>Port 10</td><td>管理サーバ</td><td>Access</td><td>110</td><td>Untagged</td></tr>
+        <tr><td>Port 20</td><td>AI Dev Server</td><td>Access</td><td>120</td><td>Untagged</td></tr>
+        <tr><td>Port 21</td><td>AI Dev Server 2</td><td>Access</td><td>120</td><td>将来追加</td></tr>
+        <tr><td>Port 30</td><td>Backup NAS</td><td>Access</td><td>将来 VLAN180</td><td>Phase 2で分離推奨</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="warning">
+    <strong>L3 Switchの扱い：</strong>
+    L3対応品を採用してよいが、初期構成ではSwitch内でVLAN間Routingを完結させず、
+    FortiGateをVLAN Gateway / Security Policy適用点とする。
+  </div>
+</section>
+
+<section id="vlan">
+  <div class="sec-title"><div class="sec-no">05</div><h2>VLAN・IP設計</h2></div>
+
+  <div class="decision">
+    <strong>初期は2 VLANで開始：</strong> VLAN110 = 管理、VLAN120 = AI開発。
+    VLAN ID 1は多くの機器でDefault VLANとして扱われるため、用途VLANには使用しない。
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>VLAN ID</th><th>名称</th><th>IP例</th><th>用途</th><th>接続対象</th><th>Phase</th></tr></thead>
+      <tbody>
+        <tr><td>既存</td><td>CORP-LAN</td><td>既存体系</td><td>会社標準LAN</td><td>一般PC / 開発PC</td><td>既存</td></tr>
+        <tr><td><strong>110</strong></td><td><strong>MGMT-SERVER</strong></td><td>10.110.0.0/24</td><td>管理・監視・Log・Backup管理</td><td>管理サーバ</td><td>Phase 1</td></tr>
+        <tr><td><strong>120</strong></td><td><strong>AI-DEV</strong></td><td>10.120.0.0/24</td><td>AI/DX開発・MVP</td><td>AI Dev Server</td><td>Phase 1</td></tr>
+        <tr><td>140</td><td>STAGING</td><td>10.140.0.0/24</td><td>UAT / 結合試験</td><td>Staging Server</td><td>Phase 2</td></tr>
+        <tr><td>150</td><td>PRODUCTION</td><td>10.150.0.0/24</td><td>本番サービス</td><td>Production Server</td><td>Phase 2</td></tr>
+        <tr><td>160</td><td>MONITOR</td><td>10.160.0.0/24</td><td>監視・ログ収集</td><td>Monitoring Server</td><td>Phase 2</td></tr>
+        <tr><td>170</td><td>INTEGRATION</td><td>10.170.0.0/24</td><td>API / Webhook</td><td>Integration Hub</td><td>必要時</td></tr>
+        <tr><td>180</td><td>BACKUP</td><td>10.180.0.0/24</td><td>Backup</td><td>NAS</td><td>Phase 2</td></tr>
+        <tr><td>190</td><td>OOB-MGMT</td><td>10.190.0.0/24</td><td>機器管理専用</td><td>iDRAC/iLO/Switch等</td><td>将来</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small">※ IPアドレスは例。実環境では既存社内アドレス体系と重複しないレンジを採用する。</p>
+</section>
+
+<section id="firewall">
+  <div class="sec-title"><div class="sec-no">06</div><h2>FortiGate設計・通信ポリシー</h2></div>
+
+  <div class="lead">
+    <strong>原則：</strong> Default DENY。既存会社貸与PCからAI/DXサーバへは、承認された開発端末・プロトコルだけ許可する。
+  </div>
+
+  <h3>初期Firewall通信マトリクス</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>From</th><th>To</th><th>判定</th><th>主な通信</th><th>設計意図</th></tr></thead>
+      <tbody>
+        <tr><td>既存LAN 開発PC</td><td>AI-DEV</td><td>限定ALLOW</td><td>SSH 22 / HTTPS 443 / 必要開発Port</td><td>開発端末のみ</td></tr>
+        <tr><td>既存LAN 一般PC</td><td>AI-DEV</td><td>DENY</td><td>―</td><td>不要アクセス遮断</td></tr>
+        <tr><td>既存LAN</td><td>MGMT</td><td>原則DENY</td><td>―</td><td>管理系保護</td></tr>
+        <tr><td>管理者端末</td><td>MGMT</td><td>限定ALLOW</td><td>HTTPS / SSH / RDP等</td><td>管理者のみ</td></tr>
+        <tr><td>MGMT</td><td>AI-DEV</td><td>ALLOW限定</td><td>Monitoring / SSH / Backup管理</td><td>管理通信</td></tr>
+        <tr><td>AI-DEV</td><td>MGMT</td><td>原則DENY</td><td>Syslog等のみ例外</td><td>逆方向を最小化</td></tr>
+        <tr><td>AI-DEV</td><td>Internet</td><td>限定ALLOW</td><td>HTTPS 443 / DNS / NTP</td><td>GitHub・AI API・Update等</td></tr>
+        <tr><td>AI-DEV</td><td>既存LAN</td><td>原則DENY</td><td>必要時のみ例外</td><td>横展開防止</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>開発PCからAI Dev Serverへの経路</h3>
+  <div class="flow-row">
+    <div class="node">会社貸与 開発PC<br><span class="small">既存LAN</span></div>
+    <div class="arrow">→</div>
+    <div class="node amber">FortiGate<br><span class="small">Policy / IPS / Log</span></div>
+    <div class="arrow">→</div>
+    <div class="node blue">AI-DEV VLAN<br><span class="small">VLAN120</span></div>
+    <div class="arrow">→</div>
+    <div class="node blue">AI Dev Server</div>
+  </div>
+
+  <div class="danger">
+    <strong>禁止したい構成：</strong> 既存LANからSwitchのL3 RoutingだけでAI-DEVへ抜け、FortiGate Policyを迂回する経路。
+  </div>
+</section>
+
+<section id="server">
+  <div class="sec-title"><div class="sec-no">07</div><h2>サーバ構成</h2></div>
+
+  <div class="cards">
+    <div class="card">
+      <span class="badge">VLAN 110</span>
+      <h3>管理サーバ</h3>
+      <ul class="clean">
+        <li>監視</li>
+        <li>ログ集約</li>
+        <li>バックアップ管理</li>
+        <li>管理ダッシュボード</li>
+        <li>構成管理</li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="badge">VLAN 120</span>
+      <h3>AI Dev Server</h3>
+      <ul class="clean">
+        <li>Ubuntu Server</li>
+        <li>Docker / Container</li>
+        <li>AI Runtime</li>
+        <li>AI Coding Agent</li>
+        <li>RAG / Vector DB</li>
+        <li>GitHub Runner（DEV）</li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="badge">Phase 2</span>
+      <h3>Staging / Production</h3>
+      <ul class="clean">
+        <li>DEVと別VLAN</li>
+        <li>別Credential / Secret</li>
+        <li>Stagingはマスキング済データ</li>
+        <li>Productionでは開発しない</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>AI Dev Serverの役割イメージ</h3>
+  <div class="arch"><pre>
+AI Dev Server
+│
+├─ Ubuntu Server
+├─ Docker / Container Runtime
+├─ AI Runtime / Local Model（必要時）
+├─ Coding Agent
+├─ RAG
+├─ Vector DB
+├─ API / Development Service
+├─ GitHub Runner（DEV）
+└─ MVP / Development Environment
+
+※ Productionはここに同居させない。
+  </pre></div>
+</section>
+
+<section id="cicd">
+  <div class="sec-title"><div class="sec-no">08</div><h2>GitHub CI/CDと本番移行構成</h2></div>
+
+  <div class="diagram-shell">
+    <div class="flow-row">
+      <div class="node">開発PC</div><div class="arrow">→</div>
+      <div class="node blue">GitHub<br><span class="small">Issue / PR / Review</span></div><div class="arrow">→</div>
+      <div class="node green">CI<br><span class="small">Test / Scan</span></div><div class="arrow">→</div>
+      <div class="node blue">DEV Runner</div><div class="arrow">→</div>
+      <div class="node blue">AI-DEV</div>
+    </div>
+    <div class="flow-row">
+      <div class="node blue">Approved Main</div><div class="arrow">→</div>
+      <div class="node amber">STG Runner</div><div class="arrow">→</div>
+      <div class="node amber">STAGING</div><div class="arrow">→</div>
+      <div class="node">UAT</div><div class="arrow">→</div>
+      <div class="node green">Gate 5承認</div>
+    </div>
+    <div class="flow-row">
+      <div class="node green">Release Candidate</div><div class="arrow">→</div>
+      <div class="node red">PROD Runner</div><div class="arrow">→</div>
+      <div class="node red">PRODUCTION</div>
+    </div>
+  </div>
+
+  <div class="decision">
+    <strong>本番原則：</strong>
+    開発者PCからProductionへ直接SSHしてリリースする方式は正規経路としない。
+    GitHubの承認済みRelease Candidate / CI/CD経由を正規経路とする。
+  </div>
+</section>
+
+<section id="monitor">
+  <div class="sec-title"><div class="sec-no">09</div><h2>監視・ログ・バックアップ構成</h2></div>
+
+  <h3>監視構成</h3>
+  <div class="arch"><pre>
+                Monitoring / Management
+                       VLAN110
+                          │
+       ┌──────────────────┼──────────────────┐
+       ▼                  ▼                  ▼
+   FortiGate           Switch            AI Dev Server
+   ├─ Event            ├─ Port           ├─ CPU / Memory
+   ├─ Traffic          ├─ SNMP           ├─ Disk
+   ├─ IPS              └─ Error          ├─ Docker
+   └─ Log                                 ├─ AI API
+                                          └─ Application
+
+将来：
+STAGING / PRODUCTION / NAS / UPS / Integration Hub も監視対象へ追加
+  </pre></div>
+
+  <h3>バックアップ構成</h3>
+  <div class="flow-row">
+    <div class="node blue">AI-DEV</div><div class="arrow">→</div>
+    <div class="node green">Backup NAS</div><div class="arrow">→</div>
+    <div class="node">二次Backup<br><span class="small">別拠点 / Cloud</span></div>
+  </div>
+
+  <div class="note">
+    将来はBackup専用VLANを追加し、Production / AI-DEVから必要なBackup通信だけ許可する。
+    Snapshot / 世代管理 / オフサイトコピーも検討する。
+  </div>
+</section>
+
+<section id="future">
+  <div class="sec-title"><div class="sec-no">10</div><h2>将来拡張構成</h2></div>
+
+  <div class="lead">
+    初期は <strong>MGMT + AI-DEV</strong> の2 VLANで開始し、本番運用開始時に <strong>STAGING / PRODUCTION / MONITOR / BACKUP</strong> を追加する。
+    API/Webhookの受信が必要になった場合のみINTEGRATION VLAN / DMZを追加する。
+  </div>
+
+  <div class="arch"><pre>
+                            FortiGate
+                               │
+                         L2/L3 Switch
+                               │
+       ┌────────┬────────┬─────┼─────┬────────┬────────┬────────┐
+       ▼        ▼        ▼     ▼     ▼        ▼        ▼        ▼
+   Existing    MGMT    AI-DEV  STG   PROD   MONITOR  BACKUP  INTEGRATION
+     LAN       110      120    140    150     160      180       170
+      │         │        │      │      │        │        │         │
+   開発PC    管理Server AI Dev  STG   PROD   Monitor    NAS   API/Webhook
+
+DMZ追加条件：
+外部SaaS / GitHub等から社内へWebhookを受信する必要が発生した場合
+  </pre></div>
+
+  <h3>拡張判断</h3>
+  <div class="phase-list">
+    <div class="phase"><strong>Phase 1</strong><div>既存LAN + VLAN110 MGMT + VLAN120 AI-DEV。開発・検証開始。</div></div>
+    <div class="phase"><strong>Phase 2</strong><div>STAGING / PRODUCTION / BACKUP / MONITORを分離。本番運用開始。</div></div>
+    <div class="phase"><strong>Phase 3</strong><div>Integration Hub / Webhook / DMZ。必要な自動連携が発生した時だけ追加。</div></div>
+    <div class="phase"><strong>Phase 4</strong><div>SSO / MFA / Conditional Access / OOB管理 / 冗長化を拡張。</div></div>
+  </div>
+</section>
+
+<section id="build">
+  <div class="sec-title"><div class="sec-no">11</div><h2>推奨構築順序</h2></div>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Step</th><th>作業</th><th>主担当</th><th>完了条件</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>既存FortiGate / IP体系 / 空きポート確認</td><td>NW管理者</td><td>現行影響範囲が明確</td></tr>
+        <tr><td>2</td><td>L2/L3 Switch導入・管理IP設定</td><td>NW管理者</td><td>Switch管理可能</td></tr>
+        <tr><td>3</td><td>VLAN110 / VLAN120作成</td><td>NW管理者</td><td>VLAN分離確認</td></tr>
+        <tr><td>4</td><td>FortiGate VLAN Sub-interface / Gateway作成</td><td>NW管理者</td><td>各VLAN Gateway応答</td></tr>
+        <tr><td>5</td><td>FortiGate Policy作成</td><td>NW/SEC</td><td>Default Deny + 必要通信のみ</td></tr>
+        <tr><td>6</td><td>管理サーバ接続</td><td>IT/DX</td><td>VLAN110稼働</td></tr>
+        <tr><td>7</td><td>AI Dev Server接続</td><td>IT/DX</td><td>VLAN120稼働</td></tr>
+        <tr><td>8</td><td>許可開発PCから疎通試験</td><td>IT/DX</td><td>SSH/HTTPS等のみ成功</td></tr>
+        <tr><td>9</td><td>一般PCから遮断試験</td><td>NW/SEC</td><td>意図したDENY確認</td></tr>
+        <tr><td>10</td><td>監視 / Log / Backup試験</td><td>IT/DX</td><td>運用可能</td></tr>
+        <tr><td>11</td><td>GitHub Runner / CI/CD構築</td><td>IT/DX</td><td>DEV Deploy確認</td></tr>
+        <tr><td>12</td><td>Staging / Production追加判断</td><td>Gate Owner / IT/DX</td><td>本番要件に応じてPhase 2へ</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="sec-title"><div class="sec-no">12</div><h2>最終構成要約</h2></div>
+  <div class="kpis">
+    <div class="kpi"><strong>既存LAN維持</strong><span>開発PCは会社貸与PC・既存ネットワークのまま</span></div>
+    <div class="kpi"><strong>2 VLAN開始</strong><span>VLAN110 MGMT / VLAN120 AI-DEV</span></div>
+    <div class="kpi"><strong>FortiGate中心</strong><span>VLAN間通信・Policy・IPS・Log</span></div>
+    <div class="kpi"><strong>10GbE基幹</strong><span>Server / NAS / Switch Backbone</span></div>
+  </div>
+
+  <div class="decision" style="margin-top:18px">
+    <strong>最終採用案：</strong><br>
+    既存社内ネットワークは変更せず、会社貸与の開発PCは既存LANに配置する。
+    FortiGateからAI/DX用ネットワークを分岐し、L2/L3 Managed Switch配下に
+    <strong>VLAN110（管理サーバ）</strong>と<strong>VLAN120（AI Dev Server）</strong>を構築する。
+    VLAN間・既存LAN間通信はFortiGateのFirewall Policyで制御し、将来の本番運用時にSTAGING / PRODUCTION / MONITOR / BACKUPを追加する。
+  </div>
+</section>
+
+<div class="footer">
+  AI/DX開発基盤 インフラ・ネットワーク構成設計書 — 承認版<br>
+  Design Principle: Existing Corporate LAN + FortiGate Security Boundary + Segmented AI/DX Server Network
+</div>
+
+</main>
+</body>
+</html>

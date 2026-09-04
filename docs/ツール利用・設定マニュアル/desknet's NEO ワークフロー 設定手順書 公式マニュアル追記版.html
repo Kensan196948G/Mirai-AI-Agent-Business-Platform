@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>desknet's NEO ワークフロー 設定手順書（公式マニュアル追記版・Standalone HTML）— みらいAIエージェント事業推進基盤</title>
+<style>
+:root{
+  --bg:#f6f8fb;--panel:#fff;--ink:#172033;--muted:#637083;--line:#dfe5ee;
+  --navy:#183153;--blue:#2563eb;--cyan:#0891b2;--green:#15803d;--amber:#b45309;--purple:#7c3aed;--red:#b91c1c;
+  --shadow:0 8px 24px rgba(20,32,51,.08);--radius:18px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;background:var(--bg);color:var(--ink);line-height:1.8}
+a{color:inherit;text-decoration:none}
+.hero{background:radial-gradient(circle at 85% 15%,rgba(124,58,237,.22),transparent 28%),linear-gradient(135deg,#1e1b4b,#312e81 55%,#4c1d95);color:#fff;padding:56px 24px 44px}
+.hero .wrap{max-width:1080px;margin:auto}
+.eyebrow{display:inline-block;padding:6px 12px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);border-radius:999px;font-size:13px;letter-spacing:.05em}
+h1{font-size:clamp(26px,3.4vw,42px);line-height:1.3;margin:16px 0 10px}
+.hero p{max-width:920px;color:#e0e7ff;font-size:16.5px;margin:0}
+.hero .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.tag{padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);font-size:13px}
+.topbar{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.95);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.topbar .wrap{max-width:1080px;margin:auto;padding:10px 18px;display:flex;gap:6px;overflow-x:auto}
+.topbar a{flex:0 0 auto;padding:8px 12px;border-radius:10px;color:#42516a;font-size:13px;font-weight:700}
+.topbar a:hover{background:#eef4ff;color:var(--blue)}
+main{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+section{margin:0 0 44px}
+.section-title{display:flex;align-items:center;gap:12px;margin:0 0 16px}
+.section-title .num{width:38px;height:38px;border-radius:12px;background:var(--navy);color:#fff;display:grid;place-items:center;font-weight:800;flex:0 0 auto;font-size:15px}
+.section-title h2{margin:0;font-size:24px;line-height:1.3}
+.section-title .sub{font-size:13px;color:var(--muted);font-weight:700}
+.lead{background:#f5f3ff;border:1px solid #e9e4ff;border-left:5px solid #7c3aed;padding:16px 18px;border-radius:14px;margin:0 0 20px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);margin:0 0 16px}
+.card h3{margin:0 0 8px;font-size:18px}
+.note{border-left:4px solid var(--cyan);background:#ecfeff;padding:12px 14px;border-radius:10px;color:#164e63;margin:12px 0 0}
+.decision{border-left:4px solid var(--green);background:#f0fdf4;padding:12px 14px;border-radius:10px;color:#14532d;margin:12px 0 0}
+.warning{border-left:4px solid var(--amber);background:#fff7ed;padding:12px 14px;border-radius:10px;color:#7c2d12;margin:12px 0 0}
+table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+th,td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:#f1f5f9;text-align:left;font-size:13px;color:#334155}
+tr:last-child td{border-bottom:0}
+.tw{overflow-x:auto;border-radius:12px;background:#fff;border:1px solid var(--line)}
+.tw table{border:none;border-radius:0}
+code{background:#eef2f7;padding:2px 6px;border-radius:6px;font-family:"SFMono-Regular",Consolas,monospace;font-size:.92em}
+.small{font-size:13px;color:var(--muted)}
+.step{display:grid;grid-template-columns:52px 1fr;gap:14px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin:0 0 14px;box-shadow:0 4px 14px rgba(20,32,51,.05)}
+.step-no{width:44px;height:44px;border-radius:12px;background:#7c3aed;color:#fff;display:grid;place-items:center;font-weight:900;font-size:17px}
+.step h4{margin:0 0 6px;font-size:16.5px}
+.step p{margin:0;color:#334155;font-size:15px}
+.step .who{display:inline-block;margin-top:8px;font-size:12.5px;font-weight:800;color:#334155;background:#eef2f7;border-radius:999px;padding:4px 10px}
+.gate{border:2px solid #ddd6fe;background:#faf8ff}
+.gate .step-no{background:#6d28d9}
+ul.check{list-style:none;margin:8px 0 0;padding:0}
+ul.check li{padding:4px 0 4px 30px;position:relative;margin:2px 0}
+ul.check li::before{content:"";position:absolute;left:4px;top:8px;width:16px;height:16px;border:2px solid #94a3b8;border-radius:5px;background:#fff}
+ul.plain{margin:8px 0 0;padding-left:1.2em}
+ul.plain li{margin:3px 0}
+.footer{margin-top:48px;border-top:1px solid var(--line);padding-top:22px;color:var(--muted);font-size:13px;text-align:center}
+@media(max-width:640px){.hero{padding-top:40px}.step{grid-template-columns:44px 1fr;padding:13px 14px}.step-no{width:38px;height:38px;font-size:15px}main{padding-left:14px;padding-right:14px}h1{font-size:24px}}
+@media print{.topbar{display:none}body{background:#fff}.card,.step{box-shadow:none}}
+
+/* Official manual addendum */
+.official{border:2px solid #bfdbfe;background:linear-gradient(180deg,#f8fbff,#fff);}
+.official-purple{border:2px solid #ddd6fe;background:linear-gradient(180deg,#faf8ff,#fff);}
+.sourcebox{background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:14px 0;font-size:13.5px;color:#475569}
+.sourcebox a{color:#1d4ed8;text-decoration:underline;text-underline-offset:2px}
+.path{display:block;background:#0f172a;color:#e2e8f0;border-radius:10px;padding:10px 12px;margin:8px 0;font-family:Consolas,"SFMono-Regular",monospace;font-size:13px;overflow-x:auto}
+.badge-official{display:inline-block;background:#dbeafe;color:#1e3a8a;border:1px solid #93c5fd;border-radius:999px;padding:3px 9px;font-size:12px;font-weight:800;margin-right:6px}
+.badge-recommend{display:inline-block;background:#dcfce7;color:#166534;border:1px solid #86efac;border-radius:999px;padding:3px 9px;font-size:12px;font-weight:800}
+.flowline{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
+.flowline span{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-weight:700;font-size:13px}
+.flowline b{color:var(--muted)}
+.ref-table td:first-child{white-space:nowrap;font-weight:700}
+.kbd{display:inline-block;padding:1px 6px;border:1px solid #cbd5e1;border-bottom-width:2px;border-radius:6px;background:#fff;font-weight:700;font-size:.92em}
+
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="eyebrow">MIRAI AI AGENT BUSINESS PLATFORM — ELI5 SETUP GUIDE</span>
+    <h1>desknet's NEO ワークフロー 設定手順書 <span style="font-size:.48em;font-weight:700;opacity:.9">公式マニュアル追記版</span></h1>
+    <p>NEO Workflowは、<strong>「会社として正式に承認する」ためのハンコのしくみ</strong>です。この基盤では、案件が次の段階へ進んでよいかの関所（Gate 1〜5）を、ここで承認します。<strong>承認は必ず人間（3名）が行い、AIは承認しません。</strong></p>
+    <div class="meta">
+      <span class="tag">ELI5（やさしい説明）</span><span class="tag">実行者：DX推進部担当者</span>
+      <span class="tag">承認者：3名</span><span class="tag">目安：2〜4日</span><span class="tag">公式V9.6R1.0確認</span>
+    </div>
+  </div>
+</header>
+
+<nav class="topbar">
+  <div class="wrap">
+    <a href="#what">これは何？</a>
+    <a href="#who">だれがやる？</a>
+    <a href="#prepare">じゅんび</a>
+    <a href="#gates">Gateのしくみ</a>
+    <a href="#steps">やり方</a>
+    <a href="#official-steps">公式画面手順</a>
+    <a href="#appsuite-link">AppSuite連携</a>
+    <a href="#samples">サンプル</a>
+    <a href="#done">できた？</a>
+    <a href="#caution">ちゅうい</a>
+  </div>
+</nav>
+
+<main>
+
+<section id="what">
+  <div class="section-title"><div class="num">1</div><h2>これは何？</h2></div>
+  <div class="lead">
+    <strong>たとえると：</strong>NEO Workflowは「会社の正式なハンコ帳」。書類（申請）を出すと、決められた人が順番に見て、<strong>「よい」または「ダメ（差戻し）」</strong>を押します。その記録が全部残るので、「だれがいつ承認したか」をあとから確かめられます。
+  </div>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:24%">言葉</th><th>説明</th></tr></thead>
+    <tbody>
+      <tr><td><strong>申請</strong></td><td>「この案件を次の段階に進めたいです」と出すお願い</td></tr>
+      <tr><td><strong>承認</strong></td><td>決められた人（承認者）が「よい」と認めること</td></tr>
+      <tr><td><strong>差戻し</strong></td><td>「ここが足りないので直して」と戻すこと。理由も記録される</td></tr>
+      <tr><td><strong>Gate（ゲート）</strong></td><td>案件の関所。Gate 1〜5があり、それぞれ承認者（だれがハンコを押すか）が決まっている</td></tr>
+      <tr><td><strong>承認フロー</strong></td><td>「申請 → だれが → だれが → 承認/差戻し」という順番の設計図</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="warning">
+    <strong>この基盤の鉄則：</strong>Slackなどでの「OK」の返事は正式な承認ではありません。正式な承認は<strong>必ずここ（NEO Workflow）の記録だけ</strong>を正本とします。
+  </div>
+</section>
+
+<section id="who">
+  <div class="section-title"><div class="num">2</div><h2>だれがやるの？</h2></div>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:34%">人</th><th>役割</th></tr></thead>
+    <tbody>
+      <tr><td><strong>DX推進部担当者</strong></td><td>承認フローの「しくみ（設計図）」を作る</td></tr>
+      <tr><td><strong>社内経営企画担当者</strong></td><td>事業価値の承認（Gate 1・4・5等の最終承認）を担当する承認者になる</td></tr>
+      <tr><td><strong>社内建設土木技術者/研究者</strong></td><td>業務の妥当性・技術受入（Gate 2・3・4等）を担当する承認者になる</td></tr>
+      <tr><td><strong>IT/DX/AIシステム開発者</strong></td><td>システム面の承認者になる（ただし自分が作ったものの単独最終承認はしない＝SOD）</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>上位Gate Owner（最終ハンコ役）：</strong>高額案件やGate 5（本番リリース）の最終承認は「上位Gate Owner」が行います。3名体制では経営企画担当者が兼ねるか、役員を別途指定するかを事前に決めます（全体計画書 P-1・P-8）。<strong>未決定の場合は設定前に決定してください。</strong>
+  </div>
+</section>
+
+<section id="prepare">
+  <div class="section-title"><div class="num">3</div><h2>じゅんびするもの</h2></div>
+  <div class="card">
+    <ul class="check">
+      <li>NEO Workflow に3名のアカウントがあり、ログインできる</li>
+      <li>「どのGateで、だれが、どんな順番で承認するか」の一覧（承認者マップ）を3名で決めておく</li>
+      <li>Gateごとの「承認条件」を決めておく（例：Gate 3ならKPI実績の報告が必須）</li>
+      <li>申請書に添付する資料（企画書・要件定義書）のテンプレートが Notion に用意されている</li>
+      <li>全体計画書（<code>ai-dx-dev-saas-setup-guide.html</code>）の 3.3 と第7章（P-1〜P-12）を確認済み</li>
+    </ul>
+  </div>
+</section>
+
+<section id="gates">
+  <div class="section-title"><div class="num">4</div><h2>Gate 1〜5 のしくみ（承認者マップ）</h2></div>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:12%">Gate</th><th style="width:30%">何の関所か</th><th>承認者（3名体制での割り当て例）</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Gate 1</strong></td><td>企画承認（この取組を進めてよいか）</td><td>経営企画担当者（主）＋建設土木技術・研究者＋IT/DX/AI開発者</td></tr>
+      <tr><td><strong>Gate 2</strong></td><td>開発承認（要件・仕様が固まったか）</td><td>建設土木技術・研究者（業務受入）＋IT/DX/AI開発者　※作成者と承認者を分離</td></tr>
+      <tr><td><strong>Gate 3</strong></td><td>MVP承認（試作品の効果が出たか）</td><td>建設土木技術・研究者（技術受入）＋経営企画担当者（最終承認）</td></tr>
+      <tr><td><strong>Gate 4</strong></td><td>本番移行承認（業務受入試験＝UATが通ったか）</td><td>建設土木技術・研究者（受入判定）＋経営企画担当者（移行判定）</td></tr>
+      <tr><td><strong>Gate 5</strong></td><td>Release承認（本番に出してよいか）</td><td>上位Gate Owner（最終）＋IT/DX/AI開発者</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>3名体制の注意：</strong>承認フローを作るとき、<strong>「申請する人」と「承認する人」が同じ人にならない</strong>よう注意します。IT/DX/AI開発者が開発した案件の最終承認（Gate 5）は、別の人（経営企画担当者 or 役員）が行います。
+  </div>
+</section>
+
+<section id="steps">
+  <div class="section-title"><div class="num">5</div><h2>やり方（手順）</h2></div>
+
+  <div class="step gate">
+    <div class="step-no">1</div>
+    <div>
+      <h4>Gate 1（企画承認）フローを作る</h4>
+      <p>NEO Workflowで「企画承認申請」のフローを新規作成します。申請時に企画書（Notionのテンプレート）を添付できるようにし、承認者を上の表のとおり設定します。差戻し理由を必ず記録する設定にします。</p>
+      <span class="who">DX推進部担当者（作成）</span>
+    </div>
+  </div>
+
+  <div class="step gate">
+    <div class="step-no">2</div>
+    <div>
+      <h4>Gate 2〜5 のフローも同じようにつくる</h4>
+      <p>Gate 2（開発承認）、Gate 3（MVP承認）、Gate 4（本番移行承認）、Gate 5（Release承認）の申請フローを、それぞれ承認者と添付資料を変えて作成します。申請の名前には案件IDを含められるようにします（例：<code>DX-2026-0042 本番リリース申請</code>）。</p>
+      <span class="who">DX推進部担当者（作成）</span>
+    </div>
+  </div>
+
+  <div class="step gate">
+    <div class="step-no">3</div>
+    <div>
+      <h4>承認者を3名で登録・確認する</h4>
+      <p>各フローの承認者として3名（＋上位Gate Owner）を正しく割り当てます。このとき「承認者リスト」を3名全員で見て、間違いがないか確認します。</p>
+      <span class="who">DX推進部担当者（登録）→ 3名（確認）</span>
+    </div>
+  </div>
+
+  <div class="step gate">
+    <div class="step-no">4</div>
+    <div>
+      <h4>承認テンプレート（企画書・要件定義書）を添付できるようにする</h4>
+      <p>Notionにある企画書・要件定義書のテンプレートを、各Gateの申請に添付できるよう連携・設定します。これで「申請のたびに書式をゼロから作る」手間がなくなります。</p>
+      <span class="who">DX推進部担当者</span>
+    </div>
+  </div>
+
+  <div class="step gate">
+    <div class="step-no">5</div>
+    <div>
+      <h4>テスト申請を1回流して通してみる</h4>
+      <p>ためしに架空の案件（<code>DX-2026-9999</code>）でGate 1の申請を出し、承認者3名が順番に承認し、最後に「承認済み」になること、また差戻しもできることを確認します。テスト後は削除します。</p>
+      <span class="who">DX推進部担当者 → 3名（実操作）</span>
+    </div>
+  </div>
+
+  <div class="step gate">
+    <div class="step-no">6</div>
+    <div>
+      <h4>AppSuiteへの反映ルールを決める（手動 or 自動）</h4>
+      <p>NEOで承認された結果を、AppSuiteの案件台帳の「Gate状態」にどう反映するか決めます。<strong>推奨：最初は手動転記</strong>（承認されたらDX推進部担当者がAppSuiteを更新）。自動連携（Webhook）が必要になったら、その時点で追加検討します（全体計画書 4.3）。</p>
+      <span class="who">3名（決定）→ DX推進部担当者</span>
+    </div>
+  </div>
+
+  <div class="decision">
+    <strong>だいたいの目安：</strong>フロー5本の作成で2〜3日。3名でのテスト承認・確認を入れると計4〜6日ほど見ておくと安心です。
+  </div>
+</section>
+
+
+<section id="official-steps">
+  <div class="section-title"><div class="num">5A</div><h2>公式マニュアルに沿った「実画面」の設定手順</h2></div>
+  <div class="lead official-purple">
+    <span class="badge-official">公式手順</span>
+    公式マニュアル上の機能名は<strong>「ワークフロー」</strong>です。本書では、社内で「NeoFlow」と呼ぶ場合も、画面名・設定名は公式表記に合わせます。
+  </div>
+
+  <div class="step gate">
+    <div class="step-no">A1</div><div>
+      <h4>申請書・経路管理者を設定する</h4>
+      <span class="path">ワークフロー → 設定 → [申請書・経路管理者設定]</span>
+      <p>対象のユーザーまたはロールを選択し、管理対象を「すべて」「所属組織のみ」「選択した組織」から設定して <span class="kbd">変更</span> を押します。これにより、対象者のワークフロー設定に「申請書管理」メニューが表示されます。</p>
+      <div class="note">最初はDX推進部の設定担当者だけに管理権限を付け、承認者3名には通常の申請・決裁権限だけを与える構成が分かりやすいです。</div>
+    </div>
+  </div>
+
+  <div class="step gate">
+    <div class="step-no">A2</div><div>
+      <h4>申請経路を作成する</h4>
+      <span class="path">設定 → 申請書管理 → [申請経路設定] → [申請経路の追加]</span>
+      <p>「状態」を<strong>完成</strong>にし、申請経路名、管理組織、利用できるユーザー／組織／ロールを設定します。中央の経路編集で、ユーザー・組織・ロール・承認グループ・所属組織階層・申請者・任意ユーザーを組み合わせて承認順を作り、最後に <span class="kbd">追加</span> を押します。</p>
+      <div class="warning">未完成の経路は利用できません。テスト完了前は未完成、利用開始時に完成へ切り替える運用でも構いません。</div>
+    </div>
+  </div>
+
+  <div class="card official-purple">
+    <h3>Gate 1〜5 を経路名として作る場合の例</h3>
+    <div class="tw"><table><thead><tr><th>経路名</th><th>並びの例</th><th>用途</th></tr></thead><tbody>
+      <tr><td>Gate 1 企画承認</td><td>建設土木技術・研究 → IT/DX/AI開発 → 経営企画</td><td>事業価値・実現性を確認</td></tr>
+      <tr><td>Gate 2 開発承認</td><td>業務受入担当 → システム担当以外の承認者</td><td>作成者と最終承認者を分離</td></tr>
+      <tr><td>Gate 3 MVP承認</td><td>技術受入 → 経営企画</td><td>KPI/効果の確認</td></tr>
+      <tr><td>Gate 4 本番移行承認</td><td>業務受入 → 経営企画</td><td>UAT結果を確認</td></tr>
+      <tr><td>Gate 5 Release承認</td><td>IT/DX/AI確認 → 上位Gate Owner</td><td>本番リリース最終承認</td></tr>
+    </tbody></table></div>
+  </div>
+
+  <div class="step gate">
+    <div class="step-no">A3</div><div>
+      <h4>申請書カテゴリーを必要に応じて作る</h4>
+      <span class="path">設定 → 申請書管理 → [申請書カテゴリー設定] → [カテゴリーの追加]</span>
+      <p>例：「AI/DX案件」「システム開発」「本番リリース」。申請書の数が増えたときに選びやすくなります。</p>
+    </div>
+  </div>
+
+  <div class="step gate">
+    <div class="step-no">A4</div><div>
+      <h4>通常の申請書を作成する場合</h4>
+      <span class="path">設定 → 申請書管理 → [申請書（表題・書式・経路）設定] → [申請書の追加]</span>
+      <p>申請書の状態を<strong>完成</strong>にし、申請書名、管理組織、カテゴリー、完了通知、申請時／決裁時の動作、申請経路を設定します。書式は文章・チェックボックス・ラジオボタン等の部品を組み合わせて作成できます。</p>
+      <div class="note">AppSuite連携申請書では、ワークフロー側の通常書式ではなくAppSuiteの詳細画面が申請書として使われるため、一部の設定項目（ワークフロー側の連番など）は表示されません。</div>
+    </div>
+  </div>
+
+  <div class="step gate">
+    <div class="step-no">A5</div><div>
+      <h4>実際に申請を作成する</h4>
+      <span class="path">ワークフロー → [申請の作成] → [選択]で申請書を選ぶ → 内容入力 → [作成内容の確認]</span>
+      <p>必要に応じて添付ファイル、表題、重要度、申請組織などを入力します。確認画面で内容と経路を確認し、申請します。下書きだけにしたい場合は <span class="kbd">下書き保存</span> を使います。</p>
+    </div>
+  </div>
+
+  <div class="step gate">
+    <div class="step-no">A6</div><div>
+      <h4>承認・否認・差戻しをテストする</h4>
+      <p>承認者は「未承認・差戻し」から対象申請を開き、コメントを付けて承認します。公式仕様では、承認すると次の経路へ進みます。否認、または前の決裁者／申請者への差戻しも可能です。</p>
+      <div class="warning">Gate運用では「否認」と「差戻し」を混同しないルールを決めてください。修正して再申請するなら差戻し、案件自体を承認しないなら否認、という切り分けが実務上分かりやすいです。</div>
+    </div>
+  </div>
+</section>
+
+<section id="appsuite-link">
+  <div class="section-title"><div class="num">5B</div><h2>AppSuite申請書アプリケーションとの標準連携</h2></div>
+  <div class="lead official-purple">
+    <span class="badge-recommend">二重入力削減</span>
+    AppSuite側で「申請書アプリケーション」を作成すると、同名のワークフロー申請書が作られ、AppSuiteの詳細画面を申請書として使用できます。申請内容はAppSuite側でも管理できます。
+  </div>
+  <div class="flowline"><span>AppSuite：申請書アプリ</span><b>→</b><span>画面デザイン</span><b>→</b><span>Workflow：経路設定</span><b>→</b><span>申請書「完成」</span><b>→</b><span>申請</span><b>→</b><span>AppSuiteでも内容管理</span></div>
+
+  <div class="card official-purple">
+    <h3>公式マニュアルが示す最短の開通手順</h3>
+    <ol class="plain">
+      <li>AppSuiteで「申請書アプリケーション」を作る。</li>
+      <li>誘導に従い、AppSuiteで申請書の画面をデザインする。</li>
+      <li>ワークフローの「申請経路」を設定し、「申請書の状態」を<strong>完成</strong>にする。</li>
+      <li>申請一覧へ戻り、<strong>申請の作成</strong>から申請できることを確認する。</li>
+    </ol>
+  </div>
+
+  <div class="decision">
+    <strong>運用設計への反映：</strong>現在の「ワークフロー承認結果をAppSuiteへ手動転記」は、導入初期には分かりやすい方式です。ただし、申請内容そのものまでAppSuiteで一元管理したいGateは「申請書アプリケーション」へ移行すると、独自連携なしで重複入力を減らせます。
+  </div>
+
+  <div class="warning">
+    <strong>削除に注意：</strong>公式仕様では、AppSuite連携申請をワークフロー管理側で削除すると、関連付いた申請書アプリケーションのデータも削除されます。また申請書アプリケーション自体を削除すると、関連するワークフロー申請内容が表示できなくなるため、本番では削除権限を限定してください。
+  </div>
+</section>
+
+<section id="official-sources-wf">
+  <div class="section-title"><div class="num">参</div><h2>参照した公式マニュアル</h2></div>
+  <div class="sourcebox">
+    <strong>確認日：2026-09-04</strong><br>
+    ・<a href="https://www.desknets.com/neo/help/" target="_blank" rel="noopener">desknet's NEO マニュアル トップ</a>（製品 V9.6R1.0 / マニュアル 9.6.1）<br>
+    ・<a href="https://www.desknets.com/neo/help/ja_JP/manage/flow/001.html" target="_blank" rel="noopener">ワークフロー（機能管理）：申請書・経路管理者、申請管理</a><br>
+    ・<a href="https://www.desknets.com/neo/help/ja_JP/public/flow/003.html" target="_blank" rel="noopener">ワークフロー（申請書管理）：申請経路、カテゴリー、申請書設定</a><br>
+    ・<a href="https://www.desknets.com/neo/help/ja_JP/public/flow/001.html" target="_blank" rel="noopener">ワークフロー：申請作成、承認、否認、差戻し</a><br>
+    ・<a href="https://www.desknets.com/neo/help_apps/ja_JP/public/apps/002.html" target="_blank" rel="noopener">AppSuite：申請書アプリケーション標準連携</a><br>
+    ※本HTMLは公式マニュアルを転載するものではなく、社内設定に必要な操作を要約・再構成した手順書です。
+  </div>
+</section>
+
+<section id="samples">
+  <div class="section-title"><div class="num">6</div><h2>サンプル（記入例）</h2></div>
+  <p style="margin:0 0 12px">ここでは、パイロット案件（例：<strong>現場写真・点検記録からの報告書自動作成</strong> <code>DX-2026-0042</code>）でGate 1（企画承認）を申請するときの記入例を示します。</p>
+
+  <div class="card">
+    <h3>サンプル1：申請書の記入例（Gate 1 企画承認）</h3>
+    <div class="tw">
+    <table>
+      <thead><tr><th style="width:24%">項目</th><th>記入例</th></tr></thead>
+      <tbody>
+        <tr><td>申請名</td><td><code>DX-2026-0042</code> 企画承認申請（現場写真・点検記録からの報告書自動作成）</td></tr>
+        <tr><td>申請者</td><td>（例）現場監督（建設土木技術部）</td></tr>
+        <tr><td>添付資料</td><td>企画書（Notionのテンプレートから作成）</td></tr>
+        <tr><td>承認依頼の内容</td><td>本事案の企画内容を承認いただきたい。MVP範囲は「日常安全点検報告書」の自動作成とし、費用対効果・KPIは企画書のとおり。</td></tr>
+        <tr><td>承認経路（順番）</td><td>建設土木技術者/研究者 → IT/DX/AIシステム開発者 → 経営企画担当者（最終）</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>サンプル2：差戻しの記入例</h3>
+    <div class="tw">
+    <table>
+      <thead><tr><th style="width:24%">項目</th><th>記入例</th></tr></thead>
+      <tbody>
+        <tr><td>差戻し先</td><td>申請者（現場監督）へ戻す</td></tr>
+        <tr><td>差戻し理由</td><td>対象者（誰が使うか）の欄が未記入です。現場監督・施工管理者のどちらを対象にするか明確にしてください。あわせて、写真に写る人物・位置情報の取扱い方針を追記してください。</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>サンプル3：各Gateの申請名（案件IDを使う）</h3>
+    <ul class="plain">
+      <li>Gate 1：<code>DX-2026-0042</code> 企画承認申請</li>
+      <li>Gate 2：<code>DX-2026-0042</code> 要件・開発承認申請</li>
+      <li>Gate 3：<code>DX-2026-0042</code> MVP承認申請</li>
+      <li>Gate 4：<code>DX-2026-0042</code> 本番移行承認申請（UAT結果を添付）</li>
+      <li>Gate 5：<code>DX-2026-0042</code> 本番リリース承認申請</li>
+    </ul>
+  </div>
+</section>
+
+<section id="done">
+  <div class="section-title"><div class="num">7</div><h2>できたか確かめる（完了チェック）</h2></div>
+  <div class="card">
+    <ul class="check">
+      <li>Gate 1〜5の承認フローが5本すべて作成された</li>
+      <li>各フローの承認者が3名体制のルール（SOD）どおりに設定された</li>
+      <li>テスト申請で「申請 → 承認 → 承認済み」「差戻し」の両方が動くことを確認した</li>
+      <li>申請に企画書・要件定義書（Notionテンプレート）を添付できる</li>
+      <li>承認結果をAppSuiteのGate状態へ反映するルール（手動転記）が決まった</li>
+      <li>承認履歴がNEOに残り、あとから「だれがいつ承認したか」を確認できる</li>
+    </ul>
+  </div>
+</section>
+
+<section id="caution">
+  <div class="section-title"><div class="num">8</div><h2>ちゅういすること</h2></div>
+  <div class="warning">
+    <ul class="plain">
+      <li><strong>AIは承認しない：</strong>承認は必ず人間（3名）が行います。AIの提案・下書きはあっても、最終のハンコは人が押します。</li>
+      <li><strong>申請者＝承認者を避ける：</strong>自分で申請したものを自分だけで最終承認するフローは作らないでください（SOD）。</li>
+      <li><strong>差戻し理由は必ず記録：</strong>「なぜダメだったか」を残すことで、あとで改善に使えます。</li>
+      <li><strong>承認と台帳のズレに注意：</strong>NEOの承認結果とAppSuiteのGate状態が食い違わないよう、反映ルール（手動転記）を守ります。</li>
+      <li><strong>上位Gate Ownerの未決定：</strong>Gate 5の最終承認者が未決定のまま設定を進めないでください。先に3名（＋役員）で決めます。</li>
+    </ul>
+  </div>
+</section>
+
+<div class="footer">
+  みらい AIエージェント事業推進基盤（Mirai AI Agent Business Platform）— desknet's NEO Workflow 設定手順書（ELI5）<br>
+  関連文書：<code>ai-dx-dev-saas-setup-guide.html</code>（全体計画書）／<code>ai-dx-dev-process.html</code>（プロセス定義）<br>公式マニュアル確認：2026-09-04（desknet's NEO / AppSuite V9.6R1.0）
+</div>
+
+</main>
+</body>
+</html>

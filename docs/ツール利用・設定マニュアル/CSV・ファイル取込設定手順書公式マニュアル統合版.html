@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CSV・ファイル取込設定手順書（公式マニュアル統合版）— みらいAIエージェント事業推進基盤</title>
+<style>
+:root{
+  --bg:#f6f8fb;--panel:#fff;--ink:#172033;--muted:#637083;--line:#dfe5ee;
+  --navy:#183153;--blue:#2563eb;--cyan:#0891b2;--green:#15803d;--amber:#b45309;--purple:#7c3aed;--red:#b91c1c;
+  --shadow:0 8px 24px rgba(20,32,51,.08);--radius:18px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;background:var(--bg);color:var(--ink);line-height:1.8}
+a{color:inherit;text-decoration:none}
+.hero{background:radial-gradient(circle at 85% 15%,rgba(37,99,235,.2),transparent 28%),linear-gradient(135deg,#10233f,#183153 55%,#164e63);color:#fff;padding:56px 24px 44px}
+.hero .wrap{max-width:1140px;margin:auto}
+.eyebrow{display:inline-block;padding:6px 12px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);border-radius:999px;font-size:13px;letter-spacing:.05em}
+h1{font-size:clamp(26px,3.4vw,42px);line-height:1.3;margin:16px 0 10px}
+.hero p{max-width:980px;color:#dbeafe;font-size:16.5px;margin:0}
+.hero .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.tag{padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);font-size:13px}
+.topbar{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.95);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.topbar .wrap{max-width:1140px;margin:auto;padding:10px 18px;display:flex;gap:6px;overflow-x:auto}
+.topbar a{flex:0 0 auto;padding:8px 12px;border-radius:10px;color:#42516a;font-size:13px;font-weight:700}
+.topbar a:hover{background:#eef4ff;color:var(--blue)}
+main{max-width:1140px;margin:0 auto;padding:32px 20px 80px}
+section{margin:0 0 44px}
+.section-title{display:flex;align-items:center;gap:12px;margin:0 0 16px}
+.section-title .num{width:38px;height:38px;border-radius:12px;background:var(--navy);color:#fff;display:grid;place-items:center;font-weight:800;flex:0 0 auto;font-size:15px}
+.section-title h2{margin:0;font-size:24px;line-height:1.3}
+.section-title .sub{font-size:13px;color:var(--muted);font-weight:700}
+.lead{background:#eef5ff;border:1px solid #d7e7ff;border-left:5px solid var(--blue);padding:16px 18px;border-radius:14px;margin:0 0 20px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);margin:0 0 16px}
+.card h3{margin:0 0 10px;font-size:18px}
+.card h4{margin:16px 0 6px;font-size:15.5px;color:var(--navy)}
+.card h4:first-child{margin-top:0}
+.note{border-left:4px solid var(--cyan);background:#ecfeff;padding:12px 14px;border-radius:10px;color:#164e63;margin:12px 0 0}
+.decision{border-left:4px solid var(--green);background:#f0fdf4;padding:12px 14px;border-radius:10px;color:#14532d;margin:12px 0 0}
+.warning{border-left:4px solid var(--amber);background:#fff7ed;padding:12px 14px;border-radius:10px;color:#7c2d12;margin:12px 0 0}
+table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+th,td{padding:9px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:#f1f5f9;text-align:left;font-size:13px;color:#334155}
+tr:last-child td{border-bottom:0}
+.tw{overflow-x:auto;border-radius:12px;background:#fff;border:1px solid var(--line);margin:0 0 14px}
+.tw table{border:none;border-radius:0}
+code{background:#eef2f7;padding:2px 6px;border-radius:6px;font-family:"SFMono-Regular",Consolas,monospace;font-size:.9em}
+.small{font-size:13px;color:var(--muted)}
+.step{display:grid;grid-template-columns:52px 1fr;gap:14px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin:0 0 14px;box-shadow:0 4px 14px rgba(20,32,51,.05)}
+.step-no{width:44px;height:44px;border-radius:12px;background:var(--navy);color:#fff;display:grid;place-items:center;font-weight:900;font-size:17px}
+.step h4{margin:0 0 6px;font-size:16.5px}
+.step p{margin:0;color:#334155;font-size:15px}
+.step .who{display:inline-block;margin-top:8px;font-size:12.5px;font-weight:800;color:#334155;background:#eef2f7;border-radius:999px;padding:4px 10px}
+.flow{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:12px;padding:12px 16px;overflow:auto;margin:8px 0 14px}
+.flow pre{margin:0;font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace;font-size:13px;line-height:1.6}
+ul.check{list-style:none;margin:8px 0 0;padding:0}
+ul.check li{padding:4px 0 4px 30px;position:relative;margin:2px 0}
+ul.check li::before{content:"";position:absolute;left:4px;top:8px;width:16px;height:16px;border:2px solid #94a3b8;border-radius:5px;background:#fff}
+ul.plain{margin:8px 0 0;padding-left:1.2em}
+ul.plain li{margin:3px 0}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px}
+.toolbar a{display:inline-block;padding:9px 16px;border-radius:999px;background:#fff;border:1px solid var(--line);font-size:14px;font-weight:800;color:var(--navy);box-shadow:0 2px 8px rgba(20,32,51,.05)}
+.toolbar a:hover{background:#eef4ff;border-color:#bcd3ff}
+.footer{margin-top:48px;border-top:1px solid var(--line);padding-top:22px;color:var(--muted);font-size:13px;text-align:center}
+@media(max-width:640px){.hero{padding-top:40px}.step{grid-template-columns:44px 1fr;padding:13px 14px}.step-no{width:38px;height:38px;font-size:15px}main{padding-left:14px;padding-right:14px}h1{font-size:24px}}
+@media print{.topbar{display:none}body{background:#fff}.card,.step{box-shadow:none}}
+
+.official{background:linear-gradient(180deg,#f0fdf4,#fff);border:2px solid #bbf7d0;border-radius:18px;padding:20px;margin:16px 0}
+.official h3{margin:0 0 10px;color:#14532d;font-size:19px}
+.revised{background:#fff7ed;border:2px solid #fed7aa;border-radius:18px;padding:18px;margin:16px 0}
+.revised h3{margin:0 0 9px;color:#9a3412;font-size:18px}
+.badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11.5px;font-weight:900;vertical-align:1px;margin-right:5px}
+.badge.ok{background:#dcfce7;color:#166534}
+.badge.fix{background:#ffedd5;color:#9a3412}
+.badge.info{background:#dbeafe;color:#1d4ed8}
+.badge.check{background:#fef3c7;color:#92400e}
+.path{padding:10px 12px;border:1px solid #cbd5e1;background:#f8fafc;border-radius:10px;font-family:"SFMono-Regular",Consolas,monospace;font-size:13px;margin:8px 0;overflow-wrap:anywhere}
+.src{font-size:12.5px;color:#475569;margin-top:9px}
+.src a,.official a,.revised a{color:#0369a1;text-decoration:underline;text-underline-offset:2px}
+.codeblock{background:#0f172a;color:#e2e8f0;padding:14px 16px;border-radius:12px;overflow:auto;font-family:"SFMono-Regular",Consolas,monospace;font-size:12.5px;line-height:1.65;white-space:pre-wrap}
+.matrix td:first-child{font-weight:800}
+
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="eyebrow">MIRAI AI AGENT BUSINESS PLATFORM — OFFICIAL IMPORT GUIDE</span>
+    <h1>CSV・ファイル取込設定手順書<br><span style="font-size:.58em;font-weight:700;opacity:.9">公式マニュアル統合版</span></h1>
+    <p>各SaaSの「骨子（マスタ・申請書式・データベース・AI用ナレッジ）」を、<strong>CSV・Excel・ファイル連携で設定するための実務手順書</strong>です。2026年9月4日時点の<strong>公式オンラインマニュアル／公式ヘルプ／公式製品情報</strong>を突き合わせ、画面操作・制約・権限・更新方式を追記しました。<strong>対象：AppSuite／desknet's NEO（ユーザー・組織・Workflow）／Notion／Lightblue／Slack（移行時の参考）</strong>。</p>
+    <div class="meta">
+      <span class="tag">公式確認版 v1.0</span><span class="tag">公式情報確認：2026-09-04</span><span class="tag">AppSuite・NEO：DX推進部担当者</span>
+      <span class="tag">Notion・Lightblue：IT/DX/AIシステム開発者</span>
+    </div>
+  </div>
+</header>
+
+<nav class="topbar">
+  <div class="wrap">
+    <a href="#official-summary">公式確認サマリー</a>
+    <a href="#common">共通の進め方</a>
+    <a href="#appsuite">1. AppSuite</a>
+    <a href="#neo">2. NEO Workflow</a>
+    <a href="#notion">3. Notion</a>
+    <a href="#lightblue">4. Lightblue</a>
+    <a href="#slack">5. Slack参考</a>
+    <a href="#checklist">チェックリスト</a>
+    <a href="#sources">公式参照先</a>
+  </div>
+</nav>
+
+<main>
+
+<div class="toolbar">
+  <a href="ai-dx-dev-saas-setup-guide.html">← 全体計画書</a>
+  <a href="AppSuite.html">AppSuite手順書</a>
+  <a href="NEO-Workflow.html">NEO手順書</a>
+  <a href="Notion.html">Notion手順書</a>
+  <a href="Lightblue.html">Lightblue手順書</a>
+</div>
+
+
+<section id="official-summary">
+  <div class="section-title"><div class="num">★</div><h2>公式マニュアル確認サマリー</h2></div>
+  <div class="lead">
+    <strong>この版の方針：</strong>「推奨設計」と「製品の公式仕様」を分離しました。
+    緑の <span class="badge ok">公式確認済み</span> は公式マニュアルで裏付けられた操作、
+    橙の <span class="badge fix">修正</span> は元版からの訂正、
+    黄の <span class="badge check">テナント確認</span> は契約・UI差異があるため管理画面で最終確認する項目です。
+  </div>
+
+  <div class="tw">
+    <table class="matrix">
+      <thead><tr><th style="width:20%">製品</th><th style="width:22%">公式に確認できた取込</th><th>この基盤での扱い</th></tr></thead>
+      <tbody>
+        <tr><td>AppSuite</td><td><span class="badge ok">公式確認済み</span>Excel/CSV取込、CSVコマンドライン</td><td>画面はExcel/CSV、定期・大量処理は<code>appsimport</code>。更新時は照合部品の指定が重要。</td></tr>
+        <tr><td>desknet's NEO 本体</td><td><span class="badge ok">公式確認済み</span>ユーザー情報・組織情報のファイル取込</td><td>NEO本体ユーザー／組織と、AppSuite内の業務マスタを混同しない。</td></tr>
+        <tr><td>NEO Workflow</td><td><span class="badge ok">公式確認済み</span>申請書「書式」のインポート／エクスポート</td><td>申請経路は公式画面で作成。AppSuite連携申請書は書式エクスポート不可。</td></tr>
+        <tr><td>Notion</td><td><span class="badge ok">公式確認済み</span>CSV→新規DB／既存DBへの列マッピング</td><td>CSV取込は既存行を更新せず追加。重複防止が必須。</td></tr>
+        <tr><td>Lightblue</td><td><span class="badge ok">公式確認済み</span>Notion、Google Drive、Box、PDF/PowerPoint/Excel/Word</td><td>RAG用Knowledge連携として利用。正確な現在UIはログイン後Help Centerを正とする。</td></tr>
+        <tr><td>Slack</td><td><span class="badge ok">公式確認済み</span>CSV/Textによる移行インポート</td><td>通常の3名初期設定には使わない。ワークスペース移行時のメッセージ／チャンネル／ユーザー移行用。</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note">
+    <strong>desknet's NEO確認バージョン：</strong>公式オンラインマニュアル掲載の製品バージョン <strong>V9.6R1.0</strong>／マニュアルバージョン <strong>9.6.1</strong> を基準に確認しています。
+  </div>
+</section>
+
+<section id="common">
+  <div class="section-title"><div class="num">0</div><h2>共通の進め方と注意点（全ツール共通）</h2></div>
+  <div class="lead">
+    <strong>重要な前提：</strong>各製品のインポート機能は製品ごとに異なります。本手順書の「業務列（案件ID・Phase・Gate等）」は<strong>この基盤の推奨設計</strong>、文字コード・取込方式・権限・更新動作は<strong>公式マニュアル準拠</strong>で記載します。契約プランやテナントUIで差が出る箇所だけ、管理画面／ログイン後Help Centerを最終確認してください。
+  </div>
+
+  <h3 style="margin:0 0 10px;font-size:19px">0.1 インポートの進め方（共通の順番）</h3>
+  <div class="flow"><pre>① CSVの内容を3名で確定する
+   ↓
+② テスト用に1件だけのCSVを作り、取込む（テスト環境 or 本番の小範囲）
+   ↓
+③ 表示・更新が正しいことを3名で確認する
+   ↓
+④ 本番データ（全件）を取込む
+   ↓
+⑤ 取込後にもう一度3名で確認し、レビュー記録に残す</pre></div>
+  <div class="warning">
+    <strong>なぜテストを先にやるのか：</strong>CSV取込は「一括で入る」反面、「間違った形式だと大量に失敗する」「気づかずに誤った値が入る」リスクがあります。必ず1件テスト → 確認 → 本番、の順で進めます。
+  </div>
+
+  <h3 style="margin:22px 0 10px;font-size:19px">0.2 共通の注意点</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:8%">#</th><th style="width:24%">注意点</th><th>説明</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><strong>文字コード</strong></td><td>日本語を含むCSVは文字化けの原因になります。各ツールの指定（SJIS／UTF-8／BOMあり・なし）を確認してから保存する</td></tr>
+      <tr><td>2</td><td><strong>1行目のタイトル行</strong></td><td>タイトル行（ヘッダー）の有無を取込時に正しく指定する（指定を間違えると、項目名がデータとして入る）</td></tr>
+      <tr><td>3</td><td><strong>重複・一意性</strong></td><td>案件ID・コード類は重複しないようにする。「更新」方式の場合、キー項目の指定を誤ると既存データを上書きする危険がある</td></tr>
+      <tr><td>4</td><td><strong>管理者権限</strong></td><td>インポート機能は管理者（または機能管理者）のみ利用できることが多い。実行ユーザーの権限を確認する</td></tr>
+      <tr><td>5</td><td><strong>取込前のバックアップ</strong></td><td>既存データを更新する前に、現状のデータをエクスポートして控えを取る</td></tr>
+      <tr><td>6</td><td><strong>エラーログの確認</strong></td><td>取込後に「成功件数・失敗件数・失敗理由」を必ず確認する（失敗行だけ直して再取込）</td></tr>
+      <tr><td>7</td><td><strong>取込後は手作業の置き換えではない</strong></td><td>CSV取込後も、各ツールの権限設定・承認者設定など「CSVでは入らない設定」を画面で行う必要がある</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="official">
+    <h3>0.3 取込前の「公式仕様確認」</h3>
+    <ul class="plain">
+      <li><strong>画面名は現在の製品UIを優先：</strong>特にSaaS（Notion、Lightblue、Slack）は継続的にUIが変わります。</li>
+      <li><strong>既存データ更新か追加かを先に確認：</strong>Notion CSVは基本的に「追加」であり、既存行を更新しません。</li>
+      <li><strong>キー照合の有無を確認：</strong>AppSuiteの<code>appsimport</code>で変更・削除を行う場合は<code>-key_field_name</code>が必要です。</li>
+      <li><strong>NEOのユーザー／組織はNEO本体で管理：</strong>AppSuite内の「社員マスタ」「部署マスタ」は業務用アプリデータとして別物です。</li>
+      <li><strong>ファイル取込制限：</strong>desknet's NEO側で「添付ファイル使用設定」が禁止されている場合、CSVインポート／エクスポートにも影響します。</li>
+    </ul>
+  </div>
+
+</section>
+
+<section id="appsuite">
+  <div class="section-title"><div class="num">1</div><h2>AppSuite（案件台帳・業務マスタ）のExcel/CSVインポート</h2></div>
+  <div class="note"><strong>設定担当：DX推進部担当者</strong>（確認：3名）。手段は画面の<strong>「Excel/CSVファイルからインポート」</strong>、または定期・大量処理向けの<strong>コマンドラインツール（appsimport：CSVのみ）</strong>。</div>
+
+  
+  <div class="revised">
+    <h3><span class="badge fix">修正</span>1.0 「部署マスタ・社員マスタ」の意味を分ける</h3>
+    <p>この章の「部署マスタ」「社員マスタ」は、<strong>AppSuite内に作る業務参照用アプリ</strong>です。
+    desknet's NEO本体のログインユーザー／所属組織そのものではありません。</p>
+    <div class="tw">
+      <table>
+        <thead><tr><th>対象</th><th>正しい設定場所</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td>NEOログインユーザー</td><td>システム管理 → 運用設定 → ユーザー設定 → ユーザー情報のインポート</td><td>認証・所属・メール等のNEO本体情報</td></tr>
+          <tr><td>NEO組織</td><td>システム管理 → 運用設定 → 組織設定 → 組織情報のインポート</td><td>NEOの正式な組織階層</td></tr>
+          <tr><td>AppSuite社員／部署マスタ</td><td>AppSuiteアプリ</td><td>案件台帳から参照する業務用属性・役割・コード</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="official">
+    <h3>1.A 現行AppSuite公式仕様</h3>
+    <ul class="plain">
+      <li><span class="badge ok">公式確認済み</span>既存アプリの「その他の機能」から<strong>Excel/CSVファイルをインポート</strong>できます。</li>
+      <li><span class="badge ok">公式確認済み</span>アプリ作成時にも<strong>Excel/CSVファイルからアプリケーション作成＋データ一括登録</strong>ができます。</li>
+      <li><span class="badge ok">公式確認済み</span>入力ファイルは、Excelワークシート（<code>.xlsx</code>、5MB未満）またはカンマ／タブ区切りのCSVを利用できます。</li>
+      <li><span class="badge ok">公式確認済み</span>画面操作には対象アプリのインポート操作に必要なアクセス権が必要です。</li>
+      <li><span class="badge ok">公式確認済み</span><code>appsimport</code>はCSV専用で、クラウド環境でも利用可能です。CLI実行ユーザーは対象アプリの管理権限が必要です。</li>
+    </ul>
+  </div>
+
+<h3 style="margin:22px 0 10px;font-size:19px">1.1 インポートの順番</h3>
+  <div class="flow"><pre>① 部署マスタ
+   ↓
+② 社員マスタ（3名＋承認者）
+   ↓
+③ Phaseマスタ / Gateマスタ / Statusマスタ
+   ↓
+④ 案件ID採番ルールの設定（または採番方法の決定）
+   ↓
+⑤ 案件台帳アプリの設計（項目定義）…テンプレートのファイル取込 or 画面で作成
+   ↓
+⑥ 案件台帳の初期データ（既存案件がある場合のみ）</pre></div>
+  <div class="decision">
+    <strong>順番の理由：</strong>案件台帳に「部署」「社員」「Phase」などを参照する項目がある場合、<strong>先に参照元（マスタ）を入れておかないとエラー</strong>になります。参照関係のあるマスタを先に取り込みます。
+  </div>
+
+  <h3 style="margin:22px 0 10px;font-size:19px">1.2 CSVの列構成（案）※各マスタ</h3>
+
+  <div class="card">
+    <h4>① 部署マスタ</h4>
+    <div class="tw"><table>
+      <thead><tr><th style="width:22%">列名（案）</th><th style="width:34%">内容</th><th style="width:26%">例</th><th>必須</th></tr></thead>
+      <tbody>
+        <tr><td>部署コード</td><td>一意なコード</td><td><code>D001</code></td><td>○</td></tr>
+        <tr><td>部署名</td><td>表示名</td><td>経営企画部</td><td>○</td></tr>
+        <tr><td>上位部署コード</td><td>階層がある場合の親</td><td>（空欄）</td><td>△</td></tr>
+      </tbody>
+    </table></div>
+    <h4>② 社員マスタ</h4>
+    <div class="tw"><table>
+      <thead><tr><th style="width:22%">列名（案）</th><th style="width:34%">内容</th><th style="width:26%">例</th><th>必須</th></tr></thead>
+      <tbody>
+        <tr><td>社員ID</td><td>ログインID等</td><td><code>keiei01</code></td><td>○</td></tr>
+        <tr><td>氏名</td><td>氏名</td><td>（例）経営企画担当者</td><td>○</td></tr>
+        <tr><td>所属部署コード</td><td>①の部署コード</td><td><code>D001</code></td><td>○</td></tr>
+        <tr><td>役割</td><td>この基盤での役割</td><td>経営企画担当者／建設土木技術者・研究者／IT・DX・AI開発者</td><td>○</td></tr>
+        <tr><td>メールアドレス</td><td>通知用</td><td>（例）xxx@example.com</td><td>△</td></tr>
+      </tbody>
+    </table></div>
+    <h4>③ Phaseマスタ</h4>
+    <div class="tw"><table>
+      <thead><tr><th style="width:22%">列名（案）</th><th style="width:40%">内容</th><th>例</th></tr></thead>
+      <tbody>
+        <tr><td>Phaseコード</td><td>コード</td><td><code>Idea</code>／<code>Planning</code>／<code>Definition</code>／<code>MVP</code>／<code>Staging</code>／<code>Production</code>／<code>Operation</code></td></tr>
+        <tr><td>Phase名</td><td>表示名</td><td>アイデア／企画／要件定義／MVP／本番準備／本番／運用</td></tr>
+        <tr><td>表示順</td><td>並び順</td><td>1〜7</td></tr>
+      </tbody>
+    </table></div>
+    <h4>④ Gateマスタ</h4>
+    <div class="tw"><table>
+      <thead><tr><th style="width:22%">列名（案）</th><th style="width:36%">内容</th><th>例</th></tr></thead>
+      <tbody>
+        <tr><td>Gateコード</td><td>コード</td><td><code>Gate1</code>〜<code>Gate5</code></td></tr>
+        <tr><td>Gate名</td><td>表示名</td><td>企画承認／開発承認／MVP承認／本番移行承認／Release承認</td></tr>
+        <tr><td>主承認者（役割）</td><td>承認者（参考情報）</td><td>経営企画担当者 等</td></tr>
+        <tr><td>表示順</td><td>並び順</td><td>1〜5</td></tr>
+      </tbody>
+    </table></div>
+    <h4>⑤ Statusマスタ</h4>
+    <div class="tw"><table>
+      <thead><tr><th style="width:22%">列名（案）</th><th style="width:40%">内容</th><th>例</th></tr></thead>
+      <tbody>
+        <tr><td>Statusコード</td><td>コード</td><td><code>APPLY</code>／<code>APPROVED</code>／<code>RETURNED</code>／<code>DONE</code>／<code>STOP</code></td></tr>
+        <tr><td>Status名</td><td>表示名</td><td>申請中／承認／差戻し／完了／停止</td></tr>
+      </tbody>
+    </table></div>
+    <h4>⑥ 案件台帳の初期データ（既存案件がある場合）</h4>
+    <div class="tw"><table>
+      <thead><tr><th style="width:22%">列名（案）</th><th style="width:36%">内容</th><th>例</th></tr></thead>
+      <tbody>
+        <tr><td>案件ID</td><td>共通キー</td><td><code>DX-2026-0042</code></td></tr>
+        <tr><td>案件名</td><td>案件名</td><td>現場写真・点検記録からの報告書自動作成</td></tr>
+        <tr><td>提案者（社員ID）</td><td>②の社員ID</td><td>（例）現場監督のID</td></tr>
+        <tr><td>Phaseコード</td><td>③のコード</td><td><code>MVP</code></td></tr>
+        <tr><td>Gate状態</td><td>④のコード</td><td><code>Gate3</code></td></tr>
+        <tr><td>KPI目標</td><td>効果測定指標</td><td>作成時間 60分→20分</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <h3 style="margin:22px 0 10px;font-size:19px">1.3 インポートの手順</h3>
+  <div class="card">
+    <h4>画面で取り込む場合</h4>
+    <ul class="plain">
+      <li>AppSuiteの対象アプリを開き、<strong>「その他の機能」→「Excel/CSVファイルからインポート」</strong>を選ぶ</li>
+      <li>ExcelまたはCSVファイルを選択する。CSVの場合は文字コード・区切り文字を確認する</li>
+      <li>対象（アプリ本体／表部品）と<strong>実行する処理</strong>を選び、[次へ]へ進む</li>
+      <li>2画面目で、ファイル列とAppSuite部品の対応を確認する。先頭行をヘッダー扱いする場合はタイトル行を除外する</li>
+      <li>まず1件だけで実行し、登録／変更結果を確認してから全件を投入する</li>
+    </ul>
+    <h4>コマンドラインツールで取り込む場合（大量・定期用）</h4>
+    <ul class="plain">
+      <li>公式の<a href="https://www.desknets.com/neo/download/ascmdtool.html"><code>AppSuiteコマンドラインツール</code></a>を利用する</li>
+      <li>公式例に合わせ、<code>-l</code>（ログ）、<code>-delimiter</code>、<code>-title_except</code>、更新時の<code>-key_field_name</code>を明示する</li>
+      <li>アクセスキーは<strong>個人設定 → アクセスキー設定</strong>で発行し、アプリケーション識別子は<strong>アプリケーション設定 → オプション機能 → API設定</strong>で確認する</li>
+    <div class="codeblock">"C:\Program Files\desknet's NEO\bin\appsimport.exe" ^
+  -conf "C:\tmp\conf.txt" ^
+  -access_key sampleAccessKey ^
+  -app_alias sample ^
+  -f "C:\tmp\import.csv" ^
+  -l "C:\tmp\import.log" ^
+  -char_code utf8 ^
+  -delimiter comma ^
+  -title_except on ^
+  -import_type update ^
+  -match_with_title on ^
+  -key_field_name "案件ID" ^
+  -exec_user login ^
+  -error_stop on</div>
+    <p class="small">※上記はこの基盤向けの例です。案件IDで既存データを変更する場合、案件ID部品は重複禁止など、一意に照合できる設計にしてください。</p>
+
+      <li>失敗行はログファイルに出力されるので確認する</li>
+    </ul>
+  </div>
+
+  <div class="warning">
+    <strong>注意点（AppSuite）：</strong>
+    <ul class="plain" style="margin-top:4px">
+      <li>画面インポートは対象操作の<strong>アクセス権</strong>が必要。<code>appsimport</code>実行は対象アプリの<strong>管理権限</strong>が必要</li>
+      <li>文字コードは <strong>SJIS（日本語のみ）またはUTF-8</strong> を指定（UTF-8はBOMあり/なしの区別あり）</li>
+      <li><strong>参照マスタ（部署・社員・Phase等）を先に入れる</strong>こと（後から入れると参照エラー）</li>
+      <li>案件IDを自動生成する設計の場合は、CSV側で無理に値を入れない。既存行更新に案件IDを使う場合は、逆に<strong>照合キーとして一意性を保証</strong>する</li>
+      <li>取込後、<strong>ダッシュボード・権限・承認者設定などCSVで入らない項目</strong>を画面で仕上げる</li>
+    </ul>
+  </div>
+
+  <div class="official">
+    <h3>1.4 公式データ形式で特に確認する項目</h3>
+    <div class="tw"><table>
+      <thead><tr><th>部品</th><th>代表的な公式入力形式</th></tr></thead>
+      <tbody>
+        <tr><td>日付</td><td><code>YYYY/MM/DD</code>／<code>YYYY-MM-DD</code>／<code>YYYYMMDD</code></td></tr>
+        <tr><td>時刻</td><td><code>HH:MM</code>／<code>HHMM</code></td></tr>
+        <tr><td>日時</td><td><code>YYYY/MM/DD HH:MM</code>／<code>YYYY-MM-DD HH:MM</code>／<code>YYYYMMDDHHMM</code></td></tr>
+        <tr><td>CLI文字コード</td><td><code>sjis</code>／<code>utf8n</code>（BOMなしUTF-8）／<code>utf8</code>（BOM付きUTF-8）</td></tr>
+        <tr><td>CLI処理</td><td><code>update</code>＝追加・変更、<code>delete</code>＝削除。変更・削除には照合部品指定が必要</td></tr>
+      </tbody>
+    </table></div>
+    <p class="src">公式：AppSuite ユーザーズマニュアル／AppSuite付録「インポートファイル」「コマンドラインツール」</p>
+  </div>
+
+</section>
+
+<section id="neo">
+  <div class="section-title"><div class="num">2</div><h2>desknet's NEO Workflow（承認フロー）のファイル取込</h2></div>
+  <div class="note"><strong>設定担当：DX推進部担当者</strong>（確認：3名）。<strong>申請書の「書式」は公式のファイルインポート／エクスポートに対応</strong>。申請経路は公式画面で作成。</div>
+
+  
+  <div class="official">
+    <h3>2.0 先にNEO本体のユーザー／組織を整える</h3>
+    <p>Workflowの承認者はdesknet's NEOのユーザーを使用します。承認経路を作る前に、NEO本体のユーザー・組織情報を正しく登録してください。</p>
+    <div class="path">システム管理 → 運用設定 → ユーザー設定 → ユーザー情報のインポート</div>
+    <div class="path">システム管理 → 運用設定 → 組織設定 → 組織情報のインポート</div>
+    <ul class="plain">
+      <li>どちらもファイルから一括<strong>登録・変更</strong>が可能。</li>
+      <li>インポート画面で登録項目の順番をファイルに合わせて並べ替え可能。</li>
+      <li>先頭行を無視する設定、文字コード、区切り文字を指定可能。</li>
+      <li>既存情報を変更する場合は、先にエクスポートして控えを取得する。</li>
+    </ul>
+  </div>
+
+<h3 style="margin:22px 0 10px;font-size:19px">2.1 インポートの順番</h3>
+  <div class="flow"><pre>① 申請書カテゴリーを画面で作成（例：DX案件）
+   ↓
+② 申請経路を画面で作成（承認者：3名＋上位Gate Owner）※CSV不可
+   ↓
+③ 申請書の「書式」をファイルで取り込む（Gate 1用）※ファイル取込対応
+   ↓
+④ 表題・書式・経路をまとめた「申請書」として完成させる
+   ↓
+⑤ Gate 2〜5は、①の申請書を複製 or 書式をエクスポート→調整→インポートで作る</pre></div>
+  <div class="decision">
+    <strong>なぜ②（経路）が先か：</strong>申請書を完成させるには経路が必要です。承認者（3名）がAppSuiteマスタやNEOのユーザーに登録済みであることを先に確認します。
+  </div>
+
+  <h3 style="margin:22px 0 10px;font-size:19px">2.2 書式インポート用ファイルの列構成（概念案）</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:20%">列（概念）</th><th style="width:36%">内容</th><th>例</th></tr></thead>
+    <tbody>
+      <tr><td>項目名</td><td>フォームに表示する項目名</td><td>案件ID／申請者／対象現場／添付写真</td></tr>
+      <tr><td>部品種別</td><td>入力部品の種類</td><td>テキスト／プルダウン／表部品／添付ファイル</td></tr>
+      <tr><td>必須/任意</td><td>入力必須か</td><td>必須／任意</td></tr>
+      <tr><td>選択肢（プルダウン等）</td><td>選択肢の列挙</td><td>Gate1, Gate2, …</td></tr>
+      <tr><td>表示順</td><td>フォーム上の並び順</td><td>1〜</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="warning">
+    <strong>※重要：</strong>上の表は<strong>業務設計の概念</strong>であり、NEO公式の実ファイル列仕様そのものではありません。安全な方法は、<strong>まず画面でGate 1の書式を1本作る → 公式の「書式のエクスポート」で雛形を取得 → その形式を基準にする</strong>ことです。
+  </div>
+
+  <div class="warning">
+    <strong>注意点（NEO Workflow）：</strong>
+    <ul class="plain" style="margin-top:4px">
+      <li>公式マニュアルでは、申請経路は<strong>「申請書管理 → 申請経路設定」</strong>で作成する手順が案内されています。書式のようなファイルインポート機能は案内されていないため、承認者（3名＋上位Gate Owner）は画面設定を正とします</li>
+      <li><strong>AppSuiteアプリと連携している申請書はエクスポート不可</strong>（取込む書式が連携申請書でないことを確認）</li>
+      <li>書式を取り込んだ直後は<strong>管理組織が空</strong>なので、後から設定する</li>
+      <li>申請書の<strong>表内部品（明細行の初期値など）はCSVで複写</strong>できる（<a href="https://www.desknets.com/neo/users/media/desknets/11359/">参考記事</a>）</li>
+      <li>5つのGateは「1本完成させてから複製し、承認者だけ差し替える」のが速い</li>
+    </ul>
+  </div>
+
+  <div class="official">
+    <h3>2.3 公式の書式インポート／エクスポート手順</h3>
+    <div class="path">設定メニュー → 申請書管理 → 書式のインポート</div>
+    <ol style="margin:8px 0 14px;padding-left:1.4em">
+      <li>申請書名を入力。</li>
+      <li>ファイルを選択。</li>
+      <li>[設定を変更]で文字コードと区切り文字を指定。</li>
+      <li>[インポート]を実行。</li>
+      <li>インポート後、<strong>管理組織が空</strong>になるため管理組織を設定。</li>
+    </ol>
+    <div class="path">設定メニュー → 申請書管理 → 書式のエクスポート</div>
+    <ul class="plain">
+      <li>申請書を選択して書式をエクスポートできる。</li>
+      <li><strong>AppSuiteのアプリケーションと連携している申請書はエクスポート不可。</strong></li>
+      <li>このメニューの表示には、システム管理者／対象範囲「すべて」の機能管理者／申請書・経路管理者等の条件がある。</li>
+    </ul>
+  </div>
+
+</section>
+
+<section id="notion">
+  <div class="section-title"><div class="num">3</div><h2>Notion（Knowledge基盤）のCSVインポート</h2></div>
+  <div class="note"><strong>設定担当：IT/DX/AIシステム開発者</strong>（確認：3名）。Idea DBをCSVで作成。Decision Log・教訓台帳も同様の手順。</div>
+
+  <h3 style="margin:22px 0 10px;font-size:19px">3.1 インポートの順番</h3>
+  <div class="flow"><pre>① Idea DBのCSVを用意する（1行目＝項目名、2行目以降＝データ）
+   ↓
+② Notionで「CSVインポート」を選び、CSVを読み込む
+   ↓
+③ プロパティ（列）の型を整える（テキスト/セレクト/日付/担当者など）
+   ↓
+④ 新規DBとして作るか、既存DBへ列をマッピングして追加する
+   ↓
+⑤ 企画書・要件定義書などは「ページテンプレート」として別途作成</pre></div>
+
+  <h3 style="margin:22px 0 10px;font-size:19px">3.2 Idea DB用CSVの列構成（案）※14項目</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:22%">列名（CSVヘッダー）</th><th style="width:40%">内容</th><th>入力例</th></tr></thead>
+    <tbody>
+      <tr><td>Idea ID</td><td>アイデア識別子</td><td><code>IDEA-2026-0001</code></td></tr>
+      <tr><td>提案者</td><td>発案者</td><td>（例）現場監督</td></tr>
+      <tr><td>所属</td><td>部署</td><td>建設土木技術部</td></tr>
+      <tr><td>原課題</td><td>最初の困りごと</td><td>点検写真と手書きメモからの報告書作成が大変</td></tr>
+      <tr><td>壁打ち結果</td><td>AI整理の結果</td><td>写真整理・転記・帳票作成に1件60分</td></tr>
+      <tr><td>目的</td><td>解決したいこと</td><td>報告書作成時間の削減</td></tr>
+      <tr><td>対象者</td><td>利用者</td><td>現場監督・施工管理者</td></tr>
+      <tr><td>期待効果</td><td>工数・品質等</td><td>60分→20分</td></tr>
+      <tr><td>MVP</td><td>最小実装範囲</td><td>写真UP・AI所見案・帳票出力</td></tr>
+      <tr><td>概算工数</td><td>PoC/MVP</td><td>PoC 2〜4週間</td></tr>
+      <tr><td>リスク</td><td>情報・技術等</td><td>写真に人物・位置情報（要マスキング）</td></tr>
+      <tr><td>類似案件</td><td>過去案件</td><td>（該当なし）</td></tr>
+      <tr><td>関連Knowledge</td><td>Notionページ</td><td>（後でリンク）</td></tr>
+      <tr><td>Status</td><td>状態</td><td>企画候補</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 style="margin:22px 0 10px;font-size:19px">3.3 インポートの手順（Notion標準のCSVインポート）</h3>
+  <div class="card">
+    <ul class="plain">
+      <li>Notionで<strong>設定 → インポート → CSV</strong>を開く。またはページ内で<code>/csv</code>と入力する</li>
+      <li>CSVファイルをアップロードし、<strong>新しいデータベースを作るか、既存データベースへ取り込むか</strong>を選ぶ</li>
+      <li>CSVの各列をNotionのプロパティへマッピングし、必要に応じて型を調整する（Status→ステータス／選択、Idea ID→テキスト等）</li>
+      <li>既存DBへ追加する場合は、フルページDB上部の<code>•••</code>から<strong>CSV取り込み</strong>も利用できる</li>
+      <li>以後の運用で使う<strong>ビュー（テーブル/カンバン）</strong>を整える</li>
+    </ul>
+  </div>
+  <div class="note">
+    <strong>大量レコードの追加：</strong>まずはNotion公式のCSVインポートで形を作り、APIを使う場合はNotion公式API仕様に基づいて別途実装します。
+  </div>
+
+  <div class="warning">
+    <strong>注意点（Notion）：</strong>
+    <ul class="plain" style="margin-top:4px">
+      <li>CSVの<strong>1行目がそのままプロパティ名</strong>になる。列名は最初から分かりやすい名前にする（後から変更も可）</li>
+      <li>読み込み後は、<strong>Status等の列を「セレクト（選択肢）」型</strong>に変更して選択肢を定義する</li>
+      <li><strong>人間レビュー前の生情報（Slackログ等）は入れない</strong>。Notionに入れるのは確定Knowledgeのみ</li>
+      <li>アクセス権は3名＋案件関係者に制限し、全社公開は運用拡大時に行う</li>
+    </ul>
+  </div>
+
+  <div class="official">
+    <h3>3.4 Notion公式CSV仕様で必ず押さえる点</h3>
+    <ul class="plain">
+      <li><span class="badge ok">公式確認済み</span>CSVの<strong>行 → データベースアイテム（ページ）</strong>、<strong>列 → プロパティ</strong>として取り込まれる。</li>
+      <li><span class="badge ok">公式確認済み</span>CSVは新規DBだけでなく、<strong>既存DBにも列マッピングして追加</strong>できる。</li>
+      <li><span class="badge fix">重要</span>CSV取込／マージは<strong>既存行を更新しない。新しい行を追加する</strong>。案件IDが同じでも自動更新にはならない。</li>
+      <li><span class="badge ok">公式確認済み</span>文字化け時は<strong>UTF-8</strong>で再エクスポート。</li>
+      <li><span class="badge ok">公式確認済み</span>無料プランは1ファイル5MB、有料プランは50MB。</li>
+      <li><span class="badge ok">公式確認済み</span>新規CSVインポートでは新しいRelation／Rollup／Formulaを作成できないため、取込後にNotion側で構築する。</li>
+      <li><span class="badge ok">公式確認済み</span>日付の推奨取込形式は<code>MM/DD/YYYY</code>。</li>
+    </ul>
+    <div class="warning"><strong>重複対策：</strong>既存DBへの再取込前にIdea ID／案件IDで重複チェックし、同じ行を再投入しない運用にしてください。</div>
+  </div>
+
+</section>
+
+<section id="lightblue">
+  <div class="section-title"><div class="num">4</div><h2>Lightblue（AI窓口）のナレッジ取り込み</h2></div>
+  <div class="note"><strong>設定担当：IT/DX/AIシステム開発者</strong>（確認：3名）。Lightblue（＝Lightblue Assistant）では、<strong>AIが回答に使う社内ナレッジ（RAG用データ）を取り込む</strong>。CSVというより<strong>ファイル（PDF/Word/Excel/PPT）のアップロードと、Notion等ストレージ連携</strong>が中心。</div>
+
+  <h3 style="margin:22px 0 10px;font-size:19px">4.1 取り込みの順番</h3>
+  <div class="flow"><pre>① 参照元を3名で決める（どのKnowledgeをAIに読ませるか）
+   ↓
+② 参照元を準備する（Notionのページ/DB or ファイル化）
+   ↓
+③ Lightblueで「独自データ連携」を設定（ファイルUP or Notion連携 or ストレージ連携）
+   ↓
+④ 「マイアシスタント」を作成（プロンプト自動生成）※画面操作
+   ↓
+⑤ テスト質問で回答精度を確認し、必要なら参照範囲・プロンプトを調整</pre></div>
+
+  <h3 style="margin:22px 0 10px;font-size:19px">4.2 準備するファイル・連携先（案）</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:34%">取り込むもの</th><th style="width:30%">手段</th><th>例</th></tr></thead>
+    <tbody>
+      <tr><td>Idea DB・教訓・決定事項</td><td><strong>Notion連携</strong>（公式対応）</td><td>人間レビュー済みの確定Knowledgeだけを参照範囲にする</td></tr>
+      <tr><td>企画書・基準書・帳票様式</td><td><strong>ファイルアップロード</strong></td><td>PDF／Word／Excel／PPT</td></tr>
+      <tr><td>その他の社内文書</td><td>ストレージ連携</td><td>Google Drive／Box 等（契約プランによる）</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="warning">
+    <strong>注意点（Lightblue）：</strong>
+    <ul class="plain" style="margin-top:4px">
+      <li><strong>参照させる範囲は3名で決める</strong>（社外秘・個人情報を含むNotionページをAIに読ませない）</li>
+      <li><strong>人間レビュー前の生情報（Slackの生ログ等）は参照させない</strong></li>
+      <li>「マイアシスタント」は、作成したいアシスタントの特徴を入力して<strong>プロンプトを自動生成</strong>できることが公式に案内されています。CSVによるアシスタント定義の一括登録可否は公開公式資料では確認できないため、現テナントのHelp Centerを確認します</li>
+      <li>Notion連携自体は公式提供済みです。<strong>現在契約中プランの容量・ユーザー数・管理権限・最新UI</strong>はログイン後Help Center／契約条件で最終確認します</li>
+      <li>AIの回答は「案」。<strong>最終的な確定は人間（3名）が行う</strong></li>
+    </ul>
+  </div>
+
+  <div class="official">
+    <h3>4.3 Lightblue公式情報で確認できるKnowledge連携</h3>
+    <div class="tw"><table>
+      <thead><tr><th>連携</th><th>公式確認</th><th>本基盤での使い方</th></tr></thead>
+      <tbody>
+        <tr><td>Notion</td><td><span class="badge ok">API連携提供済み</span></td><td>レビュー済みIdea DB／Decision Log／教訓をRAG参照</td></tr>
+        <tr><td>Google Drive</td><td><span class="badge ok">公式掲載</span></td><td>将来の参照元候補</td></tr>
+        <tr><td>Box</td><td><span class="badge ok">公式掲載</span></td><td>将来の参照元候補</td></tr>
+        <tr><td>ファイルアップロード</td><td><span class="badge ok">PDF / PowerPoint / Excel / Word</span></td><td>承認済み規程・企画書・基準書等</td></tr>
+        <tr><td>RAG</td><td><span class="badge ok">標準機能として公式掲載</span></td><td>確定Knowledgeだけを検索対象にする</td></tr>
+      </tbody>
+    </table></div>
+    <div class="note">
+      <strong>公開資料とHelp Centerの使い分け：</strong>公開公式資料で機能の存在は確認できますが、
+      最新のボタン名・画面配置・契約テナント固有の権限は<strong>Lightblueログイン後Help Centerを正</strong>とします。
+    </div>
+  </div>
+
+  <div class="revised">
+    <h3><span class="badge fix">修正</span>「CSVインポート」と「RAG連携」は別物</h3>
+    <p>Lightblueでは、AppSuiteやNotionのように「業務レコードCSVを登録して台帳を作る」ことが主目的ではありません。
+    この基盤では、<strong>人間レビュー済みKnowledgeをNotion／ファイル／ストレージから参照させるRAG設定</strong>として扱います。</p>
+  </div>
+
+</section>
+
+
+<section id="slack">
+  <div class="section-title"><div class="num">5</div><h2>Slack（参考：CSV/Textインポートは「移行用」）</h2></div>
+  <div class="lead">
+    元版ではSlackを対象外としていましたが、公式ヘルプ上は<strong>CSV/Textファイルからメッセージ・チャンネル・ユーザーアカウントを移行するインポート機能</strong>があります。
+    ただし、これは通常の3名ワークスペース初期設定ではなく、<strong>別システム／別ワークスペースからの移行用途</strong>です。
+  </div>
+
+  <div class="official">
+    <h3>5.1 公式CSV/Textインポート</h3>
+    <div class="path">Admin → Workspace settings → Security → Import &amp; export data → Import → CSV/Text File</div>
+    <p>公式CSV/Text形式では、メッセージを1行ずつ並べ、列順は次の形式です。</p>
+    <div class="codeblock">timestamp, channel, username, text</div>
+    <ul class="plain">
+      <li>メッセージはタイムスタンプの古い順に並べる。</li>
+      <li>ユーザーとチャンネルを既存Slackへマッピングしてからインポートを確定する。</li>
+      <li>新規ユーザーとして招待する場合はメールアドレスが必要。</li>
+      <li>このインポートはWorkspace Owner向けの移行機能として扱う。</li>
+    </ul>
+  </div>
+
+  <div class="decision">
+    <strong>この基盤での結論：</strong>初期3名の参加者設定にはCSV/Textインポートを使いません。
+    3名は通常の招待／管理画面で追加し、将来Slack移行が発生した場合だけ本機能を利用します。
+  </div>
+</section>
+
+<section id="checklist">
+  <div class="section-title"><div class="num">付A</div><h2>実行チェックリスト（取込前・取込後）</h2></div>
+
+  <h3 style="margin:0 0 10px;font-size:19px">取込前（共通）</h3>
+  <div class="card">
+    <ul class="check">
+      <li>3名でCSVの内容（マスタ値・項目）を確認した</li>
+      <li>文字コード（SJIS/UTF-8）と区切り文字を確認した</li>
+      <li>1行目のタイトル行の有無を確認した</li>
+      <li>参照元マスタを先に入れる順番になっている（AppSuite）</li>
+      <li>NEO本体ユーザー／組織とAppSuite業務マスタを混同していない</li>
+      <li>Notion既存DBへ再取込する場合、案件ID／Idea IDの重複確認をした</li>
+      <li>既存データ更新の前にエクスポート（バックアップ）を取った</li>
+      <li>実行ユーザーに管理者権限がある</li>
+    </ul>
+  </div>
+
+  <h3 style="margin:22px 0 10px;font-size:19px">取込後（共通）</h3>
+  <div class="card">
+    <ul class="check">
+      <li>成功件数・失敗件数を確認した（失敗行はログで確認）</li>
+      <li>テストデータ（1件）を登録し、表示を3名で確認した</li>
+      <li>CSVで入らない設定（権限・承認者・ダッシュボード等）を画面で仕上げた</li>
+      <li>レビュー記録に結果を記載した</li>
+    </ul>
+  </div>
+
+  <h3 style="margin:22px 0 10px;font-size:19px">ツール別の追加確認</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:18%">ツール</th><th>取込後の追加確認</th></tr></thead>
+    <tbody>
+      <tr><td>AppSuite</td><td>案件ID採番が重複しないか／照合キーが一意か／案件台帳から業務マスタ参照が正しく表示されるか</td></tr>
+      <tr><td>NEO本体 / Workflow</td><td>ユーザー・組織が正しいか／書式インポート後の管理組織を設定したか／テスト申請が経路どおり回るか</td></tr>
+      <tr><td>Notion</td><td>プロパティ型が正しいか／重複行がないか／Relation・Formula等を取込後に再構築したか／アクセス権が適切か</td></tr>
+      <tr><td>Lightblue</td><td>Notion／ファイルKnowledgeを正しく参照するか／未レビュー領域を参照していないか／権限範囲が正しいか</td></tr>
+      <tr><td>Slack（移行時のみ）</td><td>ユーザー・チャンネルマッピングが正しいか／移行対象外の会話を誤投入していないか</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+
+<section id="sources">
+  <div class="section-title"><div class="num">参</div><h2>公式マニュアル・公式ヘルプ参照先</h2></div>
+  <div class="card">
+    <h3>desknet's NEO / AppSuite</h3>
+    <ul class="plain">
+      <li><a href="https://www.desknets.com/neo/help/" target="_blank" rel="noopener noreferrer">desknet's NEO 公式マニュアル入口</a></li>
+      <li><a href="https://www.desknets.com/neo/help_apps/ja_JP/public/apps/001.html" target="_blank" rel="noopener noreferrer">AppSuite ユーザーズマニュアル</a> — Excel/CSVインポート</li>
+      <li><a href="https://www.desknets.com/neo/help_apps/ja_JP/appendix/data_format/001.html" target="_blank" rel="noopener noreferrer">AppSuite 付録：データ形式</a></li>
+      <li><a href="https://www.desknets.com/neo/help_apps/ja_JP/appendix/appstool/001.html" target="_blank" rel="noopener noreferrer">AppSuite 付録：コマンドラインツール</a></li>
+      <li><a href="https://www.desknets.com/neo/help/ja_JP/admin/set/002.html" target="_blank" rel="noopener noreferrer">desknet's NEO システム管理：ユーザー／組織インポート</a></li>
+      <li><a href="https://www.desknets.com/neo/help/ja_JP/public/flow/003.html" target="_blank" rel="noopener noreferrer">Workflow 申請書管理</a> — 申請経路・書式インポート／エクスポート</li>
+      <li><a href="https://www.desknets.com/neo/help/ja_JP/manage/flow/001.html" target="_blank" rel="noopener noreferrer">Workflow 機能管理</a> — 申請書・経路管理者</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Notion</h3>
+    <ul class="plain">
+      <li><a href="https://www.notion.com/ja/help/import-data-into-notion" target="_blank" rel="noopener noreferrer">Notion公式：データをインポートする</a></li>
+      <li><a href="https://www.notion.com/ja/help/database-properties" target="_blank" rel="noopener noreferrer">Notion公式：データベースのプロパティ</a></li>
+      <li><a href="https://www.notion.com/help/relations-and-rollups" target="_blank" rel="noopener noreferrer">Notion公式：Relation / Rollup</a></li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Lightblue</h3>
+    <ul class="plain">
+      <li><a href="https://www.lightblue-tech.com/2024/06/04/20240604-news/" target="_blank" rel="noopener noreferrer">公式：マイアシスタント／独自データ連携アップデート</a></li>
+      <li><a href="https://www.lightblue-tech.com/2023/11/15/20231115-news/" target="_blank" rel="noopener noreferrer">公式：Notion連携機能の提供開始</a></li>
+      <li><a href="https://www.lightblue-tech.com/library/inquiry-lba/" target="_blank" rel="noopener noreferrer">Lightblue公式サービス紹介・ナレッジポータル／Help Center導線</a></li>
+    </ul>
+    <p class="small">Lightblueの詳細な最新操作画面はログイン後Help Centerを正としてください。</p>
+  </div>
+
+  <div class="card">
+    <h3>Slack</h3>
+    <ul class="plain">
+      <li><a href="https://slack.com/help/articles/360035354694-Move-data-to-Slack-using-a-CSV-or-text-file." target="_blank" rel="noopener noreferrer">Slack公式：CSV/TextファイルでデータをSlackへ移行</a></li>
+      <li><a href="https://slack.com/help/articles/204897248-Guide-to-Slack-import-and-export-tools" target="_blank" rel="noopener noreferrer">Slack公式：インポート／エクスポートツールガイド</a></li>
+    </ul>
+  </div>
+
+  <div class="note">
+    <strong>確認日：2026年9月4日</strong><br>
+    本HTMLは外部CSS・JavaScript・画像には依存しません。上記リンクは公式仕様を再確認するための参照先です。
+  </div>
+</section>
+
+<div class="footer">
+  みらい AIエージェント事業推進基盤（Mirai AI Agent Business Platform）— CSV・ファイル取込設定手順書（公式マニュアル統合版 v1.0）<br>
+  元資料：<code>docs/ai-dx-dev-csv-import-guide.md</code>／公式情報確認：2026-09-04
+</div>
+
+</main>
+</body>
+</html>
