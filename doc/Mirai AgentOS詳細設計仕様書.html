@@ -1,0 +1,282 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mirai AgentOS 詳細設計仕様書</title><style>
+:root{--bg:#f5f7fb;--panel:#fff;--ink:#142033;--muted:#5d6a7a;--line:#dce3ec;--navy:#16365d;--blue:#2563eb;--cyan:#0891b2;--green:#15803d;--amber:#b45309;--purple:#7c3aed;--red:#b91c1c;--dark:#0f172a;--softblue:#edf5ff;--softgreen:#eefbf3;--softamber:#fff8eb;--softred:#fff1f2;--shadow:0 10px 28px rgba(20,40,70,.08);--radius:18px}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP","Yu Gothic",Meiryo,sans-serif;line-height:1.72}
+a{color:inherit}.hero{background:radial-gradient(circle at 86% 12%,rgba(37,99,235,.24),transparent 28%),linear-gradient(135deg,#0e2443,#17365d 58%,#164e63);color:#fff;padding:58px 22px 44px}
+.wrap{max-width:1260px;margin:auto}.eyebrow{display:inline-block;padding:6px 12px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);border-radius:999px;font-size:12px;font-weight:800;letter-spacing:.06em}
+h1{font-size:clamp(31px,4.2vw,54px);line-height:1.18;margin:18px 0 12px}.hero p{max-width:1020px;color:#dbeafe;font-size:18px;margin:0}
+.tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:20px}.tag{padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);font-size:12px}
+.nav{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}.nav .wrap{display:flex;gap:8px;overflow:auto;padding:10px 16px}
+.nav a{white-space:nowrap;text-decoration:none;padding:8px 11px;border-radius:9px;font-size:13px;font-weight:800;color:#42516a}.nav a:hover{background:#edf4ff;color:var(--blue)}
+main{max-width:1260px;margin:auto;padding:32px 18px 78px}section{margin:0 0 46px}.section-title{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.num{width:40px;height:40px;display:grid;place-items:center;border-radius:12px;background:var(--navy);color:#fff;font-weight:900}h2{font-size:28px;line-height:1.3;margin:0}h3{margin:0 0 8px;font-size:19px}h4{margin:18px 0 8px}
+p{margin:0 0 12px}ul,ol{margin-top:8px}.small{font-size:13px;color:var(--muted)}
+.lead,.note,.warning,.decision,.danger{border-radius:14px;padding:16px 18px;margin:14px 0}.lead{background:var(--softblue);border:1px solid #d7e7ff;border-left:5px solid var(--blue)}
+.note{background:#ecfeff;border-left:4px solid var(--cyan);color:#164e63}.warning{background:var(--softamber);border-left:4px solid var(--amber);color:#7c2d12}.decision{background:var(--softgreen);border-left:4px solid var(--green);color:#14532d}.danger{background:var(--softred);border-left:4px solid var(--red);color:#881337}
+.grid{display:grid;gap:16px}.cols2{grid-template-columns:repeat(2,minmax(0,1fr))}.cols3{grid-template-columns:repeat(3,minmax(0,1fr))}.cols4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:19px;box-shadow:var(--shadow)}.card p{color:var(--muted)}
+.badge{display:inline-block;padding:4px 9px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:12px;font-weight:900;margin-bottom:8px}
+.arch{background:var(--dark);color:#e5eefc;border-radius:20px;padding:22px;overflow:auto;box-shadow:var(--shadow)}.arch pre{margin:0;font-family:Consolas,"SFMono-Regular",monospace;font-size:13.5px;line-height:1.55}
+code{background:#edf1f6;padding:2px 6px;border-radius:6px;font-family:Consolas,"SFMono-Regular",monospace;font-size:.92em}pre code{background:transparent;padding:0}
+table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden}th,td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:#f1f5f9;text-align:left;font-size:13px;color:#334155}tr:last-child td{border-bottom:0}.req{font-weight:900;color:var(--navy)}.mono{font-family:Consolas,"SFMono-Regular",monospace;font-size:.92em}
+.must{color:#991b1b;font-weight:900}.should{color:#92400e;font-weight:900}.may{color:#166534;font-weight:900}
+.quote{padding:22px;border:1px solid #dbeafe;border-radius:18px;background:linear-gradient(135deg,#eff6ff,#f5f3ff);text-align:center;font-size:21px;font-weight:900;color:#1e3a8a}
+.footer{margin-top:48px;padding-top:22px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);text-align:center}
+@media(max-width:980px){.cols3,.cols4{grid-template-columns:1fr 1fr}}@media(max-width:660px){.cols2,.cols3,.cols4{grid-template-columns:1fr}}
+@media print{.nav{display:none}body{background:#fff}.card,.arch{box-shadow:none}section,.card{break-inside:avoid}}
+</style></head><body>
+<header class="hero"><div class="wrap"><span class="eyebrow">MIRAI AGENTOS / DETAILED DESIGN SPECIFICATION</span>
+<h1>Mirai AgentOS<br>詳細設計仕様書</h1>
+<p>要件定義に基づき、AgentOS Kernel、データモデル、API、Workflow、Approval、Agent Runtime、Integrations、Identity、Observability、Deployment、Backup、Error Handling、Testの実装仕様を定義する。</p>
+<div class="tags"><span class="tag">Version 0.1</span><span class="tag">Modular Monolith + Worker</span><span class="tag">Docker Compose</span><span class="tag">Local PostgreSQL</span><span class="tag">Append-only Audit</span></div></div></header>
+<nav class="nav"><div class="wrap"><a href="#arch">Architecture</a><a href="#comp">Components</a><a href="#db">DB</a><a href="#api">API</a><a href="#workflow">Workflow</a><a href="#approval">Approval</a><a href="#agents">Agents</a><a href="#router">Model Router</a><a href="#int">Integrations</a><a href="#sec">Security</a><a href="#obs">Observability</a><a href="#deploy">Deployment</a><a href="#test">Test</a></div></nav>
+<main>
+
+<section id="arch"><div class="section-title"><div class="num">01</div><h2>論理アーキテクチャ</h2></div>
+<div class="arch"><pre>
+Presentation
+  AgentOS WebUI / Slack Bot / Gmail Gateway
+            │
+            ▼
+Application
+  Request / Project / Workflow / Approval / Agent
+  Knowledge / Integration / Audit Services
+            │
+            ▼
+Kernel
+  Intent Router / Planner / Orchestrator / Scheduler
+  Policy Engine / Model Router / Skill Registry
+  Tool Gateway / Knowledge Curator
+            │
+   ┌────────┼──────────┬───────────┐
+   ▼        ▼          ▼           ▼
+PostgreSQL Notion    GitHub     AI Providers
+ Process   Knowledge Engineering Claude/Codex/DeepSeek
+   │
+   ▼
+Worker / Runner / Sandbox
+   ▼
+Prometheus / Loki / Alloy / Grafana
+</pre></div>
+<div class="decision">初期実装は<strong>Modular Monolith + Worker</strong>。境界をコード上で分離し、必要時にWorker/Integration単位へ独立サービス化する。</div></section>
+
+<section id="comp"><div class="section-title"><div class="num">02</div><h2>コンポーネント詳細</h2></div>
+<table><thead><tr><th>Component</th><th>入力</th><th>処理</th><th>出力/永続化</th></tr></thead><tbody>
+<tr><td><strong>Intent Router</strong></td><td>User Request</td><td>Intent、Project候補、Risk候補、必要Context分類</td><td>request_context</td></tr>
+<tr><td><strong>Planner</strong></td><td>Goal + Knowledge</td><td>Task分解、依存、成果物、DoD</td><td>plans / tasks</td></tr>
+<tr><td><strong>Orchestrator</strong></td><td>Plan</td><td>Agent割当、Model選択、Tool許可、結果統合</td><td>agent_runs</td></tr>
+<tr><td><strong>Scheduler</strong></td><td>Runnable Tasks</td><td>Queue、Retry、Timeout、Resume</td><td>task_runs</td></tr>
+<tr><td><strong>Policy Engine</strong></td><td>Action Context</td><td>RBAC、Risk、Resource、Environment評価</td><td>policy_decisions</td></tr>
+<tr><td><strong>Approval Service</strong></td><td>Approval Required</td><td>Step生成、Decision、Evidence検証</td><td>approval_*</td></tr>
+<tr><td><strong>Model Router</strong></td><td>Task Profile</td><td>Capability / Cost / Latency / Independence評価</td><td>model_selection</td></tr>
+<tr><td><strong>Tool Gateway</strong></td><td>Tool Call</td><td>Schema Validation、Policy、Timeout、Redaction</td><td>tool_calls / audit</td></tr>
+<tr><td><strong>Knowledge Curator</strong></td><td>Run Result</td><td>抽出、重複判定、品質スコア、昇格候補</td><td>knowledge_candidates</td></tr>
+</tbody></table></section>
+
+<section id="db"><div class="section-title"><div class="num">03</div><h2>PostgreSQL 詳細設計</h2></div>
+<div class="arch"><pre>
+core:       projects / project_phases / gates / kpis
+workflow:   workflow_definitions / workflow_instances / state_transitions
+tasking:    tasks / task_dependencies / task_runs
+approval:   approval_requests / approval_steps / approval_actions / approval_evidence / approval_policies
+agent:      agents / agent_runs / model_runs / tool_calls / skills / skill_versions
+knowledge:  knowledge_candidates / knowledge_links
+artifact:   artifacts
+audit:      audit_events
+integration:integration_accounts / webhook_events / sync_states
+</pre></div>
+
+<h3>主要テーブル</h3>
+<table><thead><tr><th>Table</th><th>主要項目</th><th>制約/備考</th></tr></thead><tbody>
+<tr><td class="mono">core.projects</td><td>id UUID, project_key, title, status, owner_id, current_phase_id, risk_level, created_at, updated_at</td><td>project_key UNIQUE</td></tr>
+<tr><td class="mono">core.project_phases</td><td>id, project_id, phase_code, status, started_at, completed_at</td><td>project_id FK</td></tr>
+<tr><td class="mono">tasking.tasks</td><td>id, project_id, parent_task_id, title, status, priority, assigned_agent_id, due_at</td><td>親子Task</td></tr>
+<tr><td class="mono">tasking.task_dependencies</td><td>task_id, depends_on_task_id, dependency_type</td><td>循環依存禁止</td></tr>
+<tr><td class="mono">approval.approval_requests</td><td>id, project_id, request_type, target_ref, risk_level, status, requested_by, requested_at</td><td>状態遷移制約</td></tr>
+<tr><td class="mono">approval.approval_actions</td><td>id, approval_request_id, step_id, actor_id, action, reason, created_at</td><td>Append-only</td></tr>
+<tr><td class="mono">agent.agent_runs</td><td>id, task_id, agent_id, model_id, status, started_at, ended_at, input_hash, output_hash</td><td>Trace Root</td></tr>
+<tr><td class="mono">agent.model_runs</td><td>id, agent_run_id, provider, model, tokens_in, tokens_out, cost, latency_ms, status</td><td>AI利用計測</td></tr>
+<tr><td class="mono">agent.tool_calls</td><td>id, agent_run_id, tool_name, action, risk_level, policy_decision_id, status</td><td>Secret Redaction</td></tr>
+<tr><td class="mono">artifact.artifacts</td><td>id, project_id, artifact_type, path, sha256, mime_type, size_bytes, created_at</td><td>実体は外部Storage</td></tr>
+<tr><td class="mono">audit.audit_events</td><td>id, occurred_at, actor_type, actor_id, event_type, resource_type, resource_id, payload_hash, previous_hash</td><td>追記型・Hash Chain推奨</td></tr>
+</tbody></table>
+
+<h3>Status</h3><div class="grid cols3">
+<div class="card"><h3>Project</h3><p><code>idea / proposed / approved / active / staging / production / suspended / closed / archived</code></p></div>
+<div class="card"><h3>Task</h3><p><code>pending / ready / running / blocked / review / completed / failed / cancelled</code></p></div>
+<div class="card"><h3>Approval</h3><p><code>draft / requested / in_review / approved / returned / rejected / cancelled / expired</code></p></div></div></section>
+
+<section id="api"><div class="section-title"><div class="num">04</div><h2>API設計</h2></div>
+<div class="note">REST APIを基本とし、長時間処理はJob IDを返却して非同期化する。</div>
+<table><thead><tr><th>Method</th><th>Endpoint</th><th>用途</th><th>Risk</th></tr></thead><tbody>
+<tr><td>POST</td><td class="mono">/api/v1/requests</td><td>AI相談/依頼登録</td><td>R0</td></tr>
+<tr><td>GET</td><td class="mono">/api/v1/projects</td><td>Project一覧</td><td>R0</td></tr>
+<tr><td>POST</td><td class="mono">/api/v1/projects</td><td>Project作成</td><td>R1</td></tr>
+<tr><td>POST</td><td class="mono">/api/v1/projects/{id}/plan</td><td>Plan生成</td><td>R1</td></tr>
+<tr><td>POST</td><td class="mono">/api/v1/tasks/{id}/run</td><td>Task実行</td><td>Action依存</td></tr>
+<tr><td>POST</td><td class="mono">/api/v1/approvals</td><td>Approval Request作成</td><td>R1</td></tr>
+<tr><td>POST</td><td class="mono">/api/v1/approvals/{id}/actions</td><td>Approve/Return/Reject</td><td>R3+</td></tr>
+<tr><td>GET</td><td class="mono">/api/v1/agent-runs/{id}</td><td>Agent Run詳細</td><td>R0</td></tr>
+<tr><td>POST</td><td class="mono">/api/v1/knowledge/candidates</td><td>Knowledge候補生成</td><td>R1</td></tr>
+<tr><td>POST</td><td class="mono">/api/v1/integrations/github/sync</td><td>GitHub同期</td><td>R1</td></tr>
+</tbody></table></section>
+
+<section id="workflow"><div class="section-title"><div class="num">05</div><h2>Workflow / State Machine</h2></div>
+<div class="arch"><pre>
+IDEA --submit--> PROPOSED --approval--> APPROVED --activate--> ACTIVE
+ACTIVE --build/test--> STAGING --uat--> PRODUCTION --close--> CLOSED --archive--> ARCHIVED
+ACTIVE --suspend--> SUSPENDED --resume--> ACTIVE
+</pre></div>
+<ul><li>State TransitionはVersion管理されたWorkflow Definitionで管理。</li><li>TransitionごとにRequired Role、Required Evidence、Policy、Approval Ruleを紐付け。</li><li>未承認TransitionはApplication層だけでなくDomain層でも拒否。</li></ul></section>
+
+<section id="approval"><div class="section-title"><div class="num">06</div><h2>Approval / Policy詳細</h2></div>
+<h3>Policy Decision Input</h3>
+<div class="arch"><pre>
+{
+  actor: "user|agent|service",
+  role: "Developer|Reviewer|Approver|Admin",
+  action: "github.merge",
+  resource: "project:DX-2026-0042",
+  environment: "production",
+  risk_level: "R4",
+  evidence: [],
+  context: {}
+}
+</pre></div>
+<table><thead><tr><th>Decision</th><th>意味</th></tr></thead><tbody>
+<tr><td><strong>PERMIT</strong></td><td>そのまま実行可能</td></tr>
+<tr><td><strong>DENY</strong></td><td>実行禁止</td></tr>
+<tr><td><strong>APPROVAL_REQUIRED</strong></td><td>Approval Request生成、承認後のみ実行</td></tr>
+</tbody></table>
+<div class="warning">Approval Action、Policy Decision、Tool Call、Release操作は全てAudit対象。Audit EventはUPDATE/DELETEしない。</div></section>
+
+<section id="agents"><div class="section-title"><div class="num">07</div><h2>Agent / Skill設計</h2></div>
+<table><thead><tr><th>Agent</th><th>責務</th><th>代表Skill</th></tr></thead><tbody>
+<tr><td><strong>CTO Orchestrator</strong></td><td>Goal解釈、Plan、委譲、結果統合</td><td>planning, delegation, risk-classification</td></tr>
+<tr><td><strong>Research Agent</strong></td><td>調査、比較、根拠収集</td><td>web-research, notion-search, repo-analysis</td></tr>
+<tr><td><strong>Architecture Agent</strong></td><td>Architecture / ADR / Design Review</td><td>adr-draft, architecture-review</td></tr>
+<tr><td><strong>Developer Agent</strong></td><td>実装、Test、PR</td><td>coding, test-generation, github-pr</td></tr>
+<tr><td><strong>Reviewer Agent</strong></td><td>独立Review</td><td>code-review, security-review, test-review</td></tr>
+<tr><td><strong>Operations Agent</strong></td><td>Deploy、Runbook、Incident</td><td>deploy, rollback, diagnostics</td></tr>
+<tr><td><strong>Knowledge Curator</strong></td><td>Knowledge抽出・品質評価・昇格</td><td>knowledge-discovery, quality-review, lifecycle</td></tr>
+</tbody></table>
+<h3>Skill Metadata</h3><div class="arch"><pre>
+skill_id / name / version / description
+required_tools[] / required_permissions[]
+supported_agents[] / risk_ceiling
+input_schema / output_schema / test_suite
+status: draft | approved | deprecated
+</pre></div></section>
+
+<section id="router"><div class="section-title"><div class="num">08</div><h2>Model Router仕様</h2></div>
+<table><thead><tr><th>評価軸</th><th>内容</th></tr></thead><tbody>
+<tr><td>Capability</td><td>Reasoning / Coding / Long Context / Tool Use / Review</td></tr>
+<tr><td>Cost</td><td>予算上限、推定Token/Cost</td></tr>
+<tr><td>Latency</td><td>Interactive / Batch</td></tr>
+<tr><td>Independence</td><td>実装モデルとReviewモデルの分離</td></tr>
+<tr><td>Data Policy</td><td>送信可能データ区分、Provider制約</td></tr>
+<tr><td>Reliability</td><td>過去成功率、Error率、Retry率</td></tr>
+</tbody></table>
+<div class="arch" style="margin-top:16px"><pre>
+Research / Classification -> DeepSeek
+Architecture / Docs       -> Claude
+Repository Development    -> Claude Code or Codex
+Independent Review        -> alternate model
+High-volume Agent Loops   -> DeepSeek Harness
+</pre></div></section>
+
+<section id="int"><div class="section-title"><div class="num">09</div><h2>Integration詳細</h2></div>
+<table><thead><tr><th>Integration</th><th>Inbound</th><th>Outbound</th><th>留意点</th></tr></thead><tbody>
+<tr><td><strong>Notion</strong></td><td>Knowledge Retrieval</td><td>Knowledge Candidate反映</td><td>必要範囲のみ取得、Secret禁止</td></tr>
+<tr><td><strong>Slack</strong></td><td>Request / Reply / Review</td><td>Notification / Approval Prompt</td><td>Raw LogをKnowledge化しない</td></tr>
+<tr><td><strong>Gmail</strong></td><td>Mail Intake</td><td>Auto Reply / Draft</td><td>高リスクはHuman Review</td></tr>
+<tr><td><strong>GitHub</strong></td><td>Webhook / Issue / PR / Action</td><td>Branch / PR / Comment / Release</td><td>Merge/ReleaseはPolicy対象</td></tr>
+</tbody></table>
+<div class="note">Webhook Event ID保存、idempotency_key付与、sync_statesでcursor/versionを保持し重複処理を防止。</div></section>
+
+<section id="sec"><div class="section-title"><div class="num">10</div><h2>Security設計</h2></div>
+<div class="grid cols3"><div class="card"><h3>Identity</h3><p>authentik + OIDC。User/Service/Agent Identityを分離。</p></div><div class="card"><h3>Network</h3><p>Tailscale経由。DB/Grafana/Runnerの直接Internet公開禁止。</p></div><div class="card"><h3>Secrets</h3><p>Repository/Notion/Slack/Logに保存しない。</p></div><div class="card"><h3>Sandbox</h3><p>Runnerは最小権限、Filesystem/Network/Tool Permissionを制限。</p></div><div class="card"><h3>Redaction</h3><p>Token/Password/API Key候補をLog前にMask。</p></div><div class="card"><h3>Supply Chain</h3><p>Dependency/Secret/Container ScanをCIへ。</p></div></div></section>
+
+<section id="obs"><div class="section-title"><div class="num">11</div><h2>Observability詳細</h2></div>
+<h3>Metrics</h3><ul><li><code>agentos_http_request_duration_seconds</code></li><li><code>agentos_task_queue_depth</code></li><li><code>agentos_agent_runs_total{status}</code></li><li><code>agentos_model_tokens_total{provider,model}</code></li><li><code>agentos_model_cost_total{provider,model}</code></li><li><code>agentos_approval_pending_total{risk}</code></li><li><code>agentos_policy_denied_total{action}</code></li></ul>
+<h3>Logs</h3><ul><li>Structured JSON。</li><li><code>trace_id / request_id / project_id / task_id / agent_run_id</code>を相関キーにする。</li><li>Secret/PII候補はRedact。</li></ul></section>
+
+<section id="deploy"><div class="section-title"><div class="num">12</div><h2>Deployment / Runtime</h2></div>
+<div class="arch"><pre>
+docker-compose.yml
+  agentos-web
+  agentos-api
+  agentos-worker
+  postgresql
+  authentik
+  prometheus
+  loki
+  alloy
+  grafana
+
+optional
+  self-hosted-github-runner
+  object-storage
+  n8n
+</pre></div>
+<h3>Backup / Restore</h3><ul><li>毎日pg_dump</li><li>WAL Archive</li><li>DB本体とは別物理媒体</li><li>定期Restore Test</li><li>RPO/RTOをRunbook化</li></ul></section>
+
+<section><div class="section-title"><div class="num">13</div><h2>Error Handling / Retry</h2></div>
+<table><thead><tr><th>種別</th><th>戦略</th></tr></thead><tbody>
+<tr><td>AI Provider 429/5xx</td><td>指数Backoff + Provider/Model切替候補</td></tr>
+<tr><td>Notion/GitHub/Gmail一時障害</td><td>Retry + Idempotency + Dead Letter相当記録</td></tr>
+<tr><td>Validation Error</td><td>Retryしない。Failed/Blockedへ</td></tr>
+<tr><td>Policy Deny</td><td>Retry禁止。理由表示</td></tr>
+<tr><td>Approval Pending</td><td>Blockedで待機</td></tr>
+<tr><td>同一失敗反復</td><td>上限後に戦略変更またはHuman Escalation</td></tr>
+</tbody></table></section>
+
+<section id="test"><div class="section-title"><div class="num">14</div><h2>Test設計</h2></div>
+<table><thead><tr><th>Layer</th><th>対象</th></tr></thead><tbody>
+<tr><td><strong>Unit</strong></td><td>Policy、State Machine、Router、Validation、Redaction</td></tr>
+<tr><td><strong>Integration</strong></td><td>PostgreSQL、Notion/GitHub/Slack/Gmail Mock Adapter</td></tr>
+<tr><td><strong>Contract</strong></td><td>External API Schema / Webhook Payload</td></tr>
+<tr><td><strong>E2E</strong></td><td>Idea → Project → Approval → Dev → Test → Knowledge</td></tr>
+<tr><td><strong>Security</strong></td><td>AuthN/AuthZ、Secret/Dependency/Container Scan、Privilege Boundary</td></tr>
+<tr><td><strong>Recovery</strong></td><td>Backup Restore、Worker再起動、途中Task Resume</td></tr>
+<tr><td><strong>AI Eval</strong></td><td>Agent成功率、Hallucination、Review独立性、Knowledge品質</td></tr>
+</tbody></table></section>
+
+<section><div class="section-title"><div class="num">15</div><h2>Repository構成</h2></div>
+<div class="arch"><pre>
+Mirai-AgentOS/
+├─ apps/                # web / api
+├─ kernel/              # router / planner / orchestrator / workflow / scheduler / policy / model-router
+├─ agents/
+├─ skills/
+├─ tools/
+├─ integrations/        # notion / slack / gmail / github
+├─ approvals/
+├─ workflows/
+├─ database/            # migrations / seeds / backup
+├─ runtime/             # deepseek / claude / codex
+├─ observability/
+├─ docker/
+├─ tests/
+├─ docs/
+├─ CLAUDE.md
+├─ CODEX.md
+├─ docker-compose.yml
+└─ README.md
+</pre></div></section>
+
+<section><div class="section-title"><div class="num">16</div><h2>実装優先順位</h2></div>
+<table><thead><tr><th>Priority</th><th>対象</th><th>完了条件</th></tr></thead><tbody>
+<tr><td>P0</td><td>Repo / Docker / PostgreSQL / Migration</td><td>一括起動可能</td></tr>
+<tr><td>P1</td><td>Project / Phase / Gate / Task</td><td>Process State成立</td></tr>
+<tr><td>P2</td><td>Approval / Policy / Audit</td><td>高リスクAction制御</td></tr>
+<tr><td>P3</td><td>Notion / GitHub Adapter</td><td>Knowledge/Engineering連携</td></tr>
+<tr><td>P4</td><td>Planner / Orchestrator / Model Router</td><td>1 Goalを複数Agentで処理</td></tr>
+<tr><td>P5</td><td>Slack / Gmail</td><td>外部入口連携</td></tr>
+<tr><td>P6</td><td>Observability</td><td>Run/Error/Cost可視化</td></tr>
+<tr><td>P7</td><td>Knowledge Curator</td><td>Notion Knowledge循環成立</td></tr>
+</tbody></table></section>
+
+<div class="footer">Mirai AgentOS 詳細設計仕様書 v0.1 — Standalone HTML</div></main></body></html>

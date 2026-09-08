@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mirai AgentOS 構想説明資料｜非エンジニア・経営企画・建設土木技術者向け</title>
+<style>
+:root{
+  --bg:#f5f7fb;
+  --panel:#ffffff;
+  --ink:#182230;
+  --muted:#5d6a79;
+  --line:#dbe2ea;
+  --navy:#17365d;
+  --blue:#2563eb;
+  --cyan:#0891b2;
+  --green:#15803d;
+  --amber:#b45309;
+  --purple:#7c3aed;
+  --red:#b91c1c;
+  --soft-blue:#edf5ff;
+  --soft-green:#eefbf3;
+  --soft-amber:#fff8eb;
+  --soft-purple:#f5f0ff;
+  --shadow:0 10px 30px rgba(20,40,70,.08);
+  --radius:18px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+  line-height:1.75;
+}
+a{color:inherit}
+.hero{
+  background:
+    radial-gradient(circle at 88% 12%, rgba(37,99,235,.25), transparent 30%),
+    linear-gradient(135deg,#0f2545,#17365d 55%,#174b62);
+  color:#fff;padding:58px 22px 44px;
+}
+.wrap{max-width:1180px;margin:auto}
+.eyebrow{
+  display:inline-block;padding:6px 12px;border-radius:999px;
+  border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);
+  font-size:12px;font-weight:800;letter-spacing:.06em
+}
+h1{font-size:clamp(30px,4.5vw,54px);line-height:1.2;margin:18px 0 12px}
+.hero p{max-width:920px;color:#dbeafe;font-size:18px;margin:0}
+.tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:20px}
+.tag{padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);font-size:12px}
+.nav{
+  position:sticky;top:0;z-index:30;background:rgba(255,255,255,.95);
+  border-bottom:1px solid var(--line);backdrop-filter:blur(12px)
+}
+.nav .wrap{display:flex;gap:8px;overflow:auto;padding:10px 16px}
+.nav a{white-space:nowrap;text-decoration:none;padding:8px 11px;border-radius:9px;font-size:13px;font-weight:800;color:#42516a}
+.nav a:hover{background:#edf4ff;color:var(--blue)}
+main{max-width:1180px;margin:auto;padding:32px 18px 72px}
+section{margin:0 0 46px}
+.section-title{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.num{width:38px;height:38px;display:grid;place-items:center;border-radius:12px;background:var(--navy);color:#fff;font-weight:900}
+h2{font-size:28px;line-height:1.3;margin:0}
+h3{margin:0 0 8px;font-size:19px}
+.lead,.note,.warning,.decision{
+  border-radius:14px;padding:16px 18px;margin:14px 0
+}
+.lead{background:var(--soft-blue);border:1px solid #d7e7ff;border-left:5px solid var(--blue)}
+.note{background:#ecfeff;border-left:4px solid var(--cyan);color:#164e63}
+.warning{background:var(--soft-amber);border-left:4px solid var(--amber);color:#7c2d12}
+.decision{background:var(--soft-green);border-left:4px solid var(--green);color:#14532d}
+.grid{display:grid;gap:16px}
+.grid.cols3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.grid.cols4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.card{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:19px;box-shadow:var(--shadow)
+}
+.card p{margin:0;color:var(--muted)}
+.kicker{font-size:12px;font-weight:900;color:var(--blue);letter-spacing:.06em;text-transform:uppercase}
+.big{font-size:24px;font-weight:900;color:var(--navy)}
+.arch{
+  background:#101827;color:#eaf2ff;border-radius:20px;padding:22px;overflow:auto;box-shadow:var(--shadow)
+}
+.arch pre{margin:0;font-family:Consolas,"SFMono-Regular",monospace;font-size:14px;line-height:1.55}
+.flow{
+  display:grid;grid-template-columns:repeat(7,1fr);gap:8px;align-items:stretch
+}
+.flow .step{
+  color:#fff;border-radius:14px;padding:14px 8px;text-align:center;font-weight:900;min-height:86px;
+  display:grid;place-items:center
+}
+.flow .s1{background:#0ea5e9}.flow .s2{background:#0284c7}.flow .s3{background:#2563eb}
+.flow .s4{background:#4f46e5}.flow .s5{background:#7c3aed}.flow .s6{background:#9333ea}.flow .s7{background:#6d28d9}
+.badge{display:inline-block;padding:4px 9px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:12px;font-weight:900;margin-bottom:8px}
+table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden}
+th,td{padding:12px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:#f1f5f9;text-align:left;font-size:13px;color:#334155}
+tr:last-child td{border-bottom:0}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+.tabbtn{
+  border:1px solid var(--line);background:#fff;color:#334155;padding:9px 13px;border-radius:10px;
+  font-weight:800;cursor:pointer
+}
+.tabbtn.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.tabpanel{display:none}
+.tabpanel.active{display:block}
+.persona-head{
+  display:flex;gap:14px;align-items:flex-start;background:#fff;border:1px solid var(--line);
+  padding:18px;border-radius:18px;box-shadow:var(--shadow);margin-bottom:16px
+}
+.persona-icon{
+  flex:0 0 52px;width:52px;height:52px;border-radius:16px;background:#eef4ff;
+  display:grid;place-items:center;font-size:28px
+}
+.timeline{display:grid;gap:10px}
+.trow{display:grid;grid-template-columns:72px 1fr;gap:12px;align-items:start}
+.tno{background:var(--navy);color:#fff;border-radius:11px;text-align:center;padding:8px 6px;font-weight:900}
+.tbody{background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px 15px}
+.tbody strong{color:var(--navy)}
+.small{font-size:13px;color:var(--muted)}
+.checklist{margin:0;padding-left:1.2em}
+.checklist li{margin:6px 0}
+.quote{
+  padding:22px;border:1px solid #dbeafe;border-radius:18px;
+  background:linear-gradient(135deg,#eff6ff,#f5f3ff);text-align:center;
+  font-size:22px;font-weight:900;color:#1e3a8a
+}
+.footer{margin-top:48px;padding-top:22px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);text-align:center}
+@media(max-width:960px){
+  .grid.cols3,.grid.cols4{grid-template-columns:1fr 1fr}
+  .flow{grid-template-columns:1fr 1fr}
+}
+@media(max-width:640px){
+  .grid.cols3,.grid.cols4,.flow{grid-template-columns:1fr}
+  .trow{grid-template-columns:56px 1fr}
+  main{padding-left:14px;padding-right:14px}
+}
+@media print{
+  .nav,.tabs{display:none!important}
+  .tabpanel{display:block!important;margin-bottom:28px}
+  body{background:#fff}
+  .card,.persona-head,.tbody,.arch{box-shadow:none}
+  section,.card,.tbody{break-inside:avoid}
+}
+</style>
+<script>
+function showTab(id, btn){
+  document.querySelectorAll('.tabpanel').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.tabbtn').forEach(x=>x.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="eyebrow">MIRAI AGENTOS / AI・DX DEVELOPMENT PLATFORM</span>
+    <h1>AgentOSで、アイデアを<br>「相談」で終わらせず「実装と知識」に変える</h1>
+    <p>
+      社内の既存ITシステムには依存せず、自前で用意するNotion・Slack・Gmail・GitHub・ローカルPostgreSQL・AIサービスを組み合わせ、
+      アイデア創出から企画、承認、開発、テスト、本番、効果測定、ナレッジ化までを一つの流れとして管理する構想です。
+    </p>
+    <div class="tags">
+      <span class="tag">会社ITから独立</span>
+      <span class="tag">Human-in-the-Loop</span>
+      <span class="tag">Knowledge Driven</span>
+      <span class="tag">Stage Gate</span>
+      <span class="tag">AI Agent</span>
+      <span class="tag">Local PostgreSQL</span>
+    </div>
+  </div>
+</header>
+
+<nav class="nav">
+  <div class="wrap">
+    <a href="#summary">まず30秒で</a>
+    <a href="#concept">全体像</a>
+    <a href="#services">使うサービス</a>
+    <a href="#audience">対象別説明</a>
+    <a href="#process">利用プロセス</a>
+    <a href="#sor">正本</a>
+    <a href="#safety">安全設計</a>
+    <a href="#roadmap">導入ステップ</a>
+  </div>
+</nav>
+
+<main>
+
+<section id="summary">
+  <div class="section-title"><div class="num">01</div><h2>まず30秒で理解するAgentOS</h2></div>
+
+  <div class="lead">
+    <strong>AgentOSとは：</strong>
+    「AIに質問する道具」ではなく、<strong>目的を伝えると、必要な知識を調べ、計画を立て、複数のAI・Agent・Toolを使い分け、
+    必要なところだけ人間に承認を求め、結果を次回使える知識として残す仕組み</strong>です。
+  </div>
+
+  <div class="grid cols3">
+    <div class="card">
+      <div class="kicker">Before</div>
+      <div class="big">AIへ個別に相談</div>
+      <p>相談、企画、設計、実装、記録が人ごと・ツールごとに分かれ、知識が散らばりやすい。</p>
+    </div>
+    <div class="card">
+      <div class="kicker">AgentOS</div>
+      <div class="big">仕事の流れを統合</div>
+      <p>相談から開発・承認・運用までをAgentOSが一貫してつなぎ、状態をPostgreSQLで管理。</p>
+    </div>
+    <div class="card">
+      <div class="kicker">After</div>
+      <div class="big">知識が次に再利用</div>
+      <p>成果や判断理由をNotionへ整理し、次の相談・企画・研究・開発で再利用する。</p>
+    </div>
+  </div>
+
+  <div class="quote" style="margin-top:18px">
+    相談 → AI整理 → 人間レビュー → 実行 → 検証 → 知識化 → 次の改善
+  </div>
+</section>
+
+<section id="concept">
+  <div class="section-title"><div class="num">02</div><h2>今回の前提と全体像</h2></div>
+
+  <div class="warning">
+    <strong>今回の重要条件：</strong>
+    desknet's NEO、AppSuite、Workflow、社内AD、M365、SharePoint、社内メール等、
+    <strong>会社保有のITシステム／ITサービスは利用しません。</strong>
+    AgentOSに必要な基盤は、こちらで独立して用意します。
+  </div>
+
+  <div class="arch"><pre>
+利用者
+  │
+  ├───────────────┐
+  ▼               ▼
+AgentOS WebUI     Slack
+  │               │
+  └───────┬───────┘
+          ▼
+      Mirai AgentOS
+          │
+          ├─ Intent Router
+          ├─ Planner
+          ├─ Agent Orchestrator
+          ├─ Workflow Engine
+          ├─ Policy / Approval Gate
+          ├─ Model Router
+          ├─ Skill Registry
+          └─ Knowledge Curator
+          │
+   ┌──────┼───────────────┬───────────────┐
+   ▼      ▼               ▼               ▼
+Notion  PostgreSQL       GitHub           Gmail
+知識    案件/承認/状態    Code/PR/Test     外部メール
+   │      │               │               │
+   └──────┴──────┬────────┴───────────────┘
+                 ▼
+          Claude / Codex / DeepSeek
+                 │
+                 ▼
+          Docker / Linux Runner
+                 │
+                 ▼
+      Prometheus / Loki / Grafana
+                 │
+                 ▼
+          Knowledge Curator
+                 │
+                 ▼
+               Notion
+  </pre></div>
+
+  <div class="decision">
+    <strong>大きな置き換え：</strong>
+    旧構想でAppSuiteが担っていた「案件・Phase・Gate・KPI管理」と、
+    Workflowが担っていた「申請・承認・差戻し・承認履歴」は、
+    <strong>AgentOS + ローカルPostgreSQL</strong> に吸収します。
+  </div>
+</section>
+
+<section id="services">
+  <div class="section-title"><div class="num">03</div><h2>利用するIT・AIサービス</h2></div>
+
+  <div class="grid cols4">
+    <div class="card"><span class="badge">Knowledge</span><h3>Notion</h3><p>ADR、要件、研究、設計判断、Playbook、Lessons Learnedなど、長期的に残す知識の正本。</p></div>
+    <div class="card"><span class="badge">Collaboration</span><h3>Slack</h3><p>相談、議論、レビュー、Agent呼び出し、通知。生ログをそのまま知識にはしない。</p></div>
+    <div class="card"><span class="badge">Mail Gateway</span><h3>Gmail</h3><p>外部メール受付、自動返信、通知。契約・機密・承認事項は人間確認を必須化。</p></div>
+    <div class="card"><span class="badge">Engineering SoR</span><h3>GitHub</h3><p>Repository、Issue、PR、Test、Release、CI/CDなど開発履歴の正本。</p></div>
+
+    <div class="card"><span class="badge">Process SoR</span><h3>PostgreSQL</h3><p>案件、Phase、Gate、Task、Approval、Agent実行状態、監査ログ。Neonは使わずローカル運用。</p></div>
+    <div class="card"><span class="badge">Runtime</span><h3>Docker</h3><p>AgentOS API、WebUI、Worker、監視、認証などを分離して実行。</p></div>
+    <div class="card"><span class="badge">Identity</span><h3>authentik</h3><p>AgentOS独自のログイン、役割、権限管理。会社AD/Entra IDへ依存しない。</p></div>
+    <div class="card"><span class="badge">Private Access</span><h3>Tailscale</h3><p>AgentOS管理画面やサーバをインターネットへ直接公開せず、安全に接続。</p></div>
+
+    <div class="card"><span class="badge">Observability</span><h3>Grafana</h3><p>Agent、API、DB、AI利用量、障害状況を見える化するダッシュボード。</p></div>
+    <div class="card"><span class="badge">Metrics</span><h3>Prometheus</h3><p>CPU、Memory、API応答、Agent成功率など数値監視。</p></div>
+    <div class="card"><span class="badge">Logs</span><h3>Loki / Alloy</h3><p>Agent実行ログ、アプリログ、監査ログを収集・検索。</p></div>
+    <div class="card"><span class="badge">AI Layer</span><h3>Claude / Codex / DeepSeek</h3><p>調査、要件、設計、実装、テスト、レビューを役割分担して実行。</p></div>
+  </div>
+
+  <div class="note">
+    <strong>任意追加：</strong>
+    n8nはGmail・Slack・外部Webhookなどの「連携自動化」には便利ですが、
+    AgentOS本体のWorkflow/Approvalをn8nへ依存させない設計を推奨します。
+  </div>
+</section>
+
+<section id="audience">
+  <div class="section-title"><div class="num">04</div><h2>対象者別に見るAgentOS</h2></div>
+
+  <div class="tabs">
+    <button class="tabbtn active" onclick="showTab('noneng',this)">社内非エンジニア向け</button>
+    <button class="tabbtn" onclick="showTab('planning',this)">経営企画部スタッフ向け</button>
+    <button class="tabbtn" onclick="showTab('civil',this)">建設土木技術者・研究者向け</button>
+  </div>
+
+  <div id="noneng" class="tabpanel active">
+    <div class="persona-head">
+      <div class="persona-icon">👤</div>
+      <div>
+        <h3>社内非エンジニアにとっては「AI付きの仕事受付窓口」</h3>
+        <p class="small">コードやAIモデルを意識せず、困りごと・改善案・依頼を自然な日本語で伝えることが中心です。</p>
+      </div>
+    </div>
+
+    <div class="grid cols3">
+      <div class="card"><h3>① 困りごとを伝える</h3><p>「写真整理に時間がかかる」「報告書を自動化したい」など、普段の言葉で相談。</p></div>
+      <div class="card"><h3>② AIが整理する</h3><p>対象業務、頻度、時間、期待効果、必要データ、リスクを質問して整理。</p></div>
+      <div class="card"><h3>③ 必要な時だけ確認</h3><p>重要な判断・承認だけ人間が行い、細かな技術作業はAgent側へ任せる。</p></div>
+    </div>
+
+    <div class="lead">
+      <strong>利用者に必要なのは「正しく問題を説明すること」。</strong>
+      GitHub、PostgreSQL、Docker、AIモデルの違いを理解する必要はありません。
+    </div>
+  </div>
+
+  <div id="planning" class="tabpanel">
+    <div class="persona-head">
+      <div class="persona-icon">📊</div>
+      <div>
+        <h3>経営企画スタッフにとっては「DX案件ポートフォリオ＋意思決定支援基盤」</h3>
+        <p class="small">アイデアを案件化し、優先順位・効果・リスク・進捗・承認を横断管理することが主眼です。</p>
+      </div>
+    </div>
+
+    <div class="grid cols3">
+      <div class="card"><h3>案件化判断</h3><p>Ideaを「価値・実現性・影響・リスク」で比較し、正式案件へ昇格。</p></div>
+      <div class="card"><h3>Stage Gate</h3><p>企画、要件、MVP、UAT、本番など節目ごとにGateを設け、承認履歴を保持。</p></div>
+      <div class="card"><h3>KPI / ROI</h3><p>工数削減、品質向上、利用率、AI採用率、コスト等をPostgreSQL/Grafanaで追跡。</p></div>
+    </div>
+
+    <div class="decision">
+      <strong>経営企画にとって重要なのは「AIが何を言ったか」よりも、</strong>
+      どの案件を進めるか、どこで止めるか、何を承認したか、期待効果が出たかを説明できることです。
+    </div>
+  </div>
+
+  <div id="civil" class="tabpanel">
+    <div class="persona-head">
+      <div class="persona-icon">🏗️</div>
+      <div>
+        <h3>建設土木技術者・研究者にとっては「専門知識を開発へ橋渡しする共同研究者」</h3>
+        <p class="small">技術知識・実務条件・基準・試験結果をAIが整理し、要件・設計・検証・知識化へつなげます。</p>
+      </div>
+    </div>
+
+    <div class="grid cols3">
+      <div class="card"><h3>専門条件を入力</h3><p>施工条件、設計条件、判断基準、品質条件、例外、現場知見を自然言語で伝える。</p></div>
+      <div class="card"><h3>AIと設計を詰める</h3><p>Research、ADR、既存Knowledgeを参照し、仮説・設計案・検証項目を整理。</p></div>
+      <div class="card"><h3>結果を再利用可能化</h3><p>試験結果や失敗知見をNotionへ整理し、他案件・次回研究へ再利用。</p></div>
+    </div>
+
+    <div class="warning">
+      <strong>技術判断の最終責任はAIへ移しません。</strong>
+      設計・施工・安全・品質に関する重要判断は、専門技術者が確認・承認する前提です。
+    </div>
+  </div>
+</section>
+
+<section id="process">
+  <div class="section-title"><div class="num">05</div><h2>利用の流れ：アイデアから本番・知識化まで</h2></div>
+
+  <div class="flow">
+    <div class="step s1">1<br>相談</div>
+    <div class="step s2">2<br>Idea整理</div>
+    <div class="step s3">3<br>案件化</div>
+    <div class="step s4">4<br>審査・承認</div>
+    <div class="step s5">5<br>要件・設計</div>
+    <div class="step s6">6<br>開発・検証</div>
+    <div class="step s7">7<br>本番・学習</div>
+  </div>
+
+  <div class="timeline" style="margin-top:18px">
+    <div class="trow"><div class="tno">01</div><div class="tbody"><strong>相談受付</strong> — AgentOS WebUIまたはSlackで困りごと・アイデア・研究テーマを入力。</div></div>
+    <div class="trow"><div class="tno">02</div><div class="tbody"><strong>課題明確化</strong> — AIが追加質問し、対象、現状、頻度、期待効果、制約、データ、リスクを整理。</div></div>
+    <div class="trow"><div class="tno">03</div><div class="tbody"><strong>Idea構造化</strong> — NotionへIdeaとして記録。類似案件や既存Knowledgeを参照。</div></div>
+    <div class="trow"><div class="tno">04</div><div class="tbody"><strong>正式案件化</strong> — AgentOSがProject IDを発番し、PostgreSQLで案件・責任者・Phase・Gateを管理。</div></div>
+    <div class="trow"><div class="tno">05</div><div class="tbody"><strong>企画・審査</strong> — 効果、費用、リスク、MVP範囲を整理。必要な人だけApproval Gateで承認。</div></div>
+    <div class="trow"><div class="tno">06</div><div class="tbody"><strong>要件・設計</strong> — Claude等が要件・Architecture・ADR草案を作成し、専門家が確認。</div></div>
+    <div class="trow"><div class="tno">07</div><div class="tbody"><strong>開発案件化</strong> — GitHub Repository / Issue / PRへつなぎ、AgentがTaskを分解。</div></div>
+    <div class="trow"><div class="tno">08</div><div class="tbody"><strong>MVP開発</strong> — Claude Code / Codex / DeepSeekを使い分けて実装。</div></div>
+    <div class="trow"><div class="tno">09</div><div class="tbody"><strong>テスト</strong> — Unit / Integration / E2E / Security / Regression等を実施。</div></div>
+    <div class="trow"><div class="tno">10</div><div class="tbody"><strong>MVP評価</strong> — 利用者・専門家が評価し、改善点と継続可否を判断。</div></div>
+    <div class="trow"><div class="tno">11</div><div class="tbody"><strong>Staging / UAT</strong> — 本番前に業務受入試験。重大不具合や運用条件を確認。</div></div>
+    <div class="trow"><div class="tno">12</div><div class="tbody"><strong>本番承認</strong> — AgentOS Approval Gateでリリース条件、Rollback、監視、責任者承認を確認。</div></div>
+    <div class="trow"><div class="tno">13</div><div class="tbody"><strong>Production</strong> — 承認済ReleaseをGitHub CI/CD等からDeploy。</div></div>
+    <div class="trow"><div class="tno">14</div><div class="tbody"><strong>DevOps監視</strong> — Grafana / Prometheus / Lokiで可用性、性能、Agent/AI利用量、障害を監視。</div></div>
+    <div class="trow"><div class="tno">15</div><div class="tbody"><strong>効果測定</strong> — KPI、削減工数、品質、利用率、コスト、ROIを確認。</div></div>
+    <div class="trow"><div class="tno">16</div><div class="tbody"><strong>Knowledge化</strong> — AIが成果・判断・失敗・教訓を整理し、人間レビュー後にNotionへ登録。</div></div>
+  </div>
+</section>
+
+<section id="sor">
+  <div class="section-title"><div class="num">06</div><h2>「どこを正本にするか」を明確にする</h2></div>
+
+  <table>
+    <thead><tr><th>情報</th><th>正本</th><th>考え方</th></tr></thead>
+    <tbody>
+      <tr><td>相談・Agent実行要求</td><td><strong>AgentOS / PostgreSQL</strong></td><td>何を依頼し、今どこまで進んでいるか</td></tr>
+      <tr><td>Slack会話</td><td><strong>Slack</strong></td><td>話す場所。Raw ConversationをそのままKnowledgeにしない</td></tr>
+      <tr><td>メール</td><td><strong>Gmail</strong></td><td>外部とのメール受付・返信履歴</td></tr>
+      <tr><td>Idea / ADR / Research / Lessons</td><td><strong>Notion</strong></td><td>人間レビュー済みの長期Knowledge</td></tr>
+      <tr><td>Project ID / Phase / Gate / Approval</td><td><strong>PostgreSQL</strong></td><td>現在のProcess状態と監査証跡</td></tr>
+      <tr><td>Source Code / Issue / PR / Test / Release</td><td><strong>GitHub</strong></td><td>Engineering System of Record</td></tr>
+      <tr><td>Metrics</td><td><strong>Prometheus</strong></td><td>数値監視</td></tr>
+      <tr><td>Logs</td><td><strong>Loki</strong></td><td>実行履歴・障害解析</td></tr>
+      <tr><td>Dashboard</td><td><strong>Grafana</strong></td><td>状況の可視化</td></tr>
+    </tbody>
+  </table>
+
+  <div class="lead">
+    <strong>覚え方：</strong>
+    Notion = 「何を知っているか」 ／ PostgreSQL = 「今何をしているか」 ／ GitHub = 「何を作ったか」 ／ Slack = 「何を話したか」
+  </div>
+</section>
+
+<section id="safety">
+  <div class="section-title"><div class="num">07</div><h2>AIに任せすぎないための安全設計</h2></div>
+
+  <div class="grid cols3">
+    <div class="card">
+      <h3>Risk Level</h3>
+      <p>読み取り、PR作成、本番Deploy、Secret変更、破壊的操作などをリスク別に分類。</p>
+    </div>
+    <div class="card">
+      <h3>Approval Gate</h3>
+      <p>本番、権限、Security、重要技術判断などは人間の承認を必須化。</p>
+    </div>
+    <div class="card">
+      <h3>独立Review</h3>
+      <p>実装したAgentとは別のAgent/モデルがレビューし、同じAIだけで自己完結させない。</p>
+    </div>
+  </div>
+
+  <table style="margin-top:16px">
+    <thead><tr><th>例</th><th>扱い</th></tr></thead>
+    <tbody>
+      <tr><td>Knowledge検索、公開情報調査</td><td>自動</td></tr>
+      <tr><td>コード作成、Branch/PR作成</td><td>原則自動＋記録</td></tr>
+      <tr><td>Merge</td><td>条件付き承認</td></tr>
+      <tr><td>本番Deploy</td><td>人間承認必須</td></tr>
+      <tr><td>Secret / IAM / 権限変更</td><td>人間承認必須</td></tr>
+      <tr><td>データ削除・破壊的操作</td><td>強い承認＋Rollback確認</td></tr>
+      <tr><td>建設土木の重要技術判断</td><td>専門技術者の確認・承認</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="roadmap">
+  <div class="section-title"><div class="num">08</div><h2>導入は小さく始める</h2></div>
+
+  <div class="grid cols4">
+    <div class="card"><div class="kicker">Step 1</div><h3>基盤</h3><p>Mirai-AgentOS、PostgreSQL、Docker、authentik、Tailscale。</p></div>
+    <div class="card"><div class="kicker">Step 2</div><h3>Knowledge</h3><p>NotionのAI-CTO Knowledge Baseと連携。</p></div>
+    <div class="card"><div class="kicker">Step 3</div><h3>Agent / AI</h3><p>Claude、Codex、DeepSeekをModel Routerで使い分け。</p></div>
+    <div class="card"><div class="kicker">Step 4</div><h3>業務接続</h3><p>Slack、Gmail、GitHub、Approval、監視を追加。</p></div>
+  </div>
+
+  <div class="decision">
+    <strong>最初から全社基盤として完成させる必要はありません。</strong>
+    まずは少人数で「1つのIdea → 1つのMVP → 1つのKnowledge化」を通し、
+    プロセスと承認設計が正しく回ることを確認してから拡張します。
+  </div>
+</section>
+
+<section>
+  <div class="section-title"><div class="num">09</div><h2>最後に：3者それぞれの役割</h2></div>
+  <table>
+    <thead><tr><th>対象</th><th>主な役割</th><th>AgentOSに期待すること</th></tr></thead>
+    <tbody>
+      <tr><td><strong>社内非エンジニア</strong></td><td>困りごと、現状、期待効果を伝える</td><td>相談を整理し、案件化・実装可能な形へ変換する</td></tr>
+      <tr><td><strong>経営企画スタッフ</strong></td><td>価値、優先順位、KPI、リスク、Gateを管理</td><td>案件全体を見える化し、説明可能な意思決定を支援する</td></tr>
+      <tr><td><strong>建設土木技術者・研究者</strong></td><td>専門条件、技術判断、検証、品質を担保</td><td>専門知識を要件・設計・検証・再利用Knowledgeへ橋渡しする</td></tr>
+    </tbody>
+  </table>
+
+  <div class="quote" style="margin-top:20px">
+    AgentOSは「AIに仕事を奪わせる仕組み」ではなく、<br>
+    人の知識・判断・経験を、AIでつなぎ直して再利用できるようにする仕組み。
+  </div>
+</section>
+
+<div class="footer">
+  Mirai AgentOS 構想説明資料 — Standalone HTML<br>
+  前提：会社保有ITシステムは利用せず、自前Notion / Slack / Gmail / GitHub / Local PostgreSQL / AI Servicesで構成
+</div>
+
+</main>
+</body>
+</html>

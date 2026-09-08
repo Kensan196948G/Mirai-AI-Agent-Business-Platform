@@ -1,0 +1,173 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mirai AgentOS 要件定義書</title><style>
+:root{--bg:#f5f7fb;--panel:#fff;--ink:#142033;--muted:#5d6a7a;--line:#dce3ec;--navy:#16365d;--blue:#2563eb;--cyan:#0891b2;--green:#15803d;--amber:#b45309;--purple:#7c3aed;--red:#b91c1c;--dark:#0f172a;--softblue:#edf5ff;--softgreen:#eefbf3;--softamber:#fff8eb;--softred:#fff1f2;--shadow:0 10px 28px rgba(20,40,70,.08);--radius:18px}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP","Yu Gothic",Meiryo,sans-serif;line-height:1.72}
+a{color:inherit}.hero{background:radial-gradient(circle at 86% 12%,rgba(37,99,235,.24),transparent 28%),linear-gradient(135deg,#0e2443,#17365d 58%,#164e63);color:#fff;padding:58px 22px 44px}
+.wrap{max-width:1260px;margin:auto}.eyebrow{display:inline-block;padding:6px 12px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);border-radius:999px;font-size:12px;font-weight:800;letter-spacing:.06em}
+h1{font-size:clamp(31px,4.2vw,54px);line-height:1.18;margin:18px 0 12px}.hero p{max-width:1020px;color:#dbeafe;font-size:18px;margin:0}
+.tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:20px}.tag{padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);font-size:12px}
+.nav{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}.nav .wrap{display:flex;gap:8px;overflow:auto;padding:10px 16px}
+.nav a{white-space:nowrap;text-decoration:none;padding:8px 11px;border-radius:9px;font-size:13px;font-weight:800;color:#42516a}.nav a:hover{background:#edf4ff;color:var(--blue)}
+main{max-width:1260px;margin:auto;padding:32px 18px 78px}section{margin:0 0 46px}.section-title{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.num{width:40px;height:40px;display:grid;place-items:center;border-radius:12px;background:var(--navy);color:#fff;font-weight:900}h2{font-size:28px;line-height:1.3;margin:0}h3{margin:0 0 8px;font-size:19px}h4{margin:18px 0 8px}
+p{margin:0 0 12px}ul,ol{margin-top:8px}.small{font-size:13px;color:var(--muted)}
+.lead,.note,.warning,.decision,.danger{border-radius:14px;padding:16px 18px;margin:14px 0}.lead{background:var(--softblue);border:1px solid #d7e7ff;border-left:5px solid var(--blue)}
+.note{background:#ecfeff;border-left:4px solid var(--cyan);color:#164e63}.warning{background:var(--softamber);border-left:4px solid var(--amber);color:#7c2d12}.decision{background:var(--softgreen);border-left:4px solid var(--green);color:#14532d}.danger{background:var(--softred);border-left:4px solid var(--red);color:#881337}
+.grid{display:grid;gap:16px}.cols2{grid-template-columns:repeat(2,minmax(0,1fr))}.cols3{grid-template-columns:repeat(3,minmax(0,1fr))}.cols4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:19px;box-shadow:var(--shadow)}.card p{color:var(--muted)}
+.badge{display:inline-block;padding:4px 9px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:12px;font-weight:900;margin-bottom:8px}
+.arch{background:var(--dark);color:#e5eefc;border-radius:20px;padding:22px;overflow:auto;box-shadow:var(--shadow)}.arch pre{margin:0;font-family:Consolas,"SFMono-Regular",monospace;font-size:13.5px;line-height:1.55}
+code{background:#edf1f6;padding:2px 6px;border-radius:6px;font-family:Consolas,"SFMono-Regular",monospace;font-size:.92em}pre code{background:transparent;padding:0}
+table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden}th,td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:#f1f5f9;text-align:left;font-size:13px;color:#334155}tr:last-child td{border-bottom:0}.req{font-weight:900;color:var(--navy)}.mono{font-family:Consolas,"SFMono-Regular",monospace;font-size:.92em}
+.must{color:#991b1b;font-weight:900}.should{color:#92400e;font-weight:900}.may{color:#166534;font-weight:900}
+.quote{padding:22px;border:1px solid #dbeafe;border-radius:18px;background:linear-gradient(135deg,#eff6ff,#f5f3ff);text-align:center;font-size:21px;font-weight:900;color:#1e3a8a}
+.footer{margin-top:48px;padding-top:22px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);text-align:center}
+@media(max-width:980px){.cols3,.cols4{grid-template-columns:1fr 1fr}}@media(max-width:660px){.cols2,.cols3,.cols4{grid-template-columns:1fr}}
+@media print{.nav{display:none}body{background:#fff}.card,.arch{box-shadow:none}section,.card{break-inside:avoid}}
+</style></head><body>
+<header class="hero"><div class="wrap"><span class="eyebrow">MIRAI AGENTOS / REQUIREMENTS DEFINITION</span>
+<h1>Mirai AgentOS<br>要件定義書</h1>
+<p>会社保有ITシステムから完全独立し、自前Notion・Slack・Gmail・GitHub・ローカルPostgreSQL・AIサービスを統合して、AI相談、案件化、承認、開発、テスト、本番、運用、効果測定、ナレッジ化を一貫管理するAgentic Operating Systemの要件を定義する。</p>
+<div class="tags"><span class="tag">Version 0.1</span><span class="tag">Local PostgreSQL</span><span class="tag">Human-in-the-Loop</span><span class="tag">Knowledge Driven</span><span class="tag">Company-IT Independent</span></div></div></header>
+<nav class="nav"><div class="wrap"><a href="#purpose">目的</a><a href="#scope">範囲</a><a href="#actors">ロール</a><a href="#overview">全体像</a><a href="#functional">機能要件</a><a href="#nfr">非機能</a><a href="#security">Security</a><a href="#data">SoR</a><a href="#ai">AI</a><a href="#ops">運用</a><a href="#accept">受入</a></div></nav>
+<main>
+
+<section id="purpose"><div class="section-title"><div class="num">01</div><h2>目的・背景</h2></div>
+<div class="lead"><strong>目的：</strong>AI/DX案件のライフサイクルを、相談・企画・承認・開発・運用・Knowledge循環まで一つの統制基盤でつなぎ、「AIとの個別対話」で終わらず、再現可能・監査可能・再利用可能な組織的プロセスへ変換する。</div>
+<div class="grid cols3"><div class="card"><h3>Process統合</h3><p>Project / Phase / Gate / Task / Approval / KPIをAgentOS自身で管理。</p></div><div class="card"><h3>AI統制</h3><p>複数Agent・複数モデル・ToolsをPolicyとApprovalの下で実行。</p></div><div class="card"><h3>Knowledge循環</h3><p>結果・判断・失敗・教訓を人間レビュー後にNotionへ戻す。</p></div></div></section>
+
+<section id="scope"><div class="section-title"><div class="num">02</div><h2>適用範囲・前提・対象外</h2></div>
+<h3>2.1 前提</h3><table><thead><tr><th>ID</th><th>前提</th></tr></thead><tbody>
+<tr><td class="req">ASM-001</td><td>desknet's NEO、AppSuite、Workflow、M365、AD、SharePoint等の会社保有ITシステム／ITサービスを利用しない。</td></tr>
+<tr><td class="req">ASM-002</td><td>Knowledge基盤として自前Notionを利用する。</td></tr>
+<tr><td class="req">ASM-003</td><td>Collaborationとして自前Slackを利用する。</td></tr>
+<tr><td class="req">ASM-004</td><td>外部メール受付・自動返信・通知として自前Gmailを利用する。</td></tr>
+<tr><td class="req">ASM-005</td><td>Engineering SoRとしてGitHub Private Repositoryを利用する。</td></tr>
+<tr><td class="req">ASM-006</td><td>Process SoRはローカルPostgreSQLとし、Neonは利用しない。</td></tr>
+<tr><td class="req">ASM-007</td><td>実行基盤はDockerを基本とし、初期段階ではKubernetesを必須としない。</td></tr>
+</tbody></table>
+<h3>2.2 対象範囲</h3><ul><li>AI相談受付、Idea構造化、正式案件化</li><li>Project / Phase / Gate / Task / KPI</li><li>Approval / Policy / Audit Trail</li><li>Agent Orchestration / Model Routing / Skills / Tools</li><li>Notion / Slack / Gmail / GitHub連携</li><li>MVP、Test、Staging、UAT、Production、DevOps、効果測定</li><li>Knowledge CuratorによるKnowledge候補抽出・昇格</li><li>監視、Logging、Backup、Restore、監査</li></ul>
+<h3>2.3 初期対象外</h3><ul><li>会社基幹システムとの直接連携</li><li>会社AD / Entra ID / M365 SSO</li><li>Kubernetesによる大規模クラスタ</li><li>完全自律Production Deploy / IAM / Secret変更</li><li>AI単独による建設土木の重要技術判断</li></ul></section>
+
+<section id="actors"><div class="section-title"><div class="num">03</div><h2>利用者・ロール</h2></div>
+<table><thead><tr><th>Role</th><th>主責務</th><th>主な権限</th></tr></thead><tbody>
+<tr><td><strong>Administrator</strong></td><td>基盤、設定、Integration、Identity、監視</td><td>全体管理。ただしAudit改ざん不可</td></tr>
+<tr><td><strong>Developer</strong></td><td>設計・実装・Test・PR</td><td>R2まで原則実行可能</td></tr>
+<tr><td><strong>Reviewer</strong></td><td>設計・Code・Test・Security Review</td><td>Review、差戻し</td></tr>
+<tr><td><strong>Approver</strong></td><td>企画、要件、本番等Gate承認</td><td>承認 / 差戻し / 却下</td></tr>
+<tr><td><strong>Knowledge Curator</strong></td><td>Knowledge候補品質確認</td><td>昇格候補確認</td></tr>
+<tr><td><strong>Viewer</strong></td><td>参照</td><td>Read-only</td></tr>
+</tbody></table></section>
+
+<section id="overview"><div class="section-title"><div class="num">04</div><h2>システム全体像</h2></div>
+<div class="arch"><pre>
+Users ──> AgentOS WebUI / Slack
+                  │
+                  ▼
+┌────────────────────────────────────────────┐
+│ Mirai AgentOS                              │
+│ Intent Router / Planner / Orchestrator     │
+│ Workflow / Scheduler / Policy / Approval   │
+│ Model Router / Skill Registry / Curator    │
+└──────┬──────────────┬──────────────┬───────┘
+       ▼              ▼              ▼
+    Notion       PostgreSQL        GitHub
+ Knowledge SoR   Process SoR    Engineering SoR
+       └──────────────┼──────────────┘
+                      ▼
+          Claude / Codex / DeepSeek
+                      ▼
+           Docker / Linux Runner
+                      ▼
+     Prometheus / Loki / Grafana / Alloy
+
+Gmail = Mail Gateway
+authentik = Identity / RBAC
+Tailscale = Private Access
+</pre></div></section>
+
+<section id="functional"><div class="section-title"><div class="num">05</div><h2>機能要件</h2></div>
+<h3>5.1 Request / Project / Workflow</h3>
+<table><thead><tr><th>ID</th><th>要件</th><th>優先度</th></tr></thead><tbody>
+<tr><td class="req">FR-001</td><td>WebUIまたはSlackから自然言語でAI相談・案件依頼を登録できる。</td><td class="must">MUST</td></tr>
+<tr><td class="req">FR-002</td><td>RequestをIntent分類し、対象Project、Request Type、Risk候補を特定できる。</td><td class="must">MUST</td></tr>
+<tr><td class="req">FR-003</td><td>Ideaから正式Projectへ昇格し、一意なProject IDを発番できる。</td><td class="must">MUST</td></tr>
+<tr><td class="req">FR-004</td><td>ProjectごとにPhase、Gate、Owner、Status、期限、KPIを管理できる。</td><td class="must">MUST</td></tr>
+<tr><td class="req">FR-005</td><td>GoalをTask/SubTaskへ分解し、依存関係・完了条件を保持できる。</td><td class="must">MUST</td></tr>
+<tr><td class="req">FR-006</td><td>Workflow State Transitionを定義し、不正遷移を拒否できる。</td><td class="must">MUST</td></tr>
+<tr><td class="req">FR-007</td><td>TaskのRetry、Timeout、Cancel、Resumeを管理できる。</td><td class="should">SHOULD</td></tr>
+</tbody></table>
+
+<h3>5.2 Approval / Policy / Audit</h3>
+<table><thead><tr><th>ID</th><th>要件</th><th>優先度</th></tr></thead><tbody>
+<tr><td class="req">FR-101</td><td>ActionごとにRisk Levelを判定できる。</td><td class="must">MUST</td></tr>
+<tr><td class="req">FR-102</td><td>Risk、Role、Action Typeに基づきPermit / Deny / Approval Requiredを判定できる。</td><td class="must">MUST</td></tr>
+<tr><td class="req">FR-103</td><td>Approval Requestに複数Stepを定義し、承認・差戻し・却下を記録できる。</td><td class="must">MUST</td></tr>
+<tr><td class="req">FR-104</td><td>Evidence、理由、対象Version、実行対象を保存できる。</td><td class="must">MUST</td></tr>
+<tr><td class="req">FR-105</td><td>Audit Eventは追記型とし、履歴を上書きしない。</td><td class="must">MUST</td></tr>
+<tr><td class="req">FR-106</td><td>R4以上のProduction / IAM / Secret / Destructive ActionはHuman Approvalなしに実行できない。</td><td class="must">MUST</td></tr>
+</tbody></table>
+
+<h3>5.3 Agent / AI / Knowledge</h3>
+<table><thead><tr><th>ID</th><th>要件</th><th>優先度</th></tr></thead><tbody>
+<tr><td class="req">FR-201</td><td>Research / Architect / Developer / Reviewer / Operations / Knowledge Curator等のAgentを登録・選択できる。</td><td class="must">MUST</td></tr>
+<tr><td class="req">FR-202</td><td>Task特性に応じClaude / Codex / DeepSeekをModel Routerで選択できる。</td><td class="must">MUST</td></tr>
+<tr><td class="req">FR-203</td><td>AgentにSkillとToolを動的に割り当てられる。</td><td class="must">MUST</td></tr>
+<tr><td class="req">FR-204</td><td>Agent Run、Model Run、Tool Call、Error、Token、Cost、Latencyを記録できる。</td><td class="must">MUST</td></tr>
+<tr><td class="req">FR-205</td><td>実装モデルと最終Reviewモデルを分離できる。</td><td class="must">MUST</td></tr>
+<tr><td class="req">FR-301</td><td>NotionからProject / ADR / Research / Playbook / Standards等を必要範囲だけ取得できる。</td><td class="must">MUST</td></tr>
+<tr><td class="req">FR-302</td><td>実行結果からKnowledge Candidateを生成し、人間レビュー後にNotionへ反映できる。</td><td class="must">MUST</td></tr>
+<tr><td class="req">FR-303</td><td>Slack Raw ConversationをそのままKnowledge化しない。</td><td class="must">MUST</td></tr>
+<tr><td class="req">FR-304</td><td>GitHub Repository / Issue / PR / Test / ReleaseをProjectへ紐付けられる。</td><td class="must">MUST</td></tr>
+<tr><td class="req">FR-305</td><td>Gmail受信を分類し、Projectへ紐付け、Policyに応じ自動返信またはHuman Reviewへ送れる。</td><td class="should">SHOULD</td></tr>
+</tbody></table></section>
+
+<section id="nfr"><div class="section-title"><div class="num">06</div><h2>非機能要件</h2></div>
+<table><thead><tr><th>ID</th><th>カテゴリ</th><th>要件</th></tr></thead><tbody>
+<tr><td class="req">NFR-001</td><td>Availability</td><td>MVPは単一ホストを許容するが、停止・再起動・復旧手順を文書化する。</td></tr>
+<tr><td class="req">NFR-002</td><td>Scalability</td><td>Workerを水平追加できる疎結合構成とする。</td></tr>
+<tr><td class="req">NFR-003</td><td>Maintainability</td><td>Kernel / Agents / Skills / Integrations / Policy / Dataをモジュール分離する。</td></tr>
+<tr><td class="req">NFR-004</td><td>Portability</td><td>Docker Composeで再現可能な環境を構築する。</td></tr>
+<tr><td class="req">NFR-005</td><td>Observability</td><td>Metrics / Logs / Agent Runs / AI Usage / Approval / Security Eventを観測する。</td></tr>
+<tr><td class="req">NFR-006</td><td>Recoverability</td><td>PostgreSQL Backup / WAL / Restore Testを定期実施する。</td></tr>
+<tr><td class="req">NFR-007</td><td>Traceability</td><td>Request → Plan → Task → Agent Run → Artifact → Approval → Release → Knowledgeを追跡可能にする。</td></tr>
+</tbody></table></section>
+
+<section id="security"><div class="section-title"><div class="num">07</div><h2>Security / Identity要件</h2></div>
+<ul><li><strong>SEC-001:</strong> authentikによる独立認証・RBAC。</li><li><strong>SEC-002:</strong> 管理UI、PostgreSQL、Grafana、RunnerはTailscale等Private Networkを基本とする。</li><li><strong>SEC-003:</strong> SecretをGitHub / Notion / Slack / Logへ平文保存しない。</li><li><strong>SEC-004:</strong> Tool実行前にPolicy Checkを必須化。</li><li><strong>SEC-005:</strong> Audit Eventは改ざん検知可能に保持。</li><li><strong>SEC-006:</strong> 契約・金額・Security・機密・承認事項のGmail自動返信を禁止。</li><li><strong>SEC-007:</strong> Agent Sandboxと管理Planeを分離。</li></ul></section>
+
+<section id="data"><div class="section-title"><div class="num">08</div><h2>System of Record</h2></div>
+<table><thead><tr><th>情報</th><th>正本</th><th>備考</th></tr></thead><tbody>
+<tr><td>Idea / ADR / Research / Requirements / Lessons</td><td><strong>Notion</strong></td><td>人間レビュー済みKnowledge</td></tr>
+<tr><td>Project / Phase / Gate / Task / Approval / Audit</td><td><strong>PostgreSQL</strong></td><td>Process State</td></tr>
+<tr><td>Source / Issue / PR / Test / Release</td><td><strong>GitHub</strong></td><td>Engineering SoR</td></tr>
+<tr><td>Conversation</td><td><strong>Slack</strong></td><td>Knowledge正本ではない</td></tr>
+<tr><td>Mail</td><td><strong>Gmail</strong></td><td>Mail履歴</td></tr>
+<tr><td>Metrics / Logs</td><td><strong>Prometheus / Loki</strong></td><td>Observability</td></tr>
+<tr><td>Large Artifacts</td><td><strong>Local/S3-compatible Storage</strong></td><td>DBにはMetadata/Hash/Path</td></tr>
+</tbody></table></section>
+
+<section id="ai"><div class="section-title"><div class="num">09</div><h2>AI Governance要件</h2></div>
+<div class="grid cols3"><div class="card"><h3>モデル分離</h3><p>実装・Review・承認を単一モデルに集中させない。</p></div><div class="card"><h3>説明可能性</h3><p>Plan、Knowledge、Tool Call、判断理由、結果を追跡。</p></div><div class="card"><h3>Self-Improvement制御</h3><p>Candidate → Test → Eval → Approval → Promotion。</p></div></div></section>
+
+<section id="ops"><div class="section-title"><div class="num">10</div><h2>運用・監視・Backup要件</h2></div>
+<ul><li>Grafana / Prometheus / Loki / AlloyでPlatform・Agent・AI・Securityを監視。</li><li>PostgreSQLは定期pg_dump、WAL Archive、別物理ディスク、Restore Test。</li><li>Agent Failure Rate、Retry、Duration、Token、Cost、Model Errorを可視化。</li><li>重大Incident後はPostmortemをKnowledge候補化。</li></ul></section>
+
+<section id="accept"><div class="section-title"><div class="num">11</div><h2>MVP受入条件</h2></div>
+<div class="decision"><strong>最重要：</strong>「1つのIdea → Project化 → Approval → GitHub実装 → Test → Production相当 → KPI記録 → Knowledge化」を、会社ITを一切利用せず一周できること。</div>
+<table><thead><tr><th>ID</th><th>Acceptance Criterion</th></tr></thead><tbody>
+<tr><td class="req">AC-001</td><td>Docker ComposeでAgentOS一式を再現起動できる。</td></tr>
+<tr><td class="req">AC-002</td><td>Project / Phase / Gate / Task / ApprovalをPostgreSQLのみで管理できる。</td></tr>
+<tr><td class="req">AC-003</td><td>R4以上ActionがApprovalなしで実行されない。</td></tr>
+<tr><td class="req">AC-004</td><td>Notion Knowledgeを参照してAgent Planを生成できる。</td></tr>
+<tr><td class="req">AC-005</td><td>GitHub Issue / PR / Test / Releaseへ連携できる。</td></tr>
+<tr><td class="req">AC-006</td><td>複数モデルをTask単位で使い分けられる。</td></tr>
+<tr><td class="req">AC-007</td><td>実装AgentとReview Agentを分離できる。</td></tr>
+<tr><td class="req">AC-008</td><td>Execution ResultからKnowledge Candidateを生成しNotionへ反映できる。</td></tr>
+<tr><td class="req">AC-009</td><td>Metrics / Logs / Agent Runs / Approval Eventsを確認できる。</td></tr>
+<tr><td class="req">AC-010</td><td>PostgreSQL BackupからRestore Testを実施できる。</td></tr>
+</tbody></table></section>
+
+<div class="footer">Mirai AgentOS 要件定義書 v0.1 — Standalone HTML</div></main></body></html>

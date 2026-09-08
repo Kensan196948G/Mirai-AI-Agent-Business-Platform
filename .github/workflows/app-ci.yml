@@ -1,0 +1,75 @@
+name: app-ci
+
+# app/（Mirai AgentOS MVP）の CI。docs-quality とは別ワークフローとし、
+# 文書専用リポジトリ時代の「外部依存ゼロ」検査（docs-quality.yml）に
+# アプリの実行時依存（express, pg）を巻き込まない。
+on:
+  push:
+    branches: [main]
+    paths: ['app/**', '.github/workflows/app-ci.yml']
+  pull_request:
+    paths: ['app/**', '.github/workflows/app-ci.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: マイグレーション・ユニット・E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: mira_agent_os_test_app
+          POSTGRES_PASSWORD: ci-only-password-not-used-elsewhere  # doc003-allow: CI専用の使い捨てPostgresサービスコンテナ資格情報
+          POSTGRES_DB: mira_agent_os_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U mira_agent_os_test_app"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://mira_agent_os_test_app:ci-only-password-not-used-elsewhere@127.0.0.1:5432/mira_agent_os_test  # doc003-allow: 同上
+      SESSION_SECRET: ci-test-secret-not-used-in-production
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: 依存インストール
+        working-directory: app
+        run: npm ci
+
+      - name: 依存関係の脆弱性監査（Critical/High ゼロを必須とする）
+        working-directory: app
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: マイグレーション適用（空DBへの再現性確認）
+        working-directory: app
+        run: node migrate.mjs
+
+      - name: マイグレーション再適用（冪等性確認）
+        working-directory: app
+        run: node migrate.mjs
+
+      - name: ユニットテスト
+        working-directory: app
+        run: npm run test:unit
+
+      - name: E2E テスト（主要 User Journey）
+        working-directory: app
+        run: npm run test:e2e

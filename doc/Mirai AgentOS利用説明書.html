@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mirai AgentOS かんたん利用説明書</title>
+<style>
+:root{
+  --accent:#E08A2B;
+  --accent-strong:#C9781F;
+  --accent-soft:#FFF3E3;
+  --bg:#F4F6F9;
+  --surface:#FFFFFF;
+  --surface-2:#F8FAFC;
+  --sidebar:#FFFFFF;
+  --topbar:#FFFFFF;
+  --line:#DDE4EC;
+  --line-strong:#C9D3DF;
+  --ink:#172033;
+  --ink-2:#4D5C70;
+  --muted:#7A8798;
+  --blue:#2E5AAC;
+  --blue-bg:#EAF1FC;
+  --green:#1F8255;
+  --green-bg:#E8F5EE;
+  --amber:#B5701A;
+  --amber-bg:#FFF2E2;
+  --red:#C5392F;
+  --red-bg:#FDECEA;
+  --purple:#6B45B0;
+  --purple-bg:#F0EBFA;
+  --shadow:0 8px 28px rgba(23,32,51,.07);
+  --shadow-soft:0 2px 10px rgba(23,32,51,.06);
+  --sidebar-w:292px;
+  color-scheme:light;
+}
+html[data-theme="dark"]{
+  --accent:#F0A04B;
+  --accent-strong:#F3B166;
+  --accent-soft:#382A1C;
+  --bg:#0D141E;
+  --surface:#141E2B;
+  --surface-2:#192635;
+  --sidebar:#111A26;
+  --topbar:#141E2B;
+  --line:#293748;
+  --line-strong:#3A4A5D;
+  --ink:#EDF2F8;
+  --ink-2:#B8C3D2;
+  --muted:#8E9BAD;
+  --blue:#92B6F1;
+  --blue-bg:#1B2D48;
+  --green:#70C99A;
+  --green-bg:#173329;
+  --amber:#F0B061;
+  --amber-bg:#3A2A17;
+  --red:#F18A81;
+  --red-bg:#412321;
+  --purple:#C1ADEF;
+  --purple-bg:#30264A;
+  --shadow:0 10px 32px rgba(0,0,0,.25);
+  --shadow-soft:0 2px 10px rgba(0,0,0,.18);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+  font-size:16px;
+  line-height:1.82;
+  letter-spacing:.01em;
+  -webkit-font-smoothing:antialiased;
+}
+button,a{font:inherit}
+button{color:inherit}
+a{color:var(--blue)}
+.app-shell{min-height:100vh;display:grid;grid-template-columns:var(--sidebar-w) minmax(0,1fr)}
+.sidebar{
+  position:fixed;inset:0 auto 0 0;width:var(--sidebar-w);
+  background:var(--sidebar);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;z-index:50;
+  box-shadow:var(--shadow-soft);
+}
+.sidebar-brand{padding:24px 20px 18px;border-bottom:1px solid var(--line)}
+.brand-row{display:flex;align-items:center;gap:12px}
+.logo{
+  width:42px;height:42px;border-radius:11px;background:var(--accent);
+  display:grid;place-items:center;color:#182230;flex:0 0 auto;
+  box-shadow:0 4px 12px rgba(224,138,43,.20)
+}
+.brand-title{font-weight:800;font-size:15px;line-height:1.45}
+.brand-sub{font-size:11.5px;color:var(--muted);margin-top:2px}
+.sidebar-scroll{padding:14px 12px 24px;overflow:auto;flex:1}
+.nav-group{margin:8px 0 18px}
+.nav-label{
+  padding:0 10px 7px;color:var(--muted);
+  font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+}
+.side-link{
+  width:100%;border:0;background:transparent;text-align:left;
+  display:grid;grid-template-columns:30px 1fr auto;align-items:center;gap:8px;
+  padding:10px 11px;border-radius:10px;margin:2px 0;
+  color:var(--ink-2);cursor:pointer;transition:.15s ease;
+}
+.side-link:hover{background:var(--surface-2);color:var(--ink)}
+.side-link.active{
+  background:var(--accent-soft);color:var(--ink);
+  box-shadow:inset 3px 0 0 var(--accent);
+}
+.side-link .idx{
+  width:28px;height:28px;border-radius:8px;
+  display:grid;place-items:center;background:var(--surface-2);
+  border:1px solid var(--line);font-size:11px;font-weight:800;
+}
+.side-link.active .idx{background:var(--accent);color:#fff;border-color:var(--accent)}
+.side-link .txt{font-size:13.5px;font-weight:700;line-height:1.35}
+.side-link .chev{color:var(--muted);font-size:16px}
+.sidebar-footer{padding:14px 16px;border-top:1px solid var(--line)}
+.theme-btn{
+  width:100%;display:flex;align-items:center;justify-content:center;gap:8px;
+  border:1px solid var(--line-strong);background:var(--surface-2);
+  border-radius:10px;padding:9px 12px;cursor:pointer;font-weight:700;font-size:13px;
+}
+.theme-btn:hover{border-color:var(--accent);background:var(--accent-soft)}
+
+.main{grid-column:2;min-width:0}
+.topbar{
+  position:sticky;top:0;z-index:30;
+  height:72px;background:color-mix(in srgb,var(--topbar) 96%,transparent);
+  border-bottom:1px solid var(--line);backdrop-filter:blur(12px);
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:0 30px;
+}
+.mobile-menu{
+  display:none;border:1px solid var(--line);background:var(--surface-2);
+  border-radius:9px;width:40px;height:40px;cursor:pointer;
+}
+.page-kicker{font-size:11px;color:var(--muted);font-weight:800;letter-spacing:.07em;text-transform:uppercase}
+.page-title{font-size:16px;font-weight:800;line-height:1.4}
+.top-actions{display:flex;align-items:center;gap:8px}
+.mode-chip{
+  border:1px solid var(--line);background:var(--surface-2);color:var(--ink-2);
+  padding:7px 10px;border-radius:999px;font-size:12px;font-weight:700;
+}
+.content-wrap{max-width:1120px;margin:0 auto;padding:28px 32px 52px}
+.intro{
+  background:var(--surface);border:1px solid var(--line);border-radius:18px;
+  padding:28px 30px;margin-bottom:22px;box-shadow:var(--shadow-soft);
+}
+.intro-brand{display:flex;align-items:center;gap:9px;color:var(--ink-2);font-size:13px;font-weight:800;margin-bottom:10px}
+.intro h1{margin:0 0 8px;font-size:clamp(25px,3vw,34px);line-height:1.35;color:var(--ink)}
+.intro h1 span{font-size:.55em;font-weight:600;color:var(--ink-2)}
+.intro p{margin:0;max-width:900px;color:var(--ink-2);font-size:15.5px}
+.intro .accent-line{height:4px;width:64px;border-radius:999px;background:var(--accent);margin:16px 0 0}
+.content-section{display:none}
+.content-section.active{display:block;animation:fadeIn .18s ease}
+@keyframes fadeIn{from{opacity:.3;transform:translateY(4px)}to{opacity:1;transform:none}}
+section{
+  background:var(--surface);border:1px solid var(--line);border-radius:18px;
+  padding:30px 34px;box-shadow:var(--shadow-soft);
+}
+h2{
+  font-size:22px;margin:0 0 18px;font-weight:800;line-height:1.45;
+  display:flex;align-items:center;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--line)
+}
+h2 .n{
+  width:34px;height:34px;border-radius:10px;background:var(--accent);color:#fff;
+  display:grid;place-items:center;font-size:14px;flex:0 0 auto;
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace
+}
+h3{
+  font-size:17px;margin:28px 0 9px;padding-left:12px;
+  border-left:4px solid var(--accent);font-weight:750;line-height:1.5
+}
+p{margin:10px 0 14px}
+strong,b{font-weight:750}
+small{line-height:1.6}
+.eli5{
+  background:linear-gradient(135deg,var(--amber-bg),var(--accent-soft));
+  border:1px solid color-mix(in srgb,var(--amber) 30%,var(--line));
+  border-radius:12px;padding:15px 18px;margin:16px 0 20px;font-size:15.5px
+}
+.eli5 b{color:var(--amber)}
+ol,ul{margin:10px 0 14px;padding-left:1.5em}li{margin:7px 0}
+.steps{counter-reset:step;list-style:none;padding-left:0}
+.steps li{
+  position:relative;margin:12px 0;padding:12px 14px 12px 50px;
+  background:var(--surface-2);border:1px solid var(--line);border-radius:11px
+}
+.steps li::before{
+  counter-increment:step;content:counter(step);
+  position:absolute;left:13px;top:11px;width:26px;height:26px;border-radius:50%;
+  background:var(--accent);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:800
+}
+.tag{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:700;vertical-align:middle;white-space:nowrap}
+.t-green{background:var(--green-bg);color:var(--green)}
+.t-red{background:var(--red-bg);color:var(--red)}
+.t-amber{background:var(--amber-bg);color:var(--amber)}
+.t-blue{background:var(--blue-bg);color:var(--blue)}
+.t-purple{background:var(--purple-bg);color:var(--purple)}
+.t-muted{background:var(--surface-2);color:var(--ink-2);border:1px solid var(--line)}
+.ui{
+  display:inline-block;border:1px solid var(--line-strong);background:var(--surface-2);
+  border-radius:7px;padding:1px 8px;font-size:13.5px;font-weight:700
+}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;margin:16px 0}
+.card{border:1px solid var(--line);border-radius:13px;padding:17px 18px;background:var(--surface-2)}
+.card b{display:block;margin-bottom:6px;font-size:15.5px}.card small{display:block;margin-top:8px;color:var(--muted);font-size:12.5px}
+.flow{
+  display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:18px 0;padding:14px;
+  background:var(--surface-2);border:1px solid var(--line);border-radius:12px;font-size:13.5px
+}
+.flow span{background:var(--surface);border:1px solid var(--line-strong);border-radius:9px;padding:7px 12px}
+.flow i{color:var(--accent);font-style:normal;font-weight:800}
+table{
+  width:100%;border-collapse:separate;border-spacing:0;font-size:14px;margin:14px 0 20px;
+  border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface)
+}
+th,td{padding:12px 13px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}
+th{background:var(--surface-2);color:var(--ink-2);font-size:12.5px;font-weight:800}
+tr:last-child td{border-bottom:0}
+tbody tr:nth-child(even) td{background:color-mix(in srgb,var(--surface-2) 55%,transparent)}
+.note,.warn{padding:13px 16px;border-radius:0 10px 10px 0;margin:16px 0;font-size:14.5px}
+.note{border-left:4px solid var(--blue);background:var(--blue-bg)}
+.warn{border-left:4px solid var(--red);background:var(--red-bg)}
+details{border:1px solid var(--line);border-radius:11px;margin:10px 0;background:var(--surface-2);overflow:hidden}
+summary{cursor:pointer;font-weight:700;padding:13px 16px;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"＋";float:right;color:var(--accent);font-weight:900}
+details[open] summary::after{content:"－"}
+details[open] summary{background:var(--accent-soft);border-bottom:1px solid var(--line)}
+details p{padding:4px 16px 14px;margin:10px 0}
+.overlay{display:none}
+
+@media(max-width:900px){
+  :root{--sidebar-w:278px}
+  .app-shell{display:block}
+  .sidebar{transform:translateX(-100%);transition:.22s ease}
+  .sidebar.open{transform:translateX(0)}
+  .main{grid-column:auto}
+  .mobile-menu{display:grid;place-items:center}
+  .topbar{padding:0 16px}
+  .content-wrap{padding:20px 16px 42px}
+  .overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:40;
+  }
+  .overlay.show{display:block}
+}
+@media(max-width:620px){
+  body{font-size:15px}
+  .topbar{height:66px}
+  .mode-chip{display:none}
+  .intro{padding:22px 20px;border-radius:14px}
+  section{padding:23px 19px;border-radius:14px}
+  h2{font-size:20px}h3{font-size:16px}
+  .grid{grid-template-columns:1fr}
+  table{display:block;overflow-x:auto}
+  .flow span{width:100%}.flow i{width:100%;text-align:center}
+}
+@media print{
+  .sidebar,.topbar,.overlay{display:none!important}
+  .app-shell{display:block}
+  .main{display:block}
+  .content-wrap{max-width:none;padding:0}
+  .intro{box-shadow:none;border:1px solid #aaa}
+  .content-section{display:block!important;margin-bottom:16px;animation:none}
+  section{box-shadow:none;border:1px solid #aaa;break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-row">
+        <div class="logo" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 21h18"></path><path d="M5 21V7l8-4v18"></path><path d="M19 21V11l-6-4"></path>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-title">Mirai AgentOS</div>
+          <div class="brand-sub">みらい建設工業 · 利用説明書</div>
+        </div>
+      </div>
+    </div>
+    <div class="sidebar-scroll"><div class="nav-group"><div class="nav-label">概要 / Overview</div><button class="side-link" data-target="s1">
+          <span class="idx">1</span>
+          <span class="txt">AgentOS ってなに？</span>
+          <span class="chev">›</span>
+        </button><button class="side-link" data-target="s2">
+          <span class="idx">2</span>
+          <span class="txt">画面の見かた</span>
+          <span class="chev">›</span>
+        </button></div><div class="nav-group"><div class="nav-label">基本操作 / Basic Usage</div><button class="side-link" data-target="s3">
+          <span class="idx">3</span>
+          <span class="txt">まずやってみよう（AI相談）</span>
+          <span class="chev">›</span>
+        </button><button class="side-link" data-target="s4">
+          <span class="idx">4</span>
+          <span class="txt">案件を見る・進める</span>
+          <span class="chev">›</span>
+        </button><button class="side-link" data-target="s5">
+          <span class="idx">5</span>
+          <span class="txt">承認のしかた</span>
+          <span class="chev">›</span>
+        </button><button class="side-link" data-target="s6">
+          <span class="idx">6</span>
+          <span class="txt">AIの仕事を見る</span>
+          <span class="chev">›</span>
+        </button><button class="side-link" data-target="s7">
+          <span class="idx">7</span>
+          <span class="txt">ナレッジを育てる</span>
+          <span class="chev">›</span>
+        </button></div><div class="nav-group"><div class="nav-label">運用・管理 / Operations</div><button class="side-link" data-target="s8">
+          <span class="idx">8</span>
+          <span class="txt">監査・連携・監視</span>
+          <span class="chev">›</span>
+        </button><button class="side-link" data-target="s9">
+          <span class="idx">9</span>
+          <span class="txt">あなたの役割（ロール）</span>
+          <span class="chev">›</span>
+        </button><button class="side-link" data-target="s10">
+          <span class="idx">10</span>
+          <span class="txt">色とバッジの意味</span>
+          <span class="chev">›</span>
+        </button></div><div class="nav-group"><div class="nav-label">ヘルプ / Help</div><button class="side-link" data-target="s11">
+          <span class="idx">11</span>
+          <span class="txt">困ったときは</span>
+          <span class="chev">›</span>
+        </button></div></div>
+    <div class="sidebar-footer">
+      <button class="theme-btn" id="themeBtn" type="button">☾ ダークモード</button>
+    </div>
+  </aside>
+
+  <div class="overlay" id="overlay"></div>
+
+  <div class="main">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:12px;min-width:0">
+        <button class="mobile-menu" id="mobileMenu" type="button" aria-label="メニューを開く">☰</button>
+        <div style="min-width:0">
+          <div class="page-kicker">Mirai AgentOS · User Guide</div>
+          <div class="page-title" id="currentTitle">AgentOS ってなに？</div>
+        </div>
+      </div>
+      <div class="top-actions">
+        <span class="mode-chip" id="modeChip">ライトモード / Light</span>
+      </div>
+    </div>
+
+    <div class="content-wrap">
+      <div class="intro">
+        <div class="intro-brand">Mirai AgentOS · みらい建設工業</div>
+        <h1>かんたん利用説明書<br><span>〜 はじめての人にもわかる AgentOS の使い方 〜</span></h1>
+        <p>むずかしい言葉はできるだけ使いません。「困ったことを、ふだんの言葉で話すだけ」で AI が手伝ってくれる仕組みです。</p>
+        <div class="accent-line"></div>
+      </div>
+
+      <div id="contentHost">
+        <section id="s1" class="content-section">
+  <h2><span class="n">1</span>AgentOS ってなに？</h2>
+  <div class="eli5"><b>5歳の子に説明するなら：</b>「困ったことを話すと、賢いロボットのチームが調べて、作って、覚えてくれる会社の道具」です。ただし<b>大事なことを決めるのは、いつも人間</b>です。</div>
+  <p>Mirai AgentOS は、みらい建設工業のみんなが「こんな作業、もっとラクにならないかな」と思ったことを、AI に相談し、実際の仕組み（ツールやプログラム）に変えて、その学びを会社の知識として残すための基盤です。</p>
+  <div class="grid">
+    <div class="card"><b>あなたがやること</b>困っていることを、ふだんの言葉で正しく説明する。大事な場面で「いいよ」「ダメ」を判断する。</div>
+    <div class="card"><b>AI がやること</b>質問して整理する。調べる。作る。テストする。学んだことをまとめる。</div>
+    <div class="card"><b>AI がやらないこと</b>本番への反映や大きな変更など、リスクの高いことを<u>勝手に</u>実行する。必ず人の承認を待ちます。</div>
+  </div>
+  <div class="note">GitHub、PostgreSQL、AIモデルの種類…といった専門用語を知らなくても使えます。知らなくてよい部分は、この説明書でも省いています。</div>
+</section>
+<section id="s2" class="content-section">
+  <h2><span class="n">2</span>画面の見かた</h2>
+  <p>画面は大きく3つの部分に分かれています。</p>
+  <div class="grid">
+    <div class="card"><b>① 左のサイドメニュー</b>行きたい画面を選びます。「概要」「基本操作」「運用・管理」「ヘルプ」に分かれています。見たい項目をクリックすると、右側にその説明だけが表示されます。<small>赤い数字は「あなたの承認を待っている件数」です。</small></div>
+    <div class="card"><b>② 右上の操作エリア</b>この説明書ではライト／ダーク切替があります。実際のAgentOSでは検索、ロール（役割）、承認待ちなどの操作を配置します。</div>
+    <div class="card"><b>③ 真ん中の大きな場所</b>選んだ画面の中身が表示されます。一覧をクリックすると右側に詳しい内容が出ます。</div>
+  </div>
+  <h3>ライトモード / ダークモード</h3>
+  <p>上のバーの <span class="ui">☀ Light</span> / <span class="ui">☾ Dark</span> ボタンを押すと、画面全体の色が切り替わります。目が疲れるときは暗い方がおすすめです。設定は次に開いたときも覚えています。</p>
+  <h3>メニュー一覧（日本語（英語））</h3>
+  <table>
+    <tbody><tr><th>メニュー</th><th>なにをする場所？</th></tr>
+    <tr><td>ダッシュボード（Dashboard）</td><td>会社全体の「いま」をひとめで見る</td></tr>
+    <tr><td>AI相談（AI Consultation）</td><td>困りごとを AI に話す。ここから全部はじまります</td></tr>
+    <tr><td>案件（Project）</td><td>相談が「正式な取り組み」になったものの一覧と進み具合</td></tr>
+    <tr><td>タスク・実行（Task / Agent Run）</td><td>AI が実際に何をしたか、いくらかかったかを見る</td></tr>
+    <tr><td>承認（Approval）</td><td>「進めていい？」に人間が答える場所</td></tr>
+    <tr><td>ナレッジ候補（Knowledge）</td><td>AI が見つけた学びを「会社の知識」にしていいか決める</td></tr>
+    <tr><td>監査ログ（Audit Log）</td><td>誰が・いつ・何をしたかの記録（消せません）</td></tr>
+    <tr><td>外部連携（Integrations）</td><td>Notion / Slack / Gmail / GitHub とのつながり具合</td></tr>
+    <tr><td>監視（Observability）</td><td>AI の稼働状況・費用・待ち行列</td></tr>
+    <tr><td>エージェント設定（Agent / Router）</td><td>どの AI にどの仕事を任せるかの設定（管理者・開発者向け）</td></tr>
+    <tr><td>ユーザー・ロール（Users）</td><td>誰がどの役割かの管理（管理者のみ表示）</td></tr>
+  </tbody></table>
+</section>
+<section id="s3" class="content-section">
+  <h2><span class="n">3</span>まずやってみよう：AI相談</h2>
+  <div class="eli5"><b>たとえ話：</b>先生に「これ困ってるんだけど…」と話すと、先生が「いつ？どのくらい？」と聞いてくれて、最後に「じゃあこうしよう」と紙にまとめてくれる。それが AI相談です。</div>
+  <ol class="steps">
+    <li>左メニューの <span class="ui">AI相談（AI Consultation）</span> を開きます。</li>
+    <li>下の入力欄に困っていることを書きます。例：<em>「現場写真の整理に毎週3時間かかっている」</em>。入力欄の上にある例文ボタンを押してもOKです。</li>
+    <li><span class="ui">送信</span> を押すか Enter キー。AI が <b>確認の質問</b> を返してきます（枚数は？保存先は？など）。</li>
+    <li>質問にざっくり答えて、もう一度送信します。正確でなくて大丈夫です。</li>
+    <li>AI が <span class="tag t-amber">IDEA 構造化</span> というカードを出します。「対象業務・現状・期待効果・必要データ・リスク・似た過去事例」が整理されています。</li>
+    <li>内容が良ければ <span class="ui">正式案件化（Project ID発番）</span> を押します。<b>DX-2026-00xx</b> という番号がつき、案件一覧に登録されます。</li>
+  </ol>
+  <div class="flow"><span>相談を入力</span><i>→</i><span>AIが追加質問</span><i>→</i><span>Idea構造化</span><i>→</i><span>正式案件化（番号発番）</span><i>→</i><span>企画審査で承認</span></div>
+  <p>右側の「相談の流れ」に、いまどこまで進んだかが表示されます。<span class="ui">新しい相談</span> で最初からやり直せます。</p>
+  <div class="note">案件化しても、まだ何も作られません。次の「企画審査 Gate」で承認者（Approver）が「進めていいよ」と言ってから動き出します。</div>
+</section>
+<section id="s4" class="content-section">
+  <h2><span class="n">4</span>案件を見る・進める</h2>
+  <div class="eli5"><b>たとえ話：</b>案件は「すごろく」。マスを順番に進み、大事なマス（<span class="tag t-amber">GATE</span>）では、止まって大人に「進んでいい？」と聞きます。</div>
+  <h3>一覧の見かた</h3>
+  <ul>
+    <li>上のボタン（すべて / Idea・審査 / 進行中 / 本番 / 保留・完了）で絞り込めます。</li>
+    <li>行をクリックすると右側に詳細が開きます。</li>
+    <li>上のバーの検索窓に番号や名前を入れて Enter でも探せます。</li>
+  </ul>
+  <h3>詳細パネルの読みかた</h3>
+  <table>
+    <tbody><tr><th>項目</th><th>意味</th></tr>
+    <tr><td>Phase / Gate</td><td>7つのマス。緑＝終わった、オレンジ＝いまここ、グレー＝まだ。<span class="tag t-amber">GATE</span> のマスは承認が必要です</td></tr>
+    <tr><td>KPI</td><td>「どのくらい良くなったか」の目標と今の数字。棒が右まで伸びれば達成</td></tr>
+    <tr><td>Task / Agent Run</td><td>この案件で AI が動いた記録。クリックすると詳細へ</td></tr>
+    <tr><td>Owner / GitHub / Notion / Slack</td><td>担当者と、関連する資料・会話の場所</td></tr>
+  </tbody></table>
+  <h3>次のマスに進める（State Transition）</h3>
+  <p>詳細パネルの一番下に「次に進むボタン」があります（例：<span class="ui">審査へ提出 R1</span>、<span class="ui">本番リリース R4</span>）。</p>
+  <ul>
+    <li>白いボタン：そのまま進みます。</li>
+    <li>オレンジ色のボタン：<b>承認が必要</b>。押すと自動で「承認依頼」が作られ、承認画面に移動します。</li>
+  </ul>
+  <h3>案件を直接登録する</h3>
+  <p>一覧右上の <span class="ui">＋ 案件を登録</span> から、案件名・概要・担当・リスク候補を入れて登録できます（AI相談を通さない方法）。</p>
+</section>
+<section id="s5" class="content-section">
+  <h2><span class="n">5</span>承認のしかた（Approver・Reviewer向け）</h2>
+  <div class="eli5"><b>たとえ話：</b>ロボットが「外に遊びに行っていい？」と聞いてきます。危ないほど（R が大きいほど）、ちゃんと確認してから答えます。答えた理由は<b>ノートに残って、消せません</b>。</div>
+  <ol class="steps">
+    <li>左メニュー <span class="ui">承認（Approval）</span>、または上の 🔔 を押します。</li>
+    <li>一覧から1件クリック。右側に「何を・なぜ・証拠（Evidence）・誰が承認済みか」が出ます。</li>
+    <li><b>Evidence</b> を読みます。テストの結果、セキュリティ検査、元に戻す手順（Rollback）などです。</li>
+    <li>下の <b>判断理由</b> の欄に、ひとことでも理由を書きます（<u>必須</u>）。</li>
+    <li>ボタンを押します：<span class="tag t-green">承認</span>（進めていい）/ <span class="tag t-amber">差戻し</span>（直してもう一度）/ <span class="tag t-red">却下</span>（やめる）。</li>
+  </ol>
+  <h3>Approval Steps（承認の順番）</h3>
+  <p>承認は順番に進みます。たとえば「Reviewer → Approver」。自分の番でないときや、自分のロールに権限がないときは、押しても <span class="tag t-red">Policy: DENY</span> と表示されて実行されません（これも記録に残ります）。</p>
+  <h3>承認すると何が起きる？</h3>
+  <ul>
+    <li>企画審査 Gate を承認 → 案件が「承認済」になり、開発を始められます。</li>
+    <li>本番リリースを承認 → 案件が「本番稼働」になり、止まっていた AI のタスク（Blocked）が動けるようになります。</li>
+  </ul>
+</section>
+<section id="s6" class="content-section">
+  <h2><span class="n">6</span>AI の仕事を見る：タスク・実行（Task / Agent Run）</h2>
+  <div class="eli5"><b>たとえ話：</b>ロボットの「日記」です。「どのロボットが、何を、どの頭脳（AIモデル）で、いくらかけて、何秒でやったか」が全部書いてあります。</div>
+  <table>
+    <tbody><tr><th>見るところ</th><th>意味</th></tr>
+    <tr><td>Agent</td><td>担当ロボットの名前。調べる係（Research）、作る係（Developer）、チェックする係（Reviewer）など</td></tr>
+    <tr><td>Provider / Model</td><td>使った AI の頭脳。作る係とチェックする係は<b>わざと別の頭脳</b>にしています（自分で自分を採点させないため）</td></tr>
+    <tr><td>Tokens / Cost / Latency</td><td>読んだ量・書いた量 / かかったお金 / かかった時間</td></tr>
+    <tr><td>Tool Call · Policy Decision</td><td>ロボットが使おうとした道具と、その可否。<span class="tag t-green">PERMIT</span>＝OK、<span class="tag t-amber">APPROVAL_REQUIRED</span>＝人の承認待ち、<span class="tag t-red">DENY</span>＝禁止</td></tr>
+    <tr><td>Trace</td><td>「相談 → 計画 → タスク → 実行 → 成果物 → 承認」のつながり。どこから来た仕事かたどれます</td></tr>
+  </tbody></table>
+  <h3>ボタン</h3>
+  <ul>
+    <li><span class="ui">Retry / Resume</span>：失敗したり止まった仕事をもう一度。ただし「入力データの形式が違う」系の失敗は、やり直しても直らないので押せません（理由が表示されます）。</li>
+    <li><span class="ui">Cancel</span>：仕事を取り消します。終わったものは取り消せません。</li>
+    <li>黄色い「Approval Pending」の帯：承認待ちで止まっています。クリックすると承認画面へ飛びます。</li>
+  </ul>
+</section>
+<section id="s7" class="content-section">
+  <h2><span class="n">7</span>ナレッジを育てる：ナレッジ候補（Knowledge）</h2>
+  <div class="eli5"><b>たとえ話：</b>ロボットが仕事のあとに「今日わかったこと」をメモしてきます。先生（Knowledge Curator）が読んで、「これはみんなの教科書に載せよう」か「これはボツ」を決めます。</div>
+  <ul>
+    <li>カードには <b>種類</b>（Lesson＝教訓 / ADR＝設計の決めごと / Playbook＝手順書 / Standard＝基準）と <b>品質スコア</b>（80以上は緑、60未満は赤）が出ます。</li>
+    <li><b>重複判定</b>：すでに似た知識があれば「統合を推奨」と教えてくれます。</li>
+    <li><span class="ui">Notionへ昇格</span> を押すと、会社の知識ベース（Notion）に載ります。<span class="ui">却下</span> はボツです。</li>
+  </ul>
+  <div class="warn">Slack のおしゃべりの生ログは、そのままでは知識になりません（ルールで禁止）。整理された「学び」だけが昇格の対象です。</div>
+</section>
+<section id="s8" class="content-section">
+  <h2><span class="n">8</span>監査・連携・監視（見るだけでOK）</h2>
+  <h3>監査ログ（Audit Log）</h3>
+  <div class="eli5"><b>たとえ話：</b>ページを破ったり書き換えたりできない「学級日誌」。前のページとつながる「合言葉（Hash）」があるので、こっそり書き換えるとすぐバレます。</div>
+  <p>種類やキーワードで絞り込めます。あなたの承認、AI の道具使用、ログイン、拒否された操作…全部ここにあります。管理者でも消せません。</p>
+  <h3>外部連携（Integrations）</h3>
+  <p>Notion（知識）、Slack（会話）、Gmail（メール）、GitHub（プログラム置き場）とのつながり具合。<span class="tag t-green">Connected</span> なら正常、<span class="tag t-amber">要確認</span> なら人のチェック待ちがあります。<span class="ui">今すぐ同期</span> で最新にできます（開発者・管理者）。</p>
+  <div class="note">Gmail は「契約・金額・機密・承認に関わるメール」には自動返信しません。必ず人が見ます。</div>
+  <h3>監視（Observability）</h3>
+  <p>AI が何回動いたか、いくら使ったか、どのくらい待っているか。上の <span class="ui">24時間 / 7日 / 30日</span> で期間を変えられます。費用が気になる人はここを見ましょう。</p>
+  <h3>エージェント設定（Agent / Router）</h3>
+  <p>どのロボットに、どの頭脳（AIモデル）を使わせるかの設定です。<b>「作る係」と「チェックする係」が同じ系列の頭脳になると赤い警告</b>が出ます。管理者・開発者以外は見るだけです。</p>
+</section>
+<section id="s9" class="content-section">
+  <h2><span class="n">9</span>あなたの役割（ロール）</h2>
+  <div class="eli5"><b>たとえ話：</b>学校の「係」です。給食係は給食のことだけできます。係にない仕事をしようとすると「それは君の係じゃないよ」と止められます（それも日誌に書かれます）。</div>
+  <p>上のバーの選択肢でロールを切り替えると、できること・見えるメニューが変わります。</p>
+  <table>
+    <tbody><tr><th>ロール</th><th>だれ向け</th><th>できること</th></tr>
+    <tr><td>Viewer</td><td>全社員の基本</td><td>見る、AI相談する</td></tr>
+    <tr><td>Developer</td><td>作る人</td><td>案件を作る・進める、AIタスクの再実行、連携の同期、エージェント設定</td></tr>
+    <tr><td>Reviewer</td><td>チェックする人</td><td>承認の「Reviewer」段階を担当、差戻し・却下</td></tr>
+    <tr><td>Approver</td><td>決める人（部長など）</td><td>Gate の最終承認、案件の状態を進める</td></tr>
+    <tr><td>Knowledge Curator</td><td>知識を管理する人</td><td>ナレッジ候補の昇格・却下</td></tr>
+    <tr><td>Administrator</td><td>情シス</td><td>全部。ユーザー・ロール管理も。ただし監査ログは消せない</td></tr>
+  </tbody></table>
+</section>
+<section id="s10" class="content-section">
+  <h2><span class="n">10</span>色とバッジの意味</h2>
+  <h3>リスク（R0〜R5）</h3>
+  <p><span class="tag t-muted">R0 / R1</span> 読むだけ・小さな変更　<span class="tag t-blue">R2</span> 中くらい　<span class="tag t-amber">R3</span> 人の承認が必要　<span class="tag t-red">R4 / R5</span> 本番や外部に影響。慎重に</p>
+  <h3>案件の状態</h3>
+  <p><span class="tag t-muted">Idea</span> → <span class="tag t-blue">審査中</span> → <span class="tag t-blue">承認済</span> → <span class="tag t-purple">開発中</span> → <span class="tag t-amber">Staging / UAT</span> → <span class="tag t-green">本番稼働</span> → <span class="tag t-green">完了</span>　（横道：<span class="tag t-amber">保留</span> / <span class="tag t-muted">アーカイブ</span>）</p>
+  <h3>AIタスクの状態</h3>
+  <p><span class="tag t-purple">実行中</span> 動いている　<span class="tag t-blue">レビュー</span> チェック待ち　<span class="tag t-amber">ブロック</span> 承認待ちで止まっている　<span class="tag t-green">完了</span>　<span class="tag t-red">失敗</span>　<span class="tag t-muted">取消</span></p>
+  <h3>通知（右下に出る黒い箱）</h3>
+  <p>操作の結果を数秒だけ表示します。オレンジ＝お知らせ、緑＝成功、黄＝注意、赤＝できませんでした。×で閉じられます。</p>
+</section>
+<section id="s11" class="content-section">
+  <h2><span class="n">11</span>困ったときは</h2>
+  <details><summary>ボタンを押したら「Policy: DENY」と出た</summary><p>あなたのロールにその操作の権限がありません。上のバーでロールを確認するか、Administrator に相談してください。試したこと自体は監査ログに残りますが、悪いことではありません。</p></details>
+  <details><summary>承認ボタンが押せない / 反応しない</summary><p>「判断理由」が空だと承認できません。ひとことでも書いてください。</p></details>
+  <details><summary>Retry を押しても動かない</summary><p>承認待ち（Blocked）か、やり直しても直らない種類の失敗です。画面の黄色または赤の帯に理由が書いてあります。</p></details>
+  <details><summary>「ユーザー・ロール」メニューが見えない</summary><p>Administrator だけに表示されます。</p></details>
+  <details><summary>操作をやり直したい / 最初の状態に戻したい</summary><p>操作内容はブラウザに保存されています。Administrator で「ユーザー・ロール」→ <span class="ui">デモデータを初期化</span> を押すと最初の状態に戻ります。</p></details>
+  <details><summary>AI相談で何を書けばいい？</summary><p>「誰が・どのくらいの頻度で・何に困っていて・どうなったら嬉しいか」。この4つが入っていれば十分です。文章が下手でも AI が質問して補います。</p></details>
+  <div class="eli5" style="margin-top:18px"><b>最後にいちばん大事なこと：</b>AI は手伝う係。決めるのはあなた。わからないときは、進めずに聞いてください。</div>
+</section>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const root = document.documentElement;
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('overlay');
+  const mobileMenu = document.getElementById('mobileMenu');
+  const themeBtn = document.getElementById('themeBtn');
+  const modeChip = document.getElementById('modeChip');
+  const title = document.getElementById('currentTitle');
+  const links = Array.from(document.querySelectorAll('.side-link'));
+  const sections = Array.from(document.querySelectorAll('.content-section'));
+
+  const labels = {"s1": "AgentOS ってなに？", "s2": "画面の見かた", "s3": "まずやってみよう（AI相談）", "s4": "案件を見る・進める", "s5": "承認のしかた", "s6": "AIの仕事を見る", "s7": "ナレッジを育てる", "s8": "監査・連携・監視", "s9": "あなたの役割（ロール）", "s10": "色とバッジの意味", "s11": "困ったときは"};
+
+  function setTheme(theme){
+    root.dataset.theme = theme;
+    localStorage.setItem('mirai-agentos-guide-theme', theme);
+    const dark = theme === 'dark';
+    themeBtn.textContent = dark ? '☀ ライトモード' : '☾ ダークモード';
+    modeChip.textContent = dark ? 'ダークモード / Dark' : 'ライトモード / Light';
+  }
+
+  function showSection(id, updateHash=true){
+    sections.forEach(s => s.classList.toggle('active', s.id === id));
+    links.forEach(b => b.classList.toggle('active', b.dataset.target === id));
+    title.textContent = labels[id] || '';
+    localStorage.setItem('mirai-agentos-guide-section', id);
+    if(updateHash) history.replaceState(null,'','#'+id);
+    sidebar.classList.remove('open');
+    overlay.classList.remove('show');
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  links.forEach(btn => btn.addEventListener('click', () => showSection(btn.dataset.target)));
+  themeBtn.addEventListener('click', () => setTheme(root.dataset.theme === 'dark' ? 'light' : 'dark'));
+  mobileMenu.addEventListener('click', () => {
+    sidebar.classList.toggle('open');
+    overlay.classList.toggle('show');
+  });
+  overlay.addEventListener('click', () => {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('show');
+  });
+
+  const savedTheme = localStorage.getItem('mirai-agentos-guide-theme') || 'light';
+  setTheme(savedTheme);
+
+  const hashId = location.hash && document.querySelector(location.hash) ? location.hash.slice(1) : null;
+  const savedSection = localStorage.getItem('mirai-agentos-guide-section');
+  const initial = hashId || (savedSection && document.getElementById(savedSection) ? savedSection : 's1');
+  showSection(initial, false);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+# /etc/systemd/system/mira-agent-os-mvp-api.service
+[Unit]
+Description=Mirai AgentOS MVP API (mira-agent-os-mvp.mirai-dx-platform.com, local Postgres backend)
+After=network.target postgresql.service
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=kensan
+Group=kensan
+WorkingDirectory=/home/kensan/Projects/Mirai-DX-Project/Mirai-AI-Agent-Business-Platform/app
+EnvironmentFile=/home/kensan/Projects/Mirai-DX-Project/Mirai-AI-Agent-Business-Platform/app/.env.mvp
+ExecStart=/home/kensan/.nvm/versions/node/v22.22.3/bin/node src/server.js
+Restart=on-failure
+RestartSec=5
+
+IPAddressAllow=127.0.0.1/8 ::1/128
+IPAddressDeny=any
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+
+[Install]
+WantedBy=multi-user.target

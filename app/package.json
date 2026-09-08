@@ -1,0 +1,27 @@
+{
+  "name": "mira-agent-os",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mirai AgentOS MVP — 案件依頼登録→Project昇格→Gate承認の垂直スライス実装",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "migrate": "node migrate.mjs",
+    "seed-admin": "node seed-admin.mjs",
+    "start": "node src/server.js",
+    "test:unit": "node --test test/unit.test.mjs",
+    "test:e2e": "node --test test/e2e.test.mjs",
+    "test": "npm run test:unit"
+  },
+  "dependencies": {
+    "express": "4.22.2",
+    "pg": "8.13.1"
+  },
+  "overrides": {
+    "path-to-regexp": "0.1.13",
+    "qs": "6.16.0"
+  },
+  "license": "UNLICENSED"
+}
