@@ -27,7 +27,8 @@
   .dh h2{margin:0;font-size:15px;flex:1} .dh .org{font-size:12px;color:var(--muted);font-weight:400;margin-left:8px} .dh .cnt{font-size:12px;color:var(--muted)}
   .dh .tog{color:var(--muted);transition:transform .15s} section.dept.closed .tog{transform:rotate(-90deg)} section.dept.closed .body{display:none}
   .body{overflow-x:auto}
-  table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:1160px}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:1080px}
+  td.purpose{max-width:260px}
   th{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line2);font-size:11px;color:var(--muted);font-weight:600;background:#fafbfc;white-space:nowrap}
   td{padding:9px 12px;border-bottom:1px solid var(--line2);vertical-align:top}
   tr:hover td{background:#fafbfc}
@@ -49,6 +50,11 @@
   .wish{background:#fffbf3}
   .note{padding:10px 16px;font-size:12px;color:var(--ink2);border-top:1px solid var(--line2);background:#fafbfc}
   .foot{color:var(--muted);font-size:12px;margin:18px 0 40px;line-height:1.7}
+  .reg{background:var(--surface);border:1px solid var(--line);border-radius:10px;margin-bottom:16px;overflow:hidden;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+  .reg .dh h2 .org{margin-left:8px}
+  .reg table{min-width:900px}
+  .reg td.mono{font-family:var(--mono);font-size:11.5px}
+  .reg .cap{padding:8px 16px;font-size:12px;color:var(--ink2);background:#fafbfc;border-bottom:1px solid var(--line2)}
   .toast{position:fixed;right:18px;bottom:18px;background:#141c29;color:#fff;padding:10px 14px;border-radius:9px;font-size:12.5px;opacity:0;transition:opacity .2s;pointer-events:none}
   .toast.show{opacity:1}
   @media print{header{position:static} button,.bar,.toc{display:none} section.dept.closed .body{display:block} textarea{border:none;background:none;min-height:0} body{background:#fff} main{padding:0}}
@@ -78,6 +84,32 @@
     <span class="lv">A0=説明・要約 / A1=承認済み検索・草案作成 / A2=正式承認に拘束された外部書き込み（未対応） / A3=設備制御（対象外）</span>
   </div>
   <nav class="toc" id="toc"></nav>
+  <section class="reg" id="sec-registry">
+    <div class="dh" style="cursor:default"><h2>登録状況（20260909 時点）<span class="org">本番 Agent Runtime の Registry（承認済み版）を 2026-09-09 に読み取り</span></h2><span class="cnt">Agent 3 件 / Skill 9 件</span></div>
+    <div class="cap">Domain Pack <code>mirai-construction</code> を Administrator（Kensan）が 2026-09-08 22:41 に同期・承認。承認済み出典（source_records）6 件、Agent Run 4 件（うち完走 1 件：technology-selection RUN-1004）。内容ハッシュは先頭 12 桁。</div>
+    <div class="body"><table>
+      <thead><tr><th>Agent 機能（登録済み）</th><th>版</th><th>状態</th><th>責任者ロール</th><th>使用 Skill（実行順）</th><th>本シートの区分</th><th>内容ハッシュ</th><th>承認</th></tr></thead>
+      <tbody>
+        <tr><td><b>技術選定・比較支援</b><div class="id">technology-selection</div></td><td class="mono">1.0.0</td><td><span class="chip p1">approved</span></td><td>技術</td><td>technology-catalog-search → applicability-gap-check → technology-comparison → evidence-backed-draft</td><td>04_技術・研究開発</td><td class="mono">124f247fda76</td><td>Kensan 2026-09-08 22:41</td></tr>
+        <tr><td><b>施工実績・提案支援</b><div class="id">project-case-research</div></td><td class="mono">1.0.0</td><td><span class="chip p1">approved</span></td><td>営業・施工</td><td>project-case-search → case-comparison → evidence-backed-draft</td><td>02_営業・案件形成</td><td class="mono">cc42b794355e</td><td>Kensan 2026-09-08 22:41</td></tr>
+        <tr><td><b>Knowledge 品質支援</b><div class="id">knowledge-quality</div></td><td class="mono">1.0.0</td><td><span class="chip p1">approved</span></td><td>Knowledge Curator</td><td>knowledge-quality-review → knowledge-dedup → knowledge-review-packet</td><td>06_管理本部・経営企画（仮置き）</td><td class="mono">e6b404ce2e7e</td><td>Kensan 2026-09-08 22:41</td></tr>
+      </tbody></table></div>
+    <div class="cap">Skill 機能（登録済み 9 件）。「許可 Tool」は Tool Gateway が実行を許す型付き Tool。空欄は LLM の構造化出力のみで Tool を呼ばない Skill。</div>
+    <div class="body"><table>
+      <thead><tr><th>Skill 機能（登録済み）</th><th>版</th><th>状態</th><th>Risk</th><th>許可 Tool</th><th>使用する Agent</th><th>内容ハッシュ</th><th>承認</th></tr></thead>
+      <tbody>
+        <tr><td><b>技術カタログ検索</b><div class="id">technology-catalog-search</div></td><td class="mono">1.0.0</td><td><span class="chip p1">approved</span></td><td class="mono">R1</td><td class="mono">knowledge.search-approved</td><td>technology-selection</td><td class="mono">2c9ebca103ba</td><td>Kensan 2026-09-08 22:41</td></tr>
+        <tr><td><b>適用条件・不足情報の整理</b><div class="id">applicability-gap-check</div></td><td class="mono">1.0.0</td><td><span class="chip p1">approved</span></td><td class="mono">R1</td><td class="mono">—</td><td>technology-selection</td><td class="mono">9e9960119799</td><td>Kensan 2026-09-08 22:41</td></tr>
+        <tr><td><b>技術比較表作成</b><div class="id">technology-comparison</div></td><td class="mono">1.0.0</td><td><span class="chip p1">approved</span></td><td class="mono">R1</td><td class="mono">—</td><td>technology-selection</td><td class="mono">c9c9974aaedd</td><td>Kensan 2026-09-08 22:41</td></tr>
+        <tr><td><b>根拠付き草案</b><div class="id">evidence-backed-draft</div></td><td class="mono">1.0.0</td><td><span class="chip p1">approved</span></td><td class="mono">R1</td><td class="mono">artifact.write-draft</td><td>technology-selection, project-case-research</td><td class="mono">9b7c699b15fb</td><td>Kensan 2026-09-08 22:41</td></tr>
+        <tr><td><b>施工実績検索</b><div class="id">project-case-search</div></td><td class="mono">1.0.0</td><td><span class="chip p1">approved</span></td><td class="mono">R1</td><td class="mono">knowledge.search-approved</td><td>project-case-research</td><td class="mono">1899603811e7</td><td>Kensan 2026-09-08 22:41</td></tr>
+        <tr><td><b>類似・相違の比較</b><div class="id">case-comparison</div></td><td class="mono">1.0.0</td><td><span class="chip p1">approved</span></td><td class="mono">R1</td><td class="mono">—</td><td>project-case-research</td><td class="mono">719afdd875c9</td><td>Kensan 2026-09-08 22:41</td></tr>
+        <tr><td><b>Knowledge 品質レビュー</b><div class="id">knowledge-quality-review</div></td><td class="mono">1.0.0</td><td><span class="chip p1">approved</span></td><td class="mono">R1</td><td class="mono">knowledge.search-approved</td><td>knowledge-quality</td><td class="mono">3563597e2065</td><td>Kensan 2026-09-08 22:41</td></tr>
+        <tr><td><b>重複・矛盾の検出</b><div class="id">knowledge-dedup</div></td><td class="mono">1.0.0</td><td><span class="chip p1">approved</span></td><td class="mono">R1</td><td class="mono">knowledge.search-promoted</td><td>knowledge-quality</td><td class="mono">73fc02cc81e8</td><td>Kensan 2026-09-08 22:41</td></tr>
+        <tr><td><b>レビュー用パケット作成</b><div class="id">knowledge-review-packet</div></td><td class="mono">1.0.0</td><td><span class="chip p1">approved</span></td><td class="mono">R1</td><td class="mono">artifact.write-draft</td><td>knowledge-quality</td><td class="mono">181ced2f1bcf</td><td>Kensan 2026-09-08 22:41</td></tr>
+      </tbody></table></div>
+    <div class="cap">定義のみで Registry 未登録（どの Agent にも紐付いていない共通 Skill、3 件）: <code>source-normalize</code>（資料の正規化・除外対象の隔離）、<code>source-citation-verify</code>（引用の実在性・権限の検証）、<code>outcome-measurement</code>（実測に基づく成果測定）。運用者がバッチとして使う想定で、Agent Run の Step としては実行されない。</div>
+  </section>
   <div id="app"></div>
   <div class="foot">✅「確認」列にチェックし、「Agent 追加希望」「Skill 追加希望」欄に各組織からの要望を記入してください。入力はこのブラウザに自動保存されます（他の端末には同期されません）。共有する場合は「JSON 書き出し」または「印刷 / PDF」をご利用ください。本ファイルは外部通信を行いません。<br>
   組織図に対する補足: 「09_DX推進部」は公式サイトの組織図（2026.4.1 版）には掲載されていない区分で、ソリューション営業本部の DX 関連および共通基盤（IT/DX）を対象としています。「Knowledge 品質支援」の担当部署（Knowledge Curator）は組織図上の所属が未確定のため 06 に仮置きしています。</div>
@@ -205,14 +237,14 @@ function bullets(text, sep){ return String(text||"").split(sep).map(x=>x.trim().
 function stageChip(s){ const cls = s==="P1"?"p1":s==="P2"?"p2":s==="P3"?"p3":s==="基盤"?"base":"none"; const label = s==="P1"?"P1 実装済み":s==="P2"||s==="P3"?s+" 候補":s; return `<span class="chip ${cls}">${label}</span>`; }
 
 function render(){
-  document.getElementById("toc").innerHTML = DATA.map(d => `<a href="#sec-${d.code}">${d.code}_${esc(d.dept)}</a>`).join("");
+  document.getElementById("toc").innerHTML = `<a href="#sec-registry">登録状況（20260909）</a>` + DATA.map(d => `<a href="#sec-${d.code}">${d.code}_${esc(d.dept)}</a>`).join("");
   const app = document.getElementById("app");
   app.innerHTML = DATA.map((d, di) => {
     const rows = d.agents.map(a => `
       <tr data-id="${esc(a.id)}">
         <td class="chk"><input type="checkbox" data-k="checked" ${get(a.id,"checked")?"checked":""} title="確認済み"></td>
         <td><div class="agent">${esc(a.name)}</div><div class="id">${esc(a.id)}</div><div style="margin-top:4px">${stageChip(a.stage)} <span class="lv">${esc(a.level)}</span></div><div class="id" style="margin-top:2px">責任者: ${esc(a.owner)}</div></td>
-        <td><div class="lbl">目的</div><ul class="bul">${bullets(a.purpose, /。/).map(x=>`<li>${esc(x)}</li>`).join("")}</ul><div class="lbl no" style="margin-top:6px">できないこと</div><ul class="bul no">${bullets(a.not, /、/).map(x=>`<li>${esc(x)}</li>`).join("")}</ul></td>
+        <td class="purpose"><div class="lbl">目的</div><ul class="bul">${bullets(a.purpose, /。/).map(x=>`<li>${esc(x)}</li>`).join("")}</ul><div class="lbl no" style="margin-top:6px">できないこと</div><ul class="bul no">${bullets(a.not, /、/).map(x=>`<li>${esc(x)}</li>`).join("")}</ul></td>
         <td><ul class="skills">${a.skills.map(s=>`<li>${esc(s)}</li>`).join("")}</ul></td>
         <td class="wish"><div class="wishcol">${wishList(a.id,"wishAgent","Agent 追加希望","例: 現場写真の整理支援（目的・成果物・責任者）")}${wishList(a.id,"wishSkill","Skill 追加希望","例: 気象データの鮮度確認（作業・入力／出力・資料）")}</div></td>
         <td class="wish"><textarea data-k="memo" placeholder="備考・懸念・確認事項">${esc(get(a.id,"memo"))}</textarea></td>
@@ -223,7 +255,7 @@ function render(){
         <div class="dh"><span class="tog">▾</span><h2>${d.code}_${esc(d.dept)}<span class="org">対象組織: ${esc(d.org)}</span></h2><span class="cnt">Agent ${d.agents.length} 件</span></div>
         <div class="body">
           <table>
-            <thead><tr><th>確認</th><th style="width:200px">Agent</th><th style="min-width:300px">目的 / できないこと</th><th style="min-width:230px">Skill</th><th style="min-width:260px">追加希望（Agent / Skill）</th><th style="min-width:160px">備考</th></tr></thead>
+            <thead><tr><th>確認</th><th style="width:200px">Agent</th><th style="min-width:200px;max-width:260px">目的 / できないこと</th><th style="min-width:230px">Skill</th><th style="min-width:260px">追加希望（Agent / Skill）</th><th style="min-width:160px">備考</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>
           ${d.note ? `<div class="note">${esc(d.note)}</div>` : ""}
