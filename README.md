@@ -7,6 +7,7 @@
 ![Visibility](https://img.shields.io/badge/Repo-Private-lightgrey)
 ![Docs](https://img.shields.io/badge/Docs-Idea%20to%20Value-blue)
 ![Custom App](https://img.shields.io/badge/Custom%20App-Not%20Planned%20(SaaS%20Config%20Only)-informational)
+[![docs-quality](https://github.com/Kensan196948G/Mirai-AI-Agent-Business-Platform/actions/workflows/docs-quality.yml/badge.svg)](https://github.com/Kensan196948G/Mirai-AI-Agent-Business-Platform/actions/workflows/docs-quality.yml)
 
 ---
 
@@ -23,7 +24,8 @@
 9. [🗂️ リポジトリ構成](#️-リポジトリ構成)
 10. [📖 ドキュメント間の関係（正本マップ）](#-ドキュメント間の関係正本マップ)
 11. [✅ 現在のステータス（Q1〜Q7 / P-1〜P-12）](#-現在のステータスq1q7--p-1p-12)
-12. [🙅 絶対に守るルール（SOD）](#-絶対に守るルール sod)
+12. [🛠️ 文書の更新方法とCI](#️-文書の更新方法とci)
+13. [🙅 絶対に守るルール（SOD）](#-絶対に守るルールsod)
 
 ---
 
@@ -325,7 +327,16 @@ flowchart LR
 ```text
 Mirai-AI-Agent-Business-Platform/
 ├── 📄 README.md                                          ← このファイル
+├── 🤝 CONTRIBUTING.md                                     ← 文書の更新手順・検査ルール・SOD
+├── 📦 package.json                                        ← 検証コマンド定義（外部依存ゼロ）
 ├── 🙈 .gitignore
+├── 📁 .github/
+│   ├── ⚙️ workflows/docs-quality.yml                      ← CI（文書整合性・秘密情報検査）
+│   ├── 📋 pull_request_template.md
+│   └── 📋 ISSUE_TEMPLATE/                                 ← 決定事項（Q/P）・文書修正の起票様式
+├── 📁 tools/
+│   ├── 🔍 check-docs.mjs                                  ← 文書整合性チェッカ（DOC001〜DOC006）
+│   └── 🧪 check-docs.test.mjs                             ← 上記のユニットテスト
 └── 📁 docs/
     ├── 📘 ai-dx-dev-process.md / .html                    ← 🏛️ プロセス定義（確定版・正本）
     ├── 📗 ai-dx-dev-saas-setup-guide.md / .html            ← 🏗️ SaaS構築・設定計画書（レビュー版v0.5）
@@ -412,6 +423,34 @@ flowchart TD
 | P-12 | 文書・設定のバックアップと引継ぎ | ⏳ 未決 |
 
 > 📌 詳細は `docs/ai-dx-dev-saas-setup-guide.md` 第7章を参照。P-1〜P-12は💼🏗️⚙️ 3 Authorityによるレビュー・決定が必要な事項であり、本リポジトリのドキュメント整備だけでは解決しない。
+
+---
+
+## 🛠️ 文書の更新方法とCI
+
+本リポジトリは**自前アプリを開発しない**方針のため、CI の対象はアプリのビルドではなく
+**文書の整合性と秘密情報の混入有無**である。外部パッケージは使わず（`npm install` 不要）、
+Node.js 標準機能だけで動く。非エンジニアの担当者でも同じコマンドで再現でき、
+supply-chain リスクを持ち込まないための判断である。
+
+```bash
+npm run verify   # 文書整合性チェック + ユニットテスト（Node.js v20 以上・install 不要）
+```
+
+| ルール | 検査内容 | 重大度 |
+|---|---|:---:|
+| `DOC001` | 文書内で参照しているファイル（`.md` / `.html` / `.pptx`）が実在するか | 🔴 error |
+| `DOC002` | `docs/` 配下の `.md` に対になる配布用 `.html` があるか | 🟡 warn |
+| `DOC003` | 秘密情報・個人情報らしき文字列が混入していないか（**検出値は出力しない**） | 🔴 error |
+| `DOC004` | 「## 文書情報」を持つ文書に「ステータス」行があるか | 🔴 error |
+| `DOC005` | Q1〜Q7 / P-1〜P-12 の ID が README と計画書 第7章で一致するか | 🔴 error |
+| `DOC006` | h1 見出しが 1 文書に 1 つだけか | 🔴 error |
+
+更新の流れ（Issue → ブランチ → 編集 → `npm run verify` → PR → CI → 起案者以外のレビュー → Squash merge）と
+禁止事項の詳細は **[`CONTRIBUTING.md`](CONTRIBUTING.md)** を参照。
+
+> 🔐 `DOC003` で指摘された場合は、**値を Slack や Issue に貼り付けない**。該当箇所を除去・匿名化し、
+> 実在の資格情報を push してしまった場合は除去だけでなく **rotation（再発行）** を行う。
 
 ---
 

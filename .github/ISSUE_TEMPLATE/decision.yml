@@ -1,0 +1,55 @@
+name: 決定事項（Q / P）の起票
+description: Q1〜Q7 / P-1〜P-12 など、3 Authority による決定が必要な論点を起票する
+title: "[決定] "
+labels: ["decision"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Slack 上の「OK」は正式承認ではありません。本 Issue は**論点の可視化と決定の記録**を目的とし、
+        正式な Gate 承認は desknet's NEO Workflow、案件の状態は AppSuite が正本です。
+  - type: input
+    id: decision-id
+    attributes:
+      label: 決定項目 ID
+      description: README・SaaS構築計画書 第7章の ID（例：P-2、Q6）。新規論点なら「新規」
+      placeholder: P-2
+    validations:
+      required: true
+  - type: textarea
+    id: point
+    attributes:
+      label: 論点
+      description: 何を決める必要があるか
+    validations:
+      required: true
+  - type: textarea
+    id: options
+    attributes:
+      label: 選択肢と трейド-off
+      description: A / B / C 案とそれぞれの利点・リスク・費用
+    validations:
+      required: true
+  - type: dropdown
+    id: authority
+    attributes:
+      label: 決定責任者（Authority）
+      options:
+        - Business Authority（経営企画）
+        - Domain Authority（建設土木技術）
+        - Engineering Authority（IT/DX）
+        - 上位 Gate Owner（AI/DX統括責任者）
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: 未決のままだと止まること
+      description: この決定が無いと着手できない作業・文書
+    validations:
+      required: true
+  - type: input
+    id: due
+    attributes:
+      label: 決定希望期限
+      placeholder: YYYY-MM-DD
