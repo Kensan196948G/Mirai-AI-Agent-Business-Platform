@@ -139,10 +139,23 @@ Pull Request と `main` への push で自動実行されます。
 
 | ステップ | 内容 |
 |---|---|
-| 依存関係の確認 | 外部依存ゼロが維持されているか（supply-chain リスクの抑止） |
+| 秘密情報スキャン | **gitleaks** でコミット履歴全体を走査（検出値は `--redact` で伏せる） |
+| 依存関係の確認 | npm 外部依存ゼロが維持されているか（supply-chain リスクの抑止） |
 | ユニットテスト | 検証スクリプト自体が正しく動くか（`node --test`） |
 | 文書整合性チェック | `DOC001`〜`DOC006` |
 | `.env` 検査 | `.env` が Git 管理下に無いこと |
+
+### 秘密情報スキャンをローカルで実行する（任意）
+
+`npm run verify` の `DOC003` は早期検知用の簡易チェックです。CI と同じ本検査を手元で回すには
+[gitleaks](https://github.com/gitleaks/gitleaks)（MIT）を導入します。
+
+```bash
+gitleaks git . --redact --no-banner     # コミット履歴全体
+gitleaks dir . --redact --no-banner     # 作業ツリー（未追跡ファイル含む）
+```
+
+`--redact` を必ず付けてください。付けないと検出された値が端末やログに表示されます。
 
 ---
 
