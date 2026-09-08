@@ -26,12 +26,31 @@ jobs:
         with:
           fetch-depth: 0
 
+      # 秘密情報スキャンは gitleaks（MIT）の公式リリースバイナリを使う。
+      # gitleaks-action は v2.0.0 以降が商用 EULA であり、Organization 配下では
+      # ライセンスキー（production secret の追加）と第三者サービスへの
+      # リポジトリ名送信が必要になるため採用しない。
+      # バージョンと SHA256 を固定し、改ざんされた成果物を実行しない。
+      - name: 秘密情報スキャン（gitleaks・履歴全体）
+        env:
+          GITLEAKS_VERSION: 8.30.1
+          GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 -o gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  gitleaks.tar.gz" | sha256sum -c -
+          tar xzf gitleaks.tar.gz gitleaks
+          # --redact: 検出値をログ・レポートへ出力しない（値の二次流出を防ぐ）
+          ./gitleaks git . --redact --no-banner
+          rm -f gitleaks gitleaks.tar.gz
+
       - name: Node.js セットアップ
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      - name: 依存関係の確認（外部依存ゼロであること）
+      - name: 依存関係の確認（npm 外部依存ゼロであること）
         run: |
           if [ -d node_modules ]; then
             echo "node_modules がコミットされている" >&2
