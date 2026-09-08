@@ -61,14 +61,13 @@ input::placeholder,textarea::placeholder{color:var(--muted)}
     <header style="min-height:62px;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;padding:10px 22px;gap:12px;flex-wrap:wrap">
       <div style="line-height:1.2;min-width:140px;flex:1 1 200px"><div style="font-size:16px;font-weight:600;color:var(--ink);white-space:nowrap">{{ title }}</div><div style="font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ subtitle }}</div></div>
       <div style="display:flex;align-items:center;gap:7px;background:var(--subtle);border:1px solid var(--line);border-radius:8px;padding:0 11px;color:var(--muted);height:36px;flex:0 1 220px;min-width:120px"><span style="font-size:13px">⌕</span><input value="{{ q }}" onChange="{{ setQ }}" onKeyDown="{{ searchKey }}" placeholder="案件・Task・承認を検索" style="border:none;background:none;padding:0;width:100%;min-width:0;font-size:12.5px"></div>
-      <select value="{{ role }}" onChange="{{ setRole }}" title="ロール切替（authentik RBAC）" style="width:auto;padding:7px 30px 7px 10px;font-size:12.5px;font-weight:500;height:36px;flex-shrink:0">
-        <sc-for list="{{ roles }}" as="r" hint-placeholder-count="6"><option value="{{ r }}">{{ r }}</option></sc-for>
-      </select>
+      <span title="現在のロール（サーバ側の実ロールに基づく・変更不可）" style="display:flex;align-items:center;height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--line);background:var(--subtle);color:var(--ink-2);font-size:12.5px;font-weight:600;flex-shrink:0;white-space:nowrap">{{ role }}</span>
       <button onClick="{{ goApprovals }}" title="承認待ち" style="position:relative;height:36px;width:36px;border-radius:8px;border:1px solid var(--line);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink-2)" style-hover="background:var(--subtle)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.7 21a2 2 0 0 1-3.4 0"></path></svg>
         <sc-if value="{{ hasPending }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;border-radius:9px;background:var(--red-2);color:#fff;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;padding:0 4px;font-family:var(--mono)">{{ pendingCount }}</span></sc-if>
       </button>
       <button onClick="{{ toggleTheme }}" title="ライト / ダーク切替" style="height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--line);background:var(--surface);cursor:pointer;display:flex;align-items:center;gap:6px;color:var(--ink-2);font-size:12px;font-weight:600" style-hover="background:var(--subtle)"><span style="font-size:14px">{{ themeIcon }}</span>{{ themeLabel }}</button>
       <div title="実行環境: Local · Docker Compose" style="display:flex;align-items:center;gap:6px;background:var(--green-bg);color:var(--green);padding:0 10px;height:36px;border-radius:7px;font-size:12px;font-weight:600;white-space:nowrap;flex-shrink:0"><span style="width:7px;height:7px;border-radius:50%;background:var(--green-2);box-shadow:0 0 0 3px rgba(46,158,107,.18)"></span>Local</div>
+      <button onClick="{{ logout }}" title="ログアウト" style="height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--line);background:var(--surface);cursor:pointer;display:flex;align-items:center;gap:6px;color:var(--ink-2);font-size:12px;font-weight:600" style-hover="background:var(--subtle)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>ログアウト</button>
     </header>
 
     <div style="flex:1;overflow:auto;padding:var(--pad)">
@@ -379,150 +378,795 @@ input::placeholder,textarea::placeholder{color:var(--muted)}
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;comfortable&quot;,&quot;compact&quot;],&quot;default&quot;:&quot;comfortable&quot;,&quot;tsType&quot;:&quot;'comfortable' | 'compact'&quot;,&quot;section&quot;:&quot;表示&quot;},&quot;currency&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;USD&quot;,&quot;JPY&quot;],&quot;default&quot;:&quot;USD&quot;,&quot;tsType&quot;:&quot;'USD' | 'JPY'&quot;,&quot;section&quot;:&quot;表示&quot;}}">
 class Component extends DCLogic {
-  constructor(p){ super(p);
-    this.state={ready:false,toasts:[],typing:false,modal:null,np:{title:'',owner:'u3',risk:'R2',summary:''},reason:'',chatInput:'',q:'',projFilter:'all',taskFilter:'all',knFilter:'pending',auditType:'all',auditQ:'',range:'7d',syncing:{}};
-    this.D=null;
-    import('./agentos-data.js').then(D=>{this.D=D;let saved=null;try{saved=JSON.parse(localStorage.getItem(D.KEY));}catch(e){}
-      const data=(saved&&saved.v===D.VERSION)?saved.data:D.seed();this.setState(Object.assign({ready:true},data));});
+  constructor(p) {
+    super(p);
+    this.state = {
+      ready: false,
+      authError: false,
+      toasts: [],
+      typing: false,
+      modal: null,
+      np: { title: '', owner: '', risk: 'R2', summary: '' },
+      reason: '',
+      chatInput: '',
+      q: '',
+      projFilter: 'all',
+      taskFilter: 'all',
+      knFilter: 'pending',
+      auditType: 'all',
+      auditQ: '',
+      range: '7d',
+      syncing: {},
+    };
+    this.D = null;
+    import('./agentos-data.js').then((D) => {
+      this.D = D;
+      this.bootstrap();
+    });
   }
-  PERSIST(){return ['users','projects','tasks','approvals','knowledge','audit','integrations','agents','router','chat','theme','role','screen','openGroups','selProject','selTask','selApproval','webhooks','skills','usage'];}
-  componentDidMount(){this.applyDoc();}
-  componentDidUpdate(){this.applyDoc();}
-  setState(u,cb){super.setState(u,()=>{this.applyDoc();if(this.state.ready&&this.D)this.persist();if(cb)cb();});}
-  applyDoc(){const d=document.documentElement;d.dataset.theme=this.state.theme||'light';d.dataset.density=this.props.density??'comfortable';}
-  persist(){const data={};this.PERSIST().forEach(k=>data[k]=this.state[k]);try{localStorage.setItem(this.D.KEY,JSON.stringify({v:this.D.VERSION,data}));}catch(e){}}
-  tone(n){return n==='muted'?{fg:'var(--ink-2)',bg:'var(--subtle)'}:{fg:`var(--${n})`,bg:`var(--${n}-bg)`};}
-  risk(r){return this.tone(this.D.RISK[r]||'muted');}
-  me(){const s=this.state;const u=s.users.find(u=>u.role===s.role)||{name:s.role+'（仮）',dept:'—'};return Object.assign({},u,{initial:u.name[0],roleShort:s.role.toUpperCase().replace('KNOWLEDGE CURATOR','CURATOR').replace('ADMINISTRATOR','ADMIN')});}
-  can(a){return this.D.PERM[a].includes(this.state.role);}
-  deny(a,label){this.toast(`Policy: DENY — ロール「${this.state.role}」に「${label}」の権限がありません`,'red');this.setState(s=>({audit:[this.ev(s,'policy_denied','policy',a,`${label} → DENY（Role: ${s.role}）`),...s.audit]}));}
-  ev(s,type,resType,resId,summary,actor,actorType){const prev=s.audit[0]?s.audit[0].hash:'00000000';const who=actor||this.me().name;return {id:'AE-'+String(9001+s.audit.length).padStart(5,'0'),at:this.D.now(),actorType:actorType||(actor?'agent':'user'),actor:who,type,resType,resId,summary,prev,hash:this.D.hash(prev+type+resId+summary+Date.now())};}
-  toast(text,color){const id=Date.now()+Math.random();this.setState(s=>({toasts:[...s.toasts,{id,text,color:color||'accent'}]}));setTimeout(()=>this.setState(s=>({toasts:s.toasts.filter(t=>t.id!==id)})),4200);}
-  go(screen){this.setState({screen});}
-  fmtCost(c){return (this.props.currency??'USD')==='JPY'?'¥'+Math.round(c*150).toLocaleString():'$'+c.toFixed(2);}
-  fmtTok(n){return n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e3?Math.round(n/1e3)+'k':String(n);}
-  chip(label,n,on,set){return {label,n,set,border:on?'var(--accent)':'var(--line)',bg:on?'var(--amber-bg)':'var(--surface)',fg:on?'var(--amber)':'var(--ink-2)'};}
-  // --- domain actions
-  transition(pk,t){if(!this.can('transition'))return this.deny('transition','State Transition');
-    if(t.approval){const exists=this.state.approvals.find(a=>a.pk===pk&&a.type===t.approval&&['requested','in_review'].includes(a.status));if(exists){this.toast(`${exists.id} が承認待ちです（${t.risk}）。承認後に遷移します`,'amber');return this.setState({screen:'approvals',selApproval:exists.id});}
-      const id='APR-0'+(109+this.state.approvals.length);const p=this.state.projects.find(x=>x.key===pk);
-      this.setState(s=>({approvals:[{id,pk,type:t.approval,title:t.label+(t.approval==='project_gate'?'（企画審査Gate）':'（本番Gate）'),risk:t.risk,status:'requested',by:this.me().name,at:this.D.now(),target:'Project '+pk+(p?' / '+p.repo:''),evidence:t.approval==='project_gate'?['Idea構造化: Notion Idea','期待効果・MVP範囲を記載']:['E2E / Security Scan 結果','Rollback手順','UAT承認'],steps:t.approval==='project_gate'?[{role:'Approver',who:'山田 太郎',st:'pending',at:''}]:[{role:'Reviewer',who:'高橋 美咲',st:'pending',at:''},{role:'Approver',who:'山田 太郎',st:'pending',at:''}],log:[]},...s.approvals],audit:[this.ev(s,'approval_request','approval',id,`${t.label} (${t.risk}) → APPROVAL_REQUIRED`),...s.audit],screen:'approvals',selApproval:id}));
-      return this.toast(`Policy: APPROVAL_REQUIRED — ${id} を生成しました（${t.risk}）`,'amber');}
-    this.setState(s=>({projects:s.projects.map(p=>p.key===pk?Object.assign({},p,{status:t.to}):p),audit:[this.ev(s,'state_transition','project',pk,`${p0(s,pk)} → ${t.to}（${t.label}）`),...s.audit]}));this.toast(`${pk}: ${t.label} を実行しました`,'green');
-    function p0(s,k){const p=s.projects.find(x=>x.key===k);return p?p.status:'?';}}
-  decide(id,action){const s=this.state;const a=s.approvals.find(x=>x.id===id);if(!a)return;const step=a.steps.find(st=>st.st==='pending');const need=action==='approved'?(step&&step.role==='Reviewer'?'review':'approve'):'review';if(!this.can(need))return this.deny(need,action==='approved'?'承認':action==='returned'?'差戻し':'却下');
-    if(!s.reason.trim())return this.toast('判断理由を入力してください（Auditに記録されます）','red');
-    const label={approved:'承認',returned:'差戻し',rejected:'却下'}[action];const me=this.me().name;const t=this.D.now();
-    this.setState(st=>{let steps=a.steps.map(x=>x);let status=a.status;let projects=st.projects,tasks=st.tasks;
-      if(action==='approved'){const i=steps.findIndex(x=>x.st==='pending');if(i>=0)steps[i]=Object.assign({},steps[i],{st:'approved',who:me,at:t});if(steps.every(x=>x.st==='approved')){status='approved';
-          if(a.type==='project_gate')projects=projects.map(p=>p.key===a.pk?Object.assign({},p,{status:'approved'}):p);
-          if(a.type==='production_release'){projects=projects.map(p=>p.key===a.pk?Object.assign({},p,{status:'production'}):p);tasks=tasks.map(x=>x.blockedBy===id?Object.assign({},x,{status:'ready',blockedBy:null}):x);}
-          if(a.type==='github_merge')tasks=tasks.map(x=>x.id==='T-1019'&&a.pk===x.pk?Object.assign({},x,{status:'completed'}):x);}else status='in_review';}
-      else{status=action;const i=steps.findIndex(x=>x.st==='pending');if(i>=0)steps[i]=Object.assign({},steps[i],{st:action,who:me,at:t});}
-      const na=Object.assign({},a,{status,steps,log:[...a.log,{at:t,who:me,action,reason:st.reason}]});
-      return {approvals:st.approvals.map(x=>x.id===id?na:x),projects,tasks,reason:'',audit:[this.ev(st,'approval_action','approval',id,`${label}: ${st.reason.slice(0,40)}`),...st.audit]};});
-    this.toast(`${id} を${label}しました（Audit記録済）`,action==='approved'?'green':action==='returned'?'amber':'red');}
-  knAct(id,status){if(!this.can('promote'))return this.deny('promote','Knowledge昇格');this.setState(s=>({knowledge:s.knowledge.map(k=>k.id===id?Object.assign({},k,{status,notion:status==='promoted'?'notion://knowledge/'+k.type.toLowerCase()+'/'+id:undefined}):k),audit:[this.ev(s,'knowledge','knowledge',id,status==='promoted'?'Knowledge候補をNotionへ昇格':'Knowledge候補を却下'),...s.audit]}));this.toast(status==='promoted'?`${id} をNotion Knowledge DBへ反映しました`:`${id} を却下しました`,status==='promoted'?'green':'red');}
-  taskAct(id,act){if(!this.can('run'))return this.deny('run',act==='retry'?'Task Retry':'Task Cancel');const t=this.state.tasks.find(x=>x.id===id);if(!t)return;
-    if(act==='cancel'){if(['completed','cancelled'].includes(t.status))return this.toast('終了済みのTaskは取消できません','amber');this.setState(s=>({tasks:s.tasks.map(x=>x.id===id?Object.assign({},x,{status:'cancelled'}):x),audit:[this.ev(s,'task_cancel','task',id,'Task を Cancel'),...s.audit]}));return this.toast(`${id} を取消しました`,'amber');}
-    if(t.status==='blocked')return this.toast(`${id} は ${t.blockedBy} の承認待ちです（Policy: Retry禁止）`,'amber');if(t.status==='running')return this.toast(`${id} は実行中です`,'amber');
-    if(t.err&&/Validation/.test(t.err)){this.toast('Validation Error は Retry 対象外です。戦略変更または Human Escalation へ','red');return;}
-    this.setState(s=>({tasks:s.tasks.map(x=>x.id===id?Object.assign({},x,{status:'running',err:null,at:this.D.now()}):x),audit:[this.ev(s,'task_run','task',id,'Retry / Resume を開始',t.agent),...s.audit]}));this.toast(`${id} を再実行しています…`,'accent');
-    setTimeout(()=>{const add=Math.round(20000+Math.random()*60000);this.setState(s=>({tasks:s.tasks.map(x=>x.id===id?Object.assign({},x,{status:'completed',tin:x.tin+add,tout:x.tout+Math.round(add*.2),cost:+(x.cost+add*0.000006).toFixed(2),lat:Math.round(8000+Math.random()*30000)}):x),audit:[this.ev(s,'task_completed','task',id,'Agent Run 完了',t.agent),...s.audit]}));this.toast(`${id} が完了しました`,'green');},2600);}
-  sync(id){if(!this.can('sync'))return this.deny('sync','Integration Sync');this.setState(s=>({syncing:Object.assign({},s.syncing,{[id]:true})}));setTimeout(()=>this.setState(s=>({syncing:Object.assign({},s.syncing,{[id]:false}),integrations:s.integrations.map(i=>i.id===id?Object.assign({},i,{last:this.D.now(),status:'connected'}):i),audit:[this.ev(s,'sync','integration',id,'手動同期 完了',id+' sync','service'),...s.audit]})),1600);}
-  createProject(fromIdea){const np=fromIdea||this.state.np;if(!this.can('create'))return this.deny('create','Project作成');if(!np.title.trim())return this.toast('案件名を入力してください','red');
-    const key='DX-2026-00'+(52+this.state.projects.filter(p=>p.key.startsWith('DX-2026')).length);
-    this.setState(s=>({projects:[{key,title:np.title,status:'idea',owner:np.owner,risk:np.risk,summary:np.summary,created:this.D.now().slice(0,10),kpis:[],repo:'—',notion:'notion://ideas/'+key,slack:'#dx-'+key.slice(-4)},...s.projects],audit:[this.ev(s,'project_created','project',key,'Project ID 発番 / Idea 登録'),...s.audit],modal:null,np:{title:'',owner:'u3',risk:'R2',summary:''},screen:'projects',selProject:key,projFilter:'all'}));this.toast(`${key} を発番し、Idea として登録しました`,'green');}
-  send(text){const msg=(text??this.state.chatInput).trim();if(!msg)return;const D=this.D;this.setState(s=>{const c=s.chat;const topic=c.topic<0?D.SCENARIOS.findIndex(x=>x.match.test(msg)):c.topic;return {chatInput:'',typing:true,chat:Object.assign({},c,{topic,messages:[...c.messages,{role:'user',text:msg}]})};});
-    setTimeout(()=>this.setState(s=>{const c=s.chat;const sc=D.SCENARIOS[c.topic];const step=c.step+1;let m;
-      if(step===1)m={role:'ai',text:sc.clarify};else if(step===2)m={role:'ai',text:'ありがとうございます。相談内容をIdeaとして構造化しました。内容を確認し、問題なければ「正式案件化」で Project ID を発番できます（企画審査Gateで Approver が承認します）。',idea:sc.idea,ideaTitle:sc.title,intent:sc.intent,risk:sc.risk};
-      else m={role:'ai',text:'補足を反映しました。Notion の Idea ページを更新しています。案件化はいつでも上のカードから実行できます。'};
-      const audit=step===1?[this.ev(s,'request','request','R-'+(2100+c.messages.length),`Intent分類: ${sc.intent} / Risk候補 ${sc.risk}`,'Intent Router'),...s.audit]:s.audit;
-      return {typing:false,audit,chat:Object.assign({},c,{step,messages:[...c.messages,m]})};}),1100);}
-  renderVals(){const s=this.state,D=this.D;if(!s.ready)return {ready:false,navGroups:[],roles:[],title:'Mirai AgentOS',subtitle:'読み込み中…',me:{initial:'…',name:'',dept:'',roleShort:''},toasts:[],themeIcon:'☀',themeLabel:'Light',q:'',role:'',hasPending:false,isDashboard:false,kpis:[]};
-    const me=this.me();const role=s.role;const roles=D.ROLES;
-    const pendA=s.approvals.filter(a=>['requested','in_review'].includes(a.status));const knPend=s.knowledge.filter(k=>k.status==='pending');
-    const navGroups=D.NAV.map(g=>{const open=s.openGroups[g.id]!==false;return {label:g.label,open,rot:open?'0deg':'-90deg',toggle:()=>this.setState(st=>({openGroups:Object.assign({},st.openGroups,{[g.id]:!open})})),items:g.items.filter(it=>!it.perm||this.can(it.perm)).map(it=>{const active=s.screen===it.key;const badge=it.key==='approvals'?pendA.length:it.key==='knowledge'?knPend.length:0;return {label:it.label,ico:it.ico,active,go:()=>this.go(it.key),fg:active?'var(--side-active)':'var(--side-fg)',bg:active?'var(--side-2)':'transparent',hoverBg:active?'var(--side-2)':'var(--side-hover)',hasBadge:badge>0,badge,badgeBg:it.key==='approvals'?'var(--red-2)':'var(--side-hover)',badgeFg:it.key==='approvals'?'#fff':'var(--side-fg)'};})};});
-    const [title,subtitle]=D.TITLES[s.screen]||['',''];const st=x=>{const [label,tone]=x;return Object.assign({st:label},this.tone(tone));};
-    const uname=id=>{const u=s.users.find(u=>u.id===id);return u?u.name:'—';};const udept=id=>{const u=s.users.find(u=>u.id===id);return u?u.dept:'—';};
-    const q=s.q.trim().toLowerCase();
+
+  // --- API 基盤 -------------------------------------------------------------
+  async api(path, { method = 'GET', body } = {}) {
+    const res = await fetch(path, {
+      method,
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+      credentials: 'same-origin',
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      location.href = './index.html';
+      throw new Error('ログインが必要です');
+    }
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    return data;
+  }
+
+  async bootstrap() {
+    try {
+      const { user } = await this.api('/api/auth/me');
+      this.setState({ me: user, role: user.role });
+      await this.refreshAll();
+      this.setState({ ready: true });
+    } catch (err) {
+      // api() が401なら既にログイン画面へ遷移している。それ以外は画面上にエラーを出す。
+      this.setState({ ready: true, authError: String(err.message || err) });
+    }
+  }
+
+  /** 全リストを再取得して state へ反映する（ミューテーション成功後の再同期にも使う）。 */
+  async refreshAll() {
+    const [
+      users, projects, tasks, approvals, knowledge, audit,
+      integrations, agents, skills, router, usage, chat,
+    ] = await Promise.all([
+      this.api('/api/users'),
+      this.api('/api/projects'),
+      this.api('/api/tasks'),
+      this.api('/api/approvals'),
+      this.api('/api/knowledge'),
+      this.api('/api/audit'),
+      this.api('/api/integrations'),
+      this.api('/api/agents'),
+      this.api('/api/skills'),
+      this.api('/api/router'),
+      this.api('/api/usage'),
+      this.api('/api/chat/conversations/me'),
+    ]);
+    this.setState({
+      users: users.users.map(mapUser),
+      projects: projects.projects.map(mapProject),
+      tasks: tasks.tasks.map(mapTask),
+      approvals: approvals.approvals.map(mapApproval),
+      knowledge: knowledge.knowledge.map(mapKnowledge),
+      audit: audit.audit.map(mapAudit),
+      integrations: integrations.integrations.map(mapIntegration),
+      agents: agents.agents.map(mapAgent),
+      skills: skills.skills.map(mapSkill),
+      router: router.router.map(mapRouterRow),
+      usage: usage.usage.map(mapUsage),
+      chat: { messages: mapChatMessages(chat.messages), topic: -1, step: Math.max(0, chat.messages.length - 1) },
+      openGroups: this.state.openGroups || { g1: true, g2: true, g3: true, g4: true },
+      screen: this.state.screen || 'dashboard',
+      selProject: this.state.selProject ?? null,
+      selTask: this.state.selTask ?? null,
+      selApproval: this.state.selApproval ?? null,
+      theme: this.state.theme || 'light',
+    });
+  }
+
+  componentDidMount() {
+    this.applyDoc();
+  }
+  componentDidUpdate() {
+    this.applyDoc();
+  }
+  applyDoc() {
+    const d = document.documentElement;
+    d.dataset.theme = this.state.theme || 'light';
+    d.dataset.density = this.props.density ?? 'comfortable';
+  }
+
+  tone(n) {
+    return n === 'muted' ? { fg: 'var(--ink-2)', bg: 'var(--subtle)' } : { fg: `var(--${n})`, bg: `var(--${n}-bg)` };
+  }
+  risk(r) {
+    return this.tone(this.D.RISK[r] || 'muted');
+  }
+  me() {
+    const u = this.state.me || { name: '', dept: '' };
+    return Object.assign({}, u, {
+      initial: (u.name || '?')[0],
+      roleShort: (u.role || '').toUpperCase().replace('KNOWLEDGE CURATOR', 'CURATOR').replace('ADMINISTRATOR', 'ADMIN'),
+    });
+  }
+  /** サーバ側の requireRole と同じ権限表（表示上のヒント用。実際の可否は必ずAPI応答で決まる）。 */
+  can(a) {
+    return this.D.PERM[a].includes(this.state.role);
+  }
+  deny(a, label) {
+    this.toast(`Policy: DENY — ロール「${this.state.role}」に「${label}」の権限がありません`, 'red');
+  }
+  toast(text, color) {
+    const id = Date.now() + Math.random();
+    this.setState((s) => ({ toasts: [...s.toasts, { id, text, color: color || 'accent' }] }));
+    setTimeout(() => this.setState((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), 4200);
+  }
+  async guarded(action, fn) {
+    try {
+      await fn();
+    } catch (err) {
+      this.toast(`エラー: ${err.message}`, 'red');
+    }
+  }
+  go(screen) {
+    this.setState({ screen });
+  }
+  fmtCost(c) {
+    return (this.props.currency ?? 'USD') === 'JPY' ? '¥' + Math.round(c * 150).toLocaleString() : '$' + c.toFixed(2);
+  }
+  fmtTok(n) {
+    return n >= 1e6 ? (n / 1e6).toFixed(2) + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'k' : String(n);
+  }
+  chip(label, n, on, set) {
+    return {
+      label, n, set,
+      border: on ? 'var(--accent)' : 'var(--line)',
+      bg: on ? 'var(--amber-bg)' : 'var(--surface)',
+      fg: on ? 'var(--amber)' : 'var(--ink-2)',
+    };
+  }
+
+  logout() {
+    this.guarded('logout', async () => {
+      await this.api('/api/auth/logout', { method: 'POST' }).catch(() => {});
+      location.href = './index.html';
+    });
+  }
+
+  // --- domain actions（すべて実APIを呼び、成功後に全リストを再取得する） -----
+  transition(pk, t) {
+    const p = this.state.projects.find((x) => x.key === pk);
+    if (!p) return;
+    this.guarded('transition', async () => {
+      const result = await this.api(`/api/projects/${p._id}/transition`, { method: 'POST', body: { to: t.to } });
+      await this.refreshAll();
+      if (result.pending_approval) {
+        this.setState({ screen: 'approvals' });
+        this.toast(`Policy: APPROVAL_REQUIRED — ${result.pending_approval.approval_code} を生成しました（${t.risk}）`, 'amber');
+      } else {
+        this.toast(`${pk}: ${t.label} を実行しました`, 'green');
+      }
+    });
+  }
+
+  decide(id, action) {
+    const a = this.state.approvals.find((x) => x.id === id);
+    if (!a) return;
+    const step = a.steps.find((s) => s.st === 'pending');
+    if (!step) return this.toast('判定可能なstepがありません', 'amber');
+    if (action !== 'rejected' && !this.state.reason.trim()) {
+      return this.toast('判断理由を入力してください（Auditに記録されます）', 'red');
+    }
+    this.guarded('decide', async () => {
+      const decision = action === 'approved' ? 'approved' : 'rejected';
+      await this.api(`/api/approvals/${a._id}/steps/${step._id}/decide`, {
+        method: 'POST', body: { decision, reason: this.state.reason || undefined },
+      });
+      this.setState({ reason: '' });
+      await this.refreshAll();
+      const label = { approved: '承認', rejected: '却下' }[decision];
+      this.toast(`${id} を${label}しました（Audit記録済）`, decision === 'approved' ? 'green' : 'red');
+    });
+  }
+
+  knAct(id, status) {
+    const k = this.state.knowledge.find((x) => x.id === id);
+    if (!k) return;
+    this.guarded('knowledge', async () => {
+      await this.api(`/api/knowledge/${k._id}`, { method: 'PATCH', body: { status } });
+      await this.refreshAll();
+      this.toast(
+        status === 'promoted' ? `${id} をNotion Knowledge DBへ反映しました` : `${id} を却下しました`,
+        status === 'promoted' ? 'green' : 'red',
+      );
+    });
+  }
+
+  taskAct(id, act) {
+    const t = this.state.tasks.find((x) => x.id === id);
+    if (!t) return;
+    if (act === 'cancel') {
+      if (['completed', 'cancelled'].includes(t.status)) return this.toast('終了済みのTaskは取消できません', 'amber');
+      return this.guarded('task-cancel', async () => {
+        await this.api(`/api/tasks/${t._id}`, { method: 'PATCH', body: { status: 'cancelled' } });
+        await this.refreshAll();
+        this.toast(`${id} を取消しました`, 'amber');
+      });
+    }
+    if (t.status === 'blocked') return this.toast(`${id} は ${t.blockedBy} の承認待ちです（Policy: Retry禁止）`, 'amber');
+    if (t.status === 'running') return this.toast(`${id} は実行中です`, 'amber');
+    if (t.err && /Validation/.test(t.err)) {
+      return this.toast('Validation Error は Retry 対象外です。戦略変更または Human Escalation へ', 'red');
+    }
+    this.guarded('task-retry', async () => {
+      await this.api(`/api/tasks/${t._id}`, { method: 'PATCH', body: { status: 'running', errorMessage: null } });
+      await this.refreshAll();
+      this.toast(`${id} を再実行としてマークしました`, 'accent');
+    });
+  }
+
+  sync(id) {
+    this.setState((s) => ({ syncing: Object.assign({}, s.syncing, { [id]: true }) }));
+    this.guarded('sync', async () => {
+      await this.api(`/api/integrations/${id}`, { method: 'PATCH', body: { status: 'connected' } });
+      await this.refreshAll();
+    }).then(() => {
+      // guarded は内部でエラーを飲み込むため、成功・失敗どちらでもここで syncing フラグを戻す
+      this.setState((s) => ({ syncing: Object.assign({}, s.syncing, { [id]: false }) }));
+    });
+  }
+
+  createProject(fromIdea) {
+    const np = fromIdea || this.state.np;
+    if (!np.title.trim()) return this.toast('案件名を入力してください', 'red');
+    this.guarded('create-project', async () => {
+      const created = await this.api('/api/requests', { method: 'POST', body: { title: np.title, description: np.summary || np.title } });
+      const promoted = await this.api(`/api/requests/${created.request.id}/promote`, { method: 'POST' });
+      await this.refreshAll();
+      this.setState({ modal: null, np: { title: '', owner: '', risk: 'R2', summary: '' }, screen: 'projects', selProject: promoted.project.project_code, projFilter: 'all' });
+      this.toast(`${promoted.project.project_code} を発番し、Idea として登録しました`, 'green');
+    });
+  }
+
+  send(text) {
+    const msg = (text ?? this.state.chatInput).trim();
+    if (!msg) return;
+    this.setState((s) => ({
+      chatInput: '', typing: true,
+      chat: Object.assign({}, s.chat, { messages: [...s.chat.messages, { role: 'user', text: msg }] }),
+    }));
+    this.guarded('chat-send', async () => {
+      const { message } = await this.api('/api/chat/messages', { method: 'POST', body: { text: msg } });
+      this.setState((s) => ({
+        typing: false,
+        chat: Object.assign({}, s.chat, {
+          step: s.chat.step + 1,
+          messages: [...s.chat.messages, {
+            role: 'ai', text: message.text,
+            idea: message.idea_json ? message.idea_json.idea : undefined,
+            ideaTitle: message.idea_json ? message.idea_json.title : undefined,
+            intent: message.idea_json ? message.idea_json.intent : undefined,
+            risk: message.idea_json ? message.idea_json.risk : undefined,
+          }],
+        }),
+      }));
+    });
+  }
+
+  resetChat() {
+    this.guarded('chat-reset', async () => {
+      const { messages } = await this.api('/api/chat/conversations', { method: 'POST' });
+      this.setState({ chat: { messages: mapChatMessages(messages), topic: -1, step: 0 } });
+    });
+  }
+
+  refreshAllWithToast() {
+    this.guarded('refresh', async () => {
+      await this.refreshAll();
+      this.toast('最新の状態を再取得しました', 'accent');
+    });
+  }
+
+  renderVals() {
+    const s = this.state, D = this.D;
+    if (!s.ready) {
+      return {
+        ready: false, navGroups: [], roles: [], title: 'Mirai AgentOS', subtitle: '読み込み中…',
+        me: { initial: '…', name: '', dept: '', roleShort: '' }, toasts: [], themeIcon: '☀', themeLabel: 'Light',
+        q: '', role: '', hasPending: false, isDashboard: false, kpis: [],
+      };
+    }
+    if (s.authError) {
+      return {
+        ready: true, navGroups: [], roles: [], title: 'Mirai AgentOS', subtitle: 'エラー',
+        me: { initial: '!', name: 'エラー', dept: '', roleShort: '' }, toasts: [], themeIcon: '☀', themeLabel: 'Light',
+        q: '', role: '', hasPending: false, isDashboard: false, kpis: [],
+      };
+    }
+    const me = this.me();
+    const role = s.role;
+    const roles = D.ROLES;
+    const pendA = s.approvals.filter((a) => ['requested', 'in_review'].includes(a.status));
+    const knPend = s.knowledge.filter((k) => k.status === 'pending');
+    const navGroups = D.NAV.map((g) => {
+      const open = s.openGroups[g.id] !== false;
+      return {
+        label: g.label, open, rot: open ? '0deg' : '-90deg',
+        toggle: () => this.setState((st) => ({ openGroups: Object.assign({}, st.openGroups, { [g.id]: !open }) })),
+        items: g.items.filter((it) => !it.perm || this.can(it.perm)).map((it) => {
+          const active = s.screen === it.key;
+          const badge = it.key === 'approvals' ? pendA.length : it.key === 'knowledge' ? knPend.length : 0;
+          return {
+            label: it.label, ico: it.ico, active, go: () => this.go(it.key),
+            fg: active ? 'var(--side-active)' : 'var(--side-fg)',
+            bg: active ? 'var(--side-2)' : 'transparent',
+            hoverBg: active ? 'var(--side-2)' : 'var(--side-hover)',
+            hasBadge: badge > 0, badge,
+            badgeBg: it.key === 'approvals' ? 'var(--red-2)' : 'var(--side-hover)',
+            badgeFg: it.key === 'approvals' ? '#fff' : 'var(--side-fg)',
+          };
+        }),
+      };
+    });
+    const [title, subtitle] = D.TITLES[s.screen] || ['', ''];
+    const st = (x) => { const [label, tone] = x; return Object.assign({ st: label }, this.tone(tone)); };
+    const uname = (id) => { const u = s.users.find((u) => u.id === id); return u ? u.name : '—'; };
+    const udept = (id) => { const u = s.users.find((u) => u.id === id); return u ? u.dept : '—'; };
+    const q = s.q.trim().toLowerCase();
+
     // dashboard
-    const active=s.projects.filter(p=>['approved','active','staging'].includes(p.status)).length;const running=s.tasks.filter(t=>t.status==='running').length;const cost=s.tasks.reduce((a,t)=>a+t.cost,0)+s.usage.reduce((a,u)=>a+u.cost,0);
-    const kpis=[{label:'進行中案件',value:active,sub:`全 ${s.projects.length} 件 · 本番 ${s.projects.filter(p=>p.status==='production').length}`,subColor:'var(--muted)',color:'var(--blue-2)',go:()=>this.go('projects')},{label:'承認待ち',value:pendA.length,sub:pendA.some(a=>a.risk==='R4')?'R4 本番リリース含む':'高リスクなし',subColor:pendA.some(a=>a.risk==='R4')?'var(--red)':'var(--green)',color:'var(--red-2)',go:()=>this.go('approvals')},{label:'実行中 Agent Run',value:running,sub:`Blocked ${s.tasks.filter(t=>t.status==='blocked').length} · Failed ${s.tasks.filter(t=>t.status==='failed').length}`,subColor:'var(--muted)',color:'var(--purple)',go:()=>this.go('tasks')},{label:'AIコスト（今月）',value:this.fmtCost(cost),sub:`${this.fmtTok(s.usage.reduce((a,u)=>a+u.tok,0))} tokens · 3 providers`,subColor:'var(--muted)',color:'var(--accent)',go:()=>this.go('observability')}];
-    const order=['idea','proposed','approved','active','staging','production','suspended','closed','archived'];const pipeline=order.map(k=>({k,n:s.projects.filter(p=>p.status===k).length})).filter(x=>x.n).map(x=>Object.assign({label:D.STATUS[x.k][0],n:x.n,pct:x.n/s.projects.length*100,color:this.tone(D.STATUS[x.k][1]).fg}));
-    const projRow=p=>Object.assign({key:p.key,title:p.title,phase:D.PHASES[D.STATUS_PHASE[p.status]],ownerName:uname(p.owner),risk:p.risk,open:()=>this.setState({screen:'projects',selProject:p.key}),rowBg:s.selProject===p.key?'var(--subtle)':'transparent'},st(D.STATUS[p.status]),{riskFg:this.risk(p.risk).fg,riskBg:this.risk(p.risk).bg});
-    const taskRow=t=>Object.assign({id:t.id,pk:t.pk,title:t.title,agent:t.agent,model:t.model,costFmt:this.fmtCost(t.cost),anim:t.status==='running'?'pulse 1.2s infinite':'none',open:()=>this.setState({screen:'tasks',selTask:t.id}),rowBg:s.selTask===t.id?'var(--subtle)':'transparent'},st(D.TASK_ST[t.status]));
-    const aprRow=a=>Object.assign({id:a.id,pk:a.pk,title:a.title,risk:a.risk,by:a.by,at:a.at,open:()=>this.setState({screen:'approvals',selApproval:a.id,reason:''}),rowBg:s.selApproval===a.id?'var(--subtle)':'transparent'},st(D.APR_ST[a.status]),{riskFg:this.risk(a.risk).fg,riskBg:this.risk(a.risk).bg});
-    const maxTok=Math.max(...s.usage.map(u=>u.tok));const rf={'24h':.15,'7d':1,'30d':4.2}[s.range]||1;const usageRows=s.usage.map(u=>({p:u.p,costFmt:this.fmtCost(u.cost*(s.screen==='observability'?rf:1)),tokFmt:this.fmtTok(u.tok*(s.screen==='observability'?rf:1)),runs:Math.round(u.runs*(s.screen==='observability'?rf:1)),pct:u.tok/maxTok*100,color:u.color}));
-    const scoreColor=n=>n>=80?'var(--green)':n>=60?'var(--amber)':'var(--red)';
+    const active = s.projects.filter((p) => ['approved', 'active', 'staging'].includes(p.status)).length;
+    const running = s.tasks.filter((t) => t.status === 'running').length;
+    const cost = s.usage.reduce((a, u) => a + u.cost, 0);
+    const kpis = [
+      { label: '進行中案件', value: active, sub: `全 ${s.projects.length} 件 · 本番 ${s.projects.filter((p) => p.status === 'production').length}`, subColor: 'var(--muted)', color: 'var(--blue-2)', go: () => this.go('projects') },
+      { label: '承認待ち', value: pendA.length, sub: pendA.some((a) => a.risk === 'R4') ? 'R4 本番リリース含む' : '高リスクなし', subColor: pendA.some((a) => a.risk === 'R4') ? 'var(--red)' : 'var(--green)', color: 'var(--red-2)', go: () => this.go('approvals') },
+      { label: '実行中 Agent Run', value: running, sub: `Blocked ${s.tasks.filter((t) => t.status === 'blocked').length} · Failed ${s.tasks.filter((t) => t.status === 'failed').length}`, subColor: 'var(--muted)', color: 'var(--purple)', go: () => this.go('tasks') },
+      { label: 'AIコスト（今月）', value: this.fmtCost(cost), sub: `${this.fmtTok(s.usage.reduce((a, u) => a + u.tok, 0))} tokens · ${s.usage.length} providers`, subColor: 'var(--muted)', color: 'var(--accent)', go: () => this.go('observability') },
+    ];
+    const order = ['idea', 'proposed', 'approved', 'active', 'staging', 'production', 'suspended', 'closed', 'archived'];
+    const pipeline = order.map((k) => ({ k, n: s.projects.filter((p) => p.status === k).length })).filter((x) => x.n)
+      .map((x) => Object.assign({ label: D.STATUS[x.k][0], n: x.n, pct: (x.n / s.projects.length) * 100, color: this.tone(D.STATUS[x.k][1]).fg }));
+    const projRow = (p) => Object.assign(
+      { key: p.key, title: p.title, phase: D.PHASES[D.STATUS_PHASE[p.status]], ownerName: uname(p.owner), risk: p.risk,
+        open: () => this.setState({ screen: 'projects', selProject: p.key }), rowBg: s.selProject === p.key ? 'var(--subtle)' : 'transparent' },
+      st(D.STATUS[p.status]), { riskFg: this.risk(p.risk).fg, riskBg: this.risk(p.risk).bg },
+    );
+    const taskRow = (t) => Object.assign(
+      { id: t.id, pk: t.pk, title: t.title, agent: t.agent, model: t.model, costFmt: this.fmtCost(t.cost),
+        anim: t.status === 'running' ? 'pulse 1.2s infinite' : 'none',
+        open: () => this.setState({ screen: 'tasks', selTask: t.id }), rowBg: s.selTask === t.id ? 'var(--subtle)' : 'transparent' },
+      st(D.TASK_ST[t.status]),
+    );
+    const aprRow = (a) => Object.assign(
+      { id: a.id, pk: a.pk, title: a.title, risk: a.risk, by: a.by, at: a.at,
+        open: () => this.setState({ screen: 'approvals', selApproval: a.id, reason: '' }),
+        rowBg: s.selApproval === a.id ? 'var(--subtle)' : 'transparent' },
+      st(D.APR_ST[a.status]), { riskFg: this.risk(a.risk).fg, riskBg: this.risk(a.risk).bg },
+    );
+    const maxTok = Math.max(1, ...s.usage.map((u) => u.tok));
+    const rf = { '24h': 0.15, '7d': 1, '30d': 4.2 }[s.range] || 1;
+    const usageRows = s.usage.map((u) => ({
+      p: u.p, costFmt: this.fmtCost(u.cost * (s.screen === 'observability' ? rf : 1)),
+      tokFmt: this.fmtTok(u.tok * (s.screen === 'observability' ? rf : 1)),
+      runs: Math.round(u.runs * (s.screen === 'observability' ? rf : 1)),
+      pct: (u.tok / maxTok) * 100, color: u.color,
+    }));
+    const scoreColor = (n) => (n >= 80 ? 'var(--green)' : n >= 60 ? 'var(--amber)' : 'var(--red)');
+
     // projects
-    const pf=s.projFilter;const filtered=s.projects.filter(p=>(pf==='all'||(pf==='live'?['approved','active','staging'].includes(p.status):pf==='pre'?['idea','proposed'].includes(p.status):pf==='prod'?p.status==='production':['suspended','closed','archived'].includes(p.status)))&&(!q||(p.key+p.title+p.summary).toLowerCase().includes(q)));
-    const cnt=f=>s.projects.filter(p=>f==='all'||(f==='live'?['approved','active','staging'].includes(p.status):f==='pre'?['idea','proposed'].includes(p.status):f==='prod'?p.status==='production':['suspended','closed','archived'].includes(p.status))).length;
-    const projChips=[['all','すべて'],['pre','Idea / 審査'],['live','進行中'],['prod','本番'],['done','保留 / 完了']].map(([k,l])=>this.chip(l,cnt(k),pf===k,()=>this.setState({projFilter:k})));
-    const P=s.projects.find(p=>p.key===s.selProject);let proj=null;if(P){const cur=D.STATUS_PHASE[P.status];const gateApr=(type)=>s.approvals.find(a=>a.pk===P.key&&a.type===type);
-      proj=Object.assign({key:P.key,title:P.title,summary:P.summary,risk:P.risk,ownerName:uname(P.owner),ownerDept:udept(P.owner),repo:P.repo,notion:P.notion,slack:P.slack,created:P.created,riskFg:this.risk(P.risk).fg,riskBg:this.risk(P.risk).bg,hasKpis:P.kpis.length>0,kpiRows:P.kpis.map(k=>{const pct=k.t===0?(k.c===0?100:30):Math.min(100,k.c/k.t*100);return {n:k.n,t:k.t,c:k.c,u:k.u,pct,color:pct>=100?'var(--green-2)':pct>=50?'var(--blue-2)':'var(--amber)'};}),
-        phases:D.PHASES.map((label,i)=>{const done=i<cur,now=i===cur;const gate=i===1||i===5;const ap=i===1?gateApr('project_gate'):i===5?gateApr('production_release'):null;return {n:i+1,label,gate,done,bg:done?'var(--green-2)':now?'var(--accent)':'var(--surface)',fg:done||now?'#fff':'var(--muted)',border:done?'var(--green-2)':now?'var(--accent)':'var(--line)',line:i<cur?'var(--green-2)':'var(--line-2)',weight:now?600:500,textColor:done||now?'var(--ink)':'var(--muted)',note:ap?`${ap.id} · ${D.APR_ST[ap.status][0]}`:(now?'現在':(done?'完了':''))};}),
-        tasks:s.tasks.filter(t=>t.pk===P.key).map(taskRow),taskCount:s.tasks.filter(t=>t.pk===P.key).length,
-        transitions:(D.TRANSITIONS[P.status]||[]).map(t=>({label:t.label,risk:t.risk,run:()=>this.transition(P.key,t),border:t.approval?'var(--accent)':'var(--line)',bg:t.approval?'var(--amber-bg)':'var(--surface)',fg:t.approval?'var(--amber)':t.to==='suspended'?'var(--red)':'var(--ink-2)'})),noTransitions:(D.TRANSITIONS[P.status]||[]).length===0},st(D.STATUS[P.status]));}
+    const pf = s.projFilter;
+    const matchFilter = (p, f) =>
+      f === 'all' || (f === 'live' ? ['approved', 'active', 'staging'].includes(p.status)
+        : f === 'pre' ? ['idea', 'proposed'].includes(p.status)
+        : f === 'prod' ? p.status === 'production'
+        : ['suspended', 'closed', 'archived'].includes(p.status));
+    const filtered = s.projects.filter((p) => matchFilter(p, pf) && (!q || (p.key + p.title + p.summary).toLowerCase().includes(q)));
+    const cnt = (f) => s.projects.filter((p) => matchFilter(p, f)).length;
+    const projChips = [['all', 'すべて'], ['pre', 'Idea / 審査'], ['live', '進行中'], ['prod', '本番'], ['done', '保留 / 完了']]
+      .map(([k, l]) => this.chip(l, cnt(k), pf === k, () => this.setState({ projFilter: k })));
+    const P = s.projects.find((p) => p.key === s.selProject);
+    let proj = null;
+    if (P) {
+      const cur = D.STATUS_PHASE[P.status];
+      const gateApr = (type) => s.approvals.find((a) => a.pk === P.key && a.type === type);
+      proj = Object.assign(
+        {
+          key: P.key, title: P.title, summary: P.summary, risk: P.risk, ownerName: uname(P.owner), ownerDept: udept(P.owner),
+          repo: P.repo, notion: P.notion, slack: P.slack, created: P.created,
+          riskFg: this.risk(P.risk).fg, riskBg: this.risk(P.risk).bg,
+          hasKpis: P.kpis.length > 0,
+          kpiRows: P.kpis.map((k) => {
+            const pct = k.t === 0 ? (k.c === 0 ? 100 : 30) : Math.min(100, (k.c / k.t) * 100);
+            return { n: k.n, t: k.t, c: k.c, u: k.u, pct, color: pct >= 100 ? 'var(--green-2)' : pct >= 50 ? 'var(--blue-2)' : 'var(--amber)' };
+          }),
+          phases: D.PHASES.map((label, i) => {
+            const done = i < cur, now = i === cur;
+            const gate = i === 1 || i === 5;
+            const ap = i === 1 ? gateApr('project_gate') : i === 5 ? gateApr('production_release') : null;
+            return {
+              n: i + 1, label, gate, done,
+              bg: done ? 'var(--green-2)' : now ? 'var(--accent)' : 'var(--surface)',
+              fg: done || now ? '#fff' : 'var(--muted)',
+              border: done ? 'var(--green-2)' : now ? 'var(--accent)' : 'var(--line)',
+              line: i < cur ? 'var(--green-2)' : 'var(--line-2)',
+              weight: now ? 600 : 500, textColor: done || now ? 'var(--ink)' : 'var(--muted)',
+              note: ap ? `${ap.id} · ${D.APR_ST[ap.status][0]}` : now ? '現在' : done ? '完了' : '',
+            };
+          }),
+          tasks: s.tasks.filter((t) => t.pk === P.key).map(taskRow),
+          taskCount: s.tasks.filter((t) => t.pk === P.key).length,
+          transitions: (D.TRANSITIONS[P.status] || []).map((t) => ({
+            label: t.label, risk: t.risk, run: () => this.transition(P.key, t),
+            border: t.approval ? 'var(--accent)' : 'var(--line)',
+            bg: t.approval ? 'var(--amber-bg)' : 'var(--surface)',
+            fg: t.approval ? 'var(--amber)' : t.to === 'suspended' ? 'var(--red)' : 'var(--ink-2)',
+          })),
+          noTransitions: (D.TRANSITIONS[P.status] || []).length === 0,
+        },
+        st(D.STATUS[P.status]),
+      );
+    }
+
     // tasks
-    const tf=s.taskFilter;const tks=s.tasks.filter(t=>(tf==='all'||(tf==='live'?['running','ready','review','pending'].includes(t.status):tf==='blocked'?['blocked','failed'].includes(t.status):['completed','cancelled'].includes(t.status)))&&(!q||(t.id+t.title+t.pk+t.agent).toLowerCase().includes(q)));
-    const tcnt=f=>s.tasks.filter(t=>f==='all'||(f==='live'?['running','ready','review','pending'].includes(t.status):f==='blocked'?['blocked','failed'].includes(t.status):['completed','cancelled'].includes(t.status))).length;
-    const taskChips=[['all','すべて'],['live','実行中 / 待機'],['blocked','Blocked / Failed'],['done','完了']].map(([k,l])=>this.chip(l,tcnt(k),tf===k,()=>this.setState({taskFilter:k})));
-    const T=s.tasks.find(t=>t.id===s.selTask);let task=null;if(T){const dcol={PERMIT:'var(--green)',DENY:'var(--red)',APPROVAL_REQUIRED:'var(--amber)'};const n=T.id.slice(2);
-      task=Object.assign({id:T.id,pk:T.pk,title:T.title,at:T.at,agent:T.agent,provider:T.provider,model:T.model,tinFmt:this.fmtTok(T.tin),toutFmt:this.fmtTok(T.tout),costFmt:this.fmtCost(T.cost),latFmt:(T.lat/1000).toFixed(1)+' s',hasErr:!!T.err,err:T.err||'',isBlocked:T.status==='blocked',blockedBy:T.blockedBy||'',openBlocker:()=>this.setState({screen:'approvals',selApproval:T.blockedBy}),
-        trace:[['R-'+(1000+ +n),'request'],['PL-'+n,'plan'],[T.id,'task'],['AR-'+n+'a','agent_run'],['ART-'+n,'artifact'],[T.blockedBy||'—','approval']].map(([t,k],i)=>({t,bg:i===2?'var(--accent)':'var(--subtle)',fg:i===2?'#fff':'var(--ink-2)'})),
-        tools:T.tools.map(([nm,r,d])=>({n:nm,r,d,riskFg:this.risk(r).fg,riskBg:this.risk(r).bg,dFg:dcol[d]})),retry:()=>this.taskAct(T.id,'retry'),cancel:()=>this.taskAct(T.id,'cancel')},st(D.TASK_ST[T.status]));}
+    const tf = s.taskFilter;
+    const matchTaskFilter = (t, f) =>
+      f === 'all' || (f === 'live' ? ['running', 'ready', 'review', 'pending'].includes(t.status)
+        : f === 'blocked' ? ['blocked', 'failed'].includes(t.status)
+        : ['completed', 'cancelled'].includes(t.status));
+    const tks = s.tasks.filter((t) => matchTaskFilter(t, tf) && (!q || (t.id + t.title + t.pk + t.agent).toLowerCase().includes(q)));
+    const tcnt = (f) => s.tasks.filter((t) => matchTaskFilter(t, f)).length;
+    const taskChips = [['all', 'すべて'], ['live', '実行中 / 待機'], ['blocked', 'Blocked / Failed'], ['done', '完了']]
+      .map(([k, l]) => this.chip(l, tcnt(k), tf === k, () => this.setState({ taskFilter: k })));
+    const T = s.tasks.find((t) => t.id === s.selTask);
+    let task = null;
+    if (T) {
+      const dcol = { PERMIT: 'var(--green)', DENY: 'var(--red)', APPROVAL_REQUIRED: 'var(--amber)' };
+      const n = T.id.replace(/\D/g, '');
+      task = Object.assign(
+        {
+          id: T.id, pk: T.pk, title: T.title, at: T.at, agent: T.agent, provider: T.provider, model: T.model,
+          tinFmt: this.fmtTok(T.tin), toutFmt: this.fmtTok(T.tout), costFmt: this.fmtCost(T.cost), latFmt: (T.lat / 1000).toFixed(1) + ' s',
+          hasErr: !!T.err, err: T.err || '', isBlocked: T.status === 'blocked', blockedBy: T.blockedBy || '',
+          openBlocker: () => {
+            const a = s.approvals.find((x) => x.id === T.blockedBy);
+            if (a) this.setState({ screen: 'approvals', selApproval: a.id });
+          },
+          trace: [['T-' + n, 'task'], [T.blockedBy || '—', 'approval']].map(([t, k], i) => ({ t, bg: i === 0 ? 'var(--accent)' : 'var(--subtle)', fg: i === 0 ? '#fff' : 'var(--ink-2)' })),
+          tools: (T.tools || []).map(([nm, r, d]) => ({ n: nm, r, d, riskFg: this.risk(r).fg, riskBg: this.risk(r).bg, dFg: dcol[d] })),
+          retry: () => this.taskAct(T.id, 'retry'),
+          cancel: () => this.taskAct(T.id, 'cancel'),
+        },
+        st(D.TASK_ST[T.status]),
+      );
+    }
+
     // approvals
-    const A=s.approvals.find(a=>a.id===s.selApproval);let apr=null;if(A){const scol={approved:'var(--green)',pending:'var(--amber)',rejected:'var(--red)',returned:'var(--amber)'};const slab={approved:'承認',pending:'待ち',rejected:'却下',returned:'差戻し'};const isOpen=['requested','in_review'].includes(A.status);const step=A.steps.find(x=>x.st==='pending');
-      apr=Object.assign({id:A.id,pk:A.pk,title:A.title,risk:A.risk,by:A.by,at:A.at,type:A.type,target:A.target,evidence:A.evidence,riskFg:this.risk(A.risk).fg,riskBg:this.risk(A.risk).bg,isOpen,hasLog:A.log.length>0,steps:A.steps.map(x=>({role:x.role,who:x.who,at:x.at,color:scol[x.st],label:slab[x.st]})),log:A.log.map(l=>({at:l.at,who:l.who,reason:l.reason,color:scol[l.action],label:slab[l.action]})),
-        approve:()=>this.decide(A.id,'approved'),return:()=>this.decide(A.id,'returned'),reject:()=>this.decide(A.id,'rejected'),policyNote:step?`現在の Step は ${step.role}。${A.risk} は Human Approval 必須`:'—'},st(D.APR_ST[A.status]));}
+    const A = s.approvals.find((a) => a.id === s.selApproval);
+    let apr = null;
+    if (A) {
+      const scol = { approved: 'var(--green)', pending: 'var(--amber)', rejected: 'var(--red)' };
+      const slab = { approved: '承認', pending: '待ち', rejected: '却下' };
+      const isOpen = ['requested', 'in_review'].includes(A.status);
+      const step = A.steps.find((x) => x.st === 'pending');
+      apr = Object.assign(
+        {
+          id: A.id, pk: A.pk, title: A.title, risk: A.risk, by: A.by, at: A.at, type: A.type, target: A.target, evidence: A.evidence,
+          riskFg: this.risk(A.risk).fg, riskBg: this.risk(A.risk).bg, isOpen, hasLog: A.log.length > 0,
+          steps: A.steps.map((x) => ({ role: x.role, who: x.who, at: x.at, color: scol[x.st], label: slab[x.st] })),
+          log: A.log.map((l) => ({ at: l.at, who: l.who, reason: l.reason, color: scol[l.action], label: slab[l.action] })),
+          approve: () => this.decide(A.id, 'approved'),
+          reject: () => this.decide(A.id, 'rejected'),
+          return: () => this.toast('差戻しは現バージョンでは未対応です（却下をご利用ください）', 'amber'),
+          policyNote: step ? `現在の Step は ${step.role}。${A.risk} は Human Approval 必須` : '—',
+        },
+        st(D.APR_ST[A.status]),
+      );
+    }
+
     // knowledge
-    const kf=s.knFilter;const knChips=[['pending','レビュー待ち'],['promoted','Notion反映済'],['rejected','却下']].map(([k,l])=>this.chip(l,s.knowledge.filter(x=>x.status===k).length,kf===k,()=>this.setState({knFilter:k})));
-    const knRows=s.knowledge.filter(k=>k.status===kf).map(k=>Object.assign({id:k.id,title:k.title,type:k.type,pk:k.pk,score:k.score,summary:k.summary,src:k.src,dup:k.dup,dupColor:/重複なし/.test(k.dup)?'var(--green)':'var(--amber)',scoreColor:scoreColor(k.score),isPending:k.status==='pending',hasNotion:!!k.notion,notion:k.notion||'',promote:()=>this.knAct(k.id,'promoted'),reject:()=>this.knAct(k.id,'rejected')},st(D.KN_ST[k.status])));
+    const kf = s.knFilter;
+    const knChips = [['pending', 'レビュー待ち'], ['promoted', 'Notion反映済'], ['rejected', '却下']]
+      .map(([k, l]) => this.chip(l, s.knowledge.filter((x) => x.status === k).length, kf === k, () => this.setState({ knFilter: k })));
+    const knRows = s.knowledge.filter((k) => k.status === kf).map((k) => Object.assign(
+      { id: k.id, title: k.title, type: k.type, pk: k.pk, score: k.score, summary: k.summary, src: k.src,
+        dup: k.dup, dupColor: /重複なし/.test(k.dup) ? 'var(--green)' : 'var(--amber)', scoreColor: scoreColor(k.score),
+        isPending: k.status === 'pending', hasNotion: !!k.notion, notion: k.notion || '',
+        promote: () => this.knAct(k.id, 'promoted'), reject: () => this.knAct(k.id, 'rejected') },
+      st(D.KN_ST[k.status]),
+    ));
+
     // audit
-    const atone={policy_denied:'red',task_failed:'red',approval_action:'green',approval_request:'amber',policy_decision:'amber',tool_call:'blue',knowledge:'purple',user_login:'green',state_transition:'blue',project_created:'blue',request:'blue',task_run:'purple',task_completed:'green',task_cancel:'muted',sync:'muted',webhook:'muted',backup:'muted'};
-    const types=[...new Set(s.audit.map(e=>e.type))].sort();const aq=s.auditQ.trim().toLowerCase();
-    const auditList=s.audit.filter(e=>(s.auditType==='all'||e.type===s.auditType)&&(!aq||(e.actor+e.resId+e.summary+e.resType).toLowerCase().includes(aq)));
-    const auditRows=auditList.map(e=>Object.assign({},e,this.tone(atone[e.type]||'muted')));
+    const atone = {
+      policy_denied: 'red', task_failed: 'red', approval_action: 'green', approval_request: 'amber', policy_decision: 'amber',
+      tool_call: 'blue', knowledge: 'purple', user_login: 'green', state_transition: 'blue', project_created: 'blue',
+      request: 'blue', task_run: 'purple', task_completed: 'green', task_cancel: 'muted', sync: 'muted', webhook: 'muted', backup: 'muted',
+    };
+    const auditTone = (type) => {
+      const key = Object.keys(atone).find((k) => type.startsWith(k) || type.includes(k));
+      return atone[key] || (type.startsWith('approval.approved') ? 'green' : type.startsWith('approval.rejected') ? 'red' : 'muted');
+    };
+    const types = [...new Set(s.audit.map((e) => e.type))].sort();
+    const aq = s.auditQ.trim().toLowerCase();
+    const auditList = s.audit.filter((e) =>
+      (s.auditType === 'all' || e.type === s.auditType) &&
+      (!aq || (e.actor + e.resId + e.summary + e.resType).toLowerCase().includes(aq)));
+    const auditRows = auditList.map((e) => Object.assign({}, e, this.tone(auditTone(e.type))));
+
     // integrations
-    const integRows=s.integrations.map(i=>{const sy=s.syncing[i.id];return {name:i.name,role:i.role,initial:i.name[0],detail:i.detail,note:i.note,last:i.last,fg:sy?'var(--blue)':i.status==='connected'?'var(--green)':'var(--amber)',stLabel:sy?'同期中':i.status==='connected'?'Connected':'要確認',anim:sy?'pulse 1s infinite':'none',btn:sy?'同期中…':'今すぐ同期',sync:()=>this.sync(i.id)};});
-    const wtone={processed:['処理済','green'],human_review:['Human Review','amber'],failed:['失敗','red']};const webhookRows=s.webhooks.map(([id,src,ev,payload,stt])=>Object.assign({id,src,ev,payload},st(wtone[stt]||['—','muted'])));
+    const integRows = s.integrations.map((i) => {
+      const sy = s.syncing[i.id];
+      return {
+        name: i.name, role: i.role, initial: i.name[0], detail: i.detail, note: i.note, last: i.last,
+        fg: sy ? 'var(--blue)' : i.status === 'connected' ? 'var(--green)' : 'var(--amber)',
+        stLabel: sy ? '同期中' : i.status === 'connected' ? 'Connected' : '要確認',
+        anim: sy ? 'pulse 1s infinite' : 'none', btn: sy ? '同期中…' : '今すぐ同期', sync: () => this.sync(i.id),
+      };
+    });
+    const webhookRows = [];
+
     // observability
-    const rangeChips=[['24h','24時間'],['7d','7日'],['30d','30日']].map(([k,l])=>this.chip(l,'',s.range===k,()=>this.setState({range:k})));
-    const denied=s.audit.filter(e=>e.type==='policy_denied').length;
-    const obsKpis=[{label:'Agent Runs',value:Math.round(237*rf),metric:'agentos_agent_runs_total',color:'var(--purple)'},{label:'Queue Depth',value:s.tasks.filter(t=>['ready','pending','running'].includes(t.status)).length,metric:'agentos_task_queue_depth',color:'var(--blue-2)'},{label:'AI Cost',value:this.fmtCost(s.usage.reduce((a,u)=>a+u.cost,0)*rf),metric:'agentos_model_cost_total',color:'var(--accent)'},{label:'API p95',value:(0.42*(rf>1?1.1:1)).toFixed(2)+'s',metric:'agentos_http_request_duration_seconds',color:'var(--green-2)'}];
-    const rdef=[['completed','green'],['running','purple'],['review','blue'],['blocked','amber'],['failed','red'],['cancelled','muted']];const runDist=rdef.map(([k,c])=>({label:D.TASK_ST[k][0],n:s.tasks.filter(t=>t.status===k).length,color:this.tone(c).fg})).filter(x=>x.n).map(x=>Object.assign(x,{pct:x.n/s.tasks.length*100}));
-    const riskDist=['R1','R2','R3','R4'].map(r=>{const n=pendA.filter(a=>a.risk===r).length;return {risk:r,n,pct:pendA.length?n/pendA.length*100:0,fg:this.risk(r).fg,bg:this.risk(r).bg};});
-    // agents
-    const canA=this.can('agents');const agentRows=s.agents.map(a=>({name:a.name,duty:a.duty,skills:a.skills,model:a.model,togBg:a.on?'var(--green-2)':'var(--line)',knob:a.on?'19px':'3px',toggle:()=>{if(!canA)return this.deny('agents','Agent設定変更');this.setState(st=>({agents:st.agents.map(x=>x.id===a.id?Object.assign({},x,{on:!x.on}):x),audit:[this.ev(st,'agent_config','agent',a.id,(a.on?'無効化':'有効化')),...st.audit]}));},setModel:e=>{const v=e.target.value;if(!canA)return this.deny('agents','Agent設定変更');this.setState(st=>({agents:st.agents.map(x=>x.id===a.id?Object.assign({},x,{model:v}):x)}));}}));
-    const routerRows=s.router.map((r,i)=>({cat:r.cat,model:r.model,set:e=>{const v=e.target.value;if(!canA)return this.deny('agents','Model Router変更');this.setState(st=>({router:st.router.map((x,j)=>j===i?Object.assign({},x,{model:v}):x),audit:[this.ev(st,'router_config','router',r.cat,`→ ${v}`),...st.audit]}));}}));
-    const devM=(s.router[2]||{}).model,revM=(s.router[3]||{}).model;const same=devM&&revM&&devM.split(' ')[0]===revM.split(' ')[0];
-    const stone={approved:['approved','green'],draft:['draft','amber'],deprecated:['deprecated','muted']};const skillRows=s.skills.map(([id,v,agent,r,stt])=>Object.assign({id,v,agent,risk:r,riskFg:this.risk(r).fg,riskBg:this.risk(r).bg},st(stone[stt])));
+    const rangeChips = [['24h', '24時間'], ['7d', '7日'], ['30d', '30日']].map(([k, l]) => this.chip(l, '', s.range === k, () => this.setState({ range: k })));
+    const denied = s.audit.filter((e) => e.type === 'policy_denied').length;
+    const obsKpis = [
+      { label: 'Agent Runs', value: s.tasks.length, metric: 'agentos_agent_runs_total', color: 'var(--purple)' },
+      { label: 'Queue Depth', value: s.tasks.filter((t) => ['ready', 'pending', 'running'].includes(t.status)).length, metric: 'agentos_task_queue_depth', color: 'var(--blue-2)' },
+      { label: 'AI Cost', value: this.fmtCost(s.usage.reduce((a, u) => a + u.cost, 0) * rf), metric: 'agentos_model_cost_total', color: 'var(--accent)' },
+      { label: 'API p95', value: (0.42 * (rf > 1 ? 1.1 : 1)).toFixed(2) + 's', metric: 'agentos_http_request_duration_seconds', color: 'var(--green-2)' },
+    ];
+    const rdef = [['completed', 'green'], ['running', 'purple'], ['review', 'blue'], ['blocked', 'amber'], ['failed', 'red'], ['cancelled', 'muted']];
+    const runDist = rdef.map(([k, c]) => ({ label: D.TASK_ST[k][0], n: s.tasks.filter((t) => t.status === k).length, color: this.tone(c).fg }))
+      .filter((x) => x.n).map((x) => Object.assign(x, { pct: (x.n / s.tasks.length) * 100 }));
+    const riskDist = ['R1', 'R2', 'R3', 'R4'].map((r) => {
+      const n = pendA.filter((a) => a.risk === r).length;
+      return { risk: r, n, pct: pendA.length ? (n / pendA.length) * 100 : 0, fg: this.risk(r).fg, bg: this.risk(r).bg };
+    });
+
+    // agents / skills / router
+    const canA = this.can('agents');
+    const agentRows = s.agents.map((a) => ({
+      name: a.name, duty: a.duty, skills: a.skills, model: a.model,
+      togBg: a.on ? 'var(--green-2)' : 'var(--line)', knob: a.on ? '19px' : '3px',
+      toggle: () => {
+        if (!canA) return this.deny('agents', 'Agent設定変更');
+        this.guarded('agent-toggle', async () => {
+          await this.api(`/api/agents/${a.id}`, { method: 'PATCH', body: { enabled: !a.on } });
+          await this.refreshAll();
+        });
+      },
+      setModel: () => this.toast('モデル変更UIは現バージョンでは未対応です', 'amber'),
+    }));
+    const routerRows = s.router.map((r) => ({
+      cat: r.cat, model: r.model,
+      set: (e) => {
+        const v = e.target.value;
+        if (!canA) return this.deny('agents', 'Model Router変更');
+        this.guarded('router-set', async () => {
+          await this.api('/api/router', { method: 'PATCH', body: { category: r.cat, model: v } });
+          await this.refreshAll();
+        });
+      },
+    }));
+    const devM = (s.router[2] || {}).model, revM = (s.router[3] || {}).model;
+    const same = devM && revM && devM.split(' ')[0] === revM.split(' ')[0];
+    const stone = { approved: ['approved', 'green'], draft: ['draft', 'amber'], deprecated: ['deprecated', 'muted'] };
+    const skillRows = s.skills.map(([id, v, agent, r, stt]) => Object.assign({ id, v, agent, risk: r, riskFg: this.risk(r).fg, riskBg: this.risk(r).bg }, st(stone[stt])));
+
     // users
-    const canU=this.can('users');const rdesc={Administrator:'基盤・設定・Integration・監視',Developer:'設計・実装・Test・PR（R2まで）',Reviewer:'設計・Code・Security Review',Approver:'Gate承認 / 差戻し / 却下','Knowledge Curator':'Knowledge候補の品質確認・昇格',Viewer:'参照のみ'};
-    const roleCards=roles.map(r=>({role:r,n:s.users.filter(u=>u.role===r).length,desc:rdesc[r]}));
-    const userRows=s.users.map(u=>({id:u.id,name:u.name,dept:u.dept,role:u.role,last:u.last,initial:u.name[0],setRole:e=>{const v=e.target.value;if(!canU)return this.deny('users','ロール変更');this.setState(st=>({users:st.users.map(x=>x.id===u.id?Object.assign({},x,{role:v}):x),audit:[this.ev(st,'role_change','user',u.id,`${u.name}: ${u.role} → ${v}`),...st.audit]}));this.toast(`${u.name} のロールを ${v} に変更しました`,'green');}}));
+    const canU = this.can('users');
+    const rdesc = {
+      Administrator: '基盤・設定・Integration・監視', Developer: '設計・実装・Test・PR（R2まで）', Reviewer: '設計・Code・Security Review',
+      Approver: 'Gate承認 / 差戻し / 却下', 'Knowledge Curator': 'Knowledge候補の品質確認・昇格', Viewer: '参照のみ',
+    };
+    const roleCards = roles.map((r) => ({ role: r, n: s.users.filter((u) => u.role === r).length, desc: rdesc[r] }));
+    const userRows = s.users.map((u) => ({
+      id: u.id, name: u.name, dept: u.dept, role: u.role, last: u.last, initial: u.name[0],
+      setRole: (e) => {
+        const v = e.target.value;
+        if (!canU) return this.deny('users', 'ロール変更');
+        this.guarded('user-role', async () => {
+          await this.api(`/api/users/${u.id}`, { method: 'PATCH', body: { role: v } });
+          await this.refreshAll();
+          this.toast(`${u.name} のロールを ${v} に変更しました`, 'green');
+        });
+      },
+    }));
+
     // chat
-    const messages=s.chat.messages.map(m=>{const ai=m.role==='ai';return {text:m.text,justify:ai?'flex-start':'flex-end',bg:ai?'var(--subtle)':'var(--accent)',fg:ai?'var(--ink)':'#fff',border:ai?'var(--line-2)':'var(--accent)',hasIdea:!!m.idea,idea:(m.idea||[]).map(([k,v])=>({k,v})),ideaTitle:m.ideaTitle||'',intent:m.intent||'',risk:m.risk||'',riskFg:this.risk(m.risk||'R1').fg,riskBg:this.risk(m.risk||'R1').bg,promote:()=>this.createProject({title:m.ideaTitle,owner:me.id||'u3',risk:m.risk,summary:(m.idea||[]).slice(0,3).map(x=>x[1]).join('。')})};});
-    const cstep=s.chat.step;const chatSteps=['相談を入力','AIが追加質問で整理','Idea構造化（Notion記録）','正式案件化（Project ID発番）','企画審査Gateで承認'].map((label,i)=>{const done=i<Math.min(cstep,2)||(i===2&&cstep>=2);const now=i===Math.min(cstep,2)&&!done;return {n:i+1,label,fg:done||now?'var(--ink)':'var(--muted)',bg:done?'var(--green-2)':now?'var(--accent)':'var(--subtle)',numFg:done||now?'#fff':'var(--muted)'};});
-    const quickPrompts=['現場写真の整理に毎週3時間かかっている','工事日報の作成を自動化したい','過去の積算根拠を素早く探したい'].map(text=>({text,use:()=>this.send(text)}));
-    return {ready:true,navGroups,roles,role,me,title,subtitle,q:s.q,setQ:e=>this.setState({q:e.target.value}),searchKey:e=>{if(e.key==='Enter')this.go('projects');},setRole:e=>{const v=e.target.value;this.setState(st=>({role:v,screen:(st.screen==='users'&&v!=='Administrator')?'dashboard':st.screen,audit:[this.ev(st,'user_login','session','authentik',`ロール切替: ${v}（OIDC）`,(st.users.find(u=>u.role===v)||{name:v}).name,'user'),...st.audit]}));this.toast(`ロールを ${v} に切り替えました`,'accent');},
-      hasPending:pendA.length>0,pendingCount:pendA.length,goApprovals:()=>this.go('approvals'),toggleTheme:()=>this.setState(st=>({theme:st.theme==='dark'?'light':'dark'})),themeIcon:s.theme==='dark'?'☾':'☀',themeLabel:s.theme==='dark'?'Dark':'Light',
-      isDashboard:s.screen==='dashboard',isChat:s.screen==='chat',isProjects:s.screen==='projects',isTasks:s.screen==='tasks',isApprovals:s.screen==='approvals',isKnowledge:s.screen==='knowledge',isAudit:s.screen==='audit',isIntegrations:s.screen==='integrations',isObs:s.screen==='observability',isAgents:s.screen==='agents',isUsers:s.screen==='users',
-      kpis,pipeline,projectCount:s.projects.length,recentProjects:s.projects.slice(0,5).map(projRow),recentTasks:s.tasks.slice(0,4).map(taskRow),pendingApprovals:pendA.map(aprRow),noPending:pendA.length===0,usageRows,knPendingCount:knPend.length,knPendingRows:knPend.slice(0,3).map(k=>({type:k.type,title:k.title,score:k.score,scoreColor:scoreColor(k.score)})),goProjects:()=>this.go('projects'),goTasks:()=>this.go('tasks'),goObs:()=>this.go('observability'),goKnowledge:()=>this.go('knowledge'),
-      messages,typing:s.typing,chatInput:s.chatInput,setChatInput:e=>this.setState({chatInput:e.target.value}),chatKey:e=>{if(e.key==='Enter')this.send();},sendChat:()=>this.send(),quickPrompts,chatSteps,chatModel:(s.router[0]||{}).model||'DeepSeek-V3',resetChat:()=>this.setState({chat:D.seed().chat}),
-      projChips,projectRows:filtered.map(projRow),noProjects:filtered.length===0,hasProject:!!proj,proj:proj||{},openNewProject:()=>{if(!this.can('create'))return this.deny('create','Project作成');this.setState({modal:'new'});},
-      taskChips,taskRows:tks.map(taskRow),hasTask:!!task,task:task||{},
-      approvalRows:s.approvals.filter(a=>!q||(a.id+a.title+a.pk).toLowerCase().includes(q)).map(aprRow),hasApproval:!!apr,apr:apr||{},reason:s.reason,setReason:e=>this.setState({reason:e.target.value}),
-      knChips,knRows,curatorName:(s.users.find(u=>u.role==='Knowledge Curator')||{name:'—'}).name,
-      auditType:s.auditType,setAuditType:e=>this.setState({auditType:e.target.value}),auditTypes:[{v:'all',label:'すべての Event'}].concat(types.map(t=>({v:t,label:t}))),auditQ:s.auditQ,setAuditQ:e=>this.setState({auditQ:e.target.value}),auditRows,auditCount:auditList.length,
-      integRows,webhookRows,rangeChips,obsKpis,runDist,riskDist,deniedCount:denied,
-      agentRows,routerRows,models:D.MODELS,skillRows,agentPolicyNote:canA?'変更は Audit に記録されます':'閲覧のみ（Administrator / Developer が変更可）',routerWarn:same?'警告: 実装モデルと Review モデルが同系列です。Independence 評価により分離を推奨（FR-205）':'OK: 実装モデルと Review モデルは分離されています（FR-205）',routerWarnColor:same?'var(--red)':'var(--green)',
-      roleCards,userRows,resetAll:()=>{try{localStorage.removeItem(D.KEY);}catch(e){}this.setState(Object.assign({},D.seed(),{ready:true}));this.toast('デモデータを初期化しました','accent');},
-      modalNew:s.modal==='new',closeModal:()=>this.setState({modal:null}),stop:e=>e.stopPropagation(),np:s.np,npTitle:e=>this.setState(st=>({np:Object.assign({},st.np,{title:e.target.value})})),npSummary:e=>this.setState(st=>({np:Object.assign({},st.np,{summary:e.target.value})})),npOwner:e=>this.setState(st=>({np:Object.assign({},st.np,{owner:e.target.value})})),npRisk:e=>this.setState(st=>({np:Object.assign({},st.np,{risk:e.target.value})})),createProject:()=>this.createProject(),
-      toasts:s.toasts.map(t=>({text:t.text,color:`var(--${t.color==='accent'?'accent':t.color+'-2'})`,close:()=>this.setState(st=>({toasts:st.toasts.filter(x=>x.id!==t.id)}))}))};
+    const messages = s.chat.messages.map((m) => {
+      const ai = m.role === 'ai';
+      return {
+        text: m.text, justify: ai ? 'flex-start' : 'flex-end', bg: ai ? 'var(--subtle)' : 'var(--accent)',
+        fg: ai ? 'var(--ink)' : '#fff', border: ai ? 'var(--line-2)' : 'var(--accent)',
+        hasIdea: !!m.idea, idea: (m.idea || []).map(([k, v]) => ({ k, v })), ideaTitle: m.ideaTitle || '', intent: m.intent || '',
+        risk: m.risk || '', riskFg: this.risk(m.risk || 'R1').fg, riskBg: this.risk(m.risk || 'R1').bg,
+        promote: () => this.createProject({ title: m.ideaTitle, owner: me.id, risk: m.risk, summary: (m.idea || []).slice(0, 3).map((x) => x[1]).join('。') }),
+      };
+    });
+    const cstep = s.chat.step;
+    const chatSteps = ['相談を入力', 'AIが追加質問で整理', 'Idea構造化（Notion記録）', '正式案件化（Project ID発番）', '企画審査Gateで承認'].map((label, i) => {
+      const done = i < Math.min(cstep, 2) || (i === 2 && cstep >= 2);
+      const now = i === Math.min(cstep, 2) && !done;
+      return { n: i + 1, label, fg: done || now ? 'var(--ink)' : 'var(--muted)', bg: done ? 'var(--green-2)' : now ? 'var(--accent)' : 'var(--subtle)', numFg: done || now ? '#fff' : 'var(--muted)' };
+    });
+    const quickPrompts = ['現場写真の整理に毎週3時間かかっている', '工事日報の作成を自動化したい', '過去の積算根拠を素早く探したい'].map((text) => ({ text, use: () => this.send(text) }));
+
+    return {
+      ready: true, navGroups, roles, role, me, title, subtitle, q: s.q,
+      setQ: (e) => this.setState({ q: e.target.value }),
+      searchKey: (e) => { if (e.key === 'Enter') this.go('projects'); },
+      hasPending: pendA.length > 0, pendingCount: pendA.length,
+      goApprovals: () => this.go('approvals'),
+      toggleTheme: () => this.setState((st) => ({ theme: st.theme === 'dark' ? 'light' : 'dark' })),
+      themeIcon: s.theme === 'dark' ? '☾' : '☀', themeLabel: s.theme === 'dark' ? 'Dark' : 'Light',
+      logout: () => this.logout(),
+      isDashboard: s.screen === 'dashboard', isChat: s.screen === 'chat', isProjects: s.screen === 'projects',
+      isTasks: s.screen === 'tasks', isApprovals: s.screen === 'approvals', isKnowledge: s.screen === 'knowledge',
+      isAudit: s.screen === 'audit', isIntegrations: s.screen === 'integrations', isObs: s.screen === 'observability',
+      isAgents: s.screen === 'agents', isUsers: s.screen === 'users',
+      kpis, pipeline, projectCount: s.projects.length,
+      recentProjects: s.projects.slice(0, 5).map(projRow),
+      recentTasks: s.tasks.slice(0, 4).map(taskRow),
+      pendingApprovals: pendA.map(aprRow), noPending: pendA.length === 0,
+      usageRows, knPendingCount: knPend.length,
+      knPendingRows: knPend.slice(0, 3).map((k) => ({ type: k.type, title: k.title, score: k.score, scoreColor: scoreColor(k.score) })),
+      goProjects: () => this.go('projects'), goTasks: () => this.go('tasks'), goObs: () => this.go('observability'), goKnowledge: () => this.go('knowledge'),
+      messages, typing: s.typing, chatInput: s.chatInput,
+      setChatInput: (e) => this.setState({ chatInput: e.target.value }),
+      chatKey: (e) => { if (e.key === 'Enter') this.send(); },
+      sendChat: () => this.send(), quickPrompts, chatSteps,
+      chatModel: (s.router[0] || {}).model || '—',
+      resetChat: () => this.resetChat(),
+      projChips, projectRows: filtered.map(projRow), noProjects: filtered.length === 0,
+      hasProject: !!proj, proj: proj || {},
+      openNewProject: () => this.setState({ modal: 'new' }),
+      taskChips, taskRows: tks.map(taskRow), hasTask: !!task, task: task || {},
+      approvalRows: s.approvals.filter((a) => !q || (a.id + a.title + a.pk).toLowerCase().includes(q)).map(aprRow),
+      hasApproval: !!apr, apr: apr || {}, reason: s.reason,
+      setReason: (e) => this.setState({ reason: e.target.value }),
+      knChips, knRows,
+      curatorName: (s.users.find((u) => u.role === 'Knowledge Curator') || { name: '—' }).name,
+      auditType: s.auditType, setAuditType: (e) => this.setState({ auditType: e.target.value }),
+      auditTypes: [{ v: 'all', label: 'すべての Event' }].concat(types.map((t) => ({ v: t, label: t }))),
+      auditQ: s.auditQ, setAuditQ: (e) => this.setState({ auditQ: e.target.value }),
+      auditRows, auditCount: auditList.length,
+      integRows, webhookRows, rangeChips, obsKpis, runDist, riskDist, deniedCount: denied,
+      agentRows, routerRows, models: D.MODELS, skillRows,
+      agentPolicyNote: canA ? '変更は Audit に記録されます' : '閲覧のみ（Administrator / Developer が変更可）',
+      routerWarn: same ? '警告: 実装モデルと Review モデルが同系列です。Independence 評価により分離を推奨（FR-205）' : 'OK: 実装モデルと Review モデルは分離されています（FR-205）',
+      routerWarnColor: same ? 'var(--red)' : 'var(--green)',
+      roleCards, userRows,
+      resetAll: () => this.refreshAllWithToast(),
+      modalNew: s.modal === 'new', closeModal: () => this.setState({ modal: null }), stop: (e) => e.stopPropagation(),
+      np: s.np,
+      npTitle: (e) => this.setState((st) => ({ np: Object.assign({}, st.np, { title: e.target.value }) })),
+      npSummary: (e) => this.setState((st) => ({ np: Object.assign({}, st.np, { summary: e.target.value }) })),
+      npOwner: (e) => this.setState((st) => ({ np: Object.assign({}, st.np, { owner: e.target.value }) })),
+      npRisk: (e) => this.setState((st) => ({ np: Object.assign({}, st.np, { risk: e.target.value }) })),
+      createProject: () => this.createProject(),
+      toasts: s.toasts.map((t) => ({
+        text: t.text, color: `var(--${t.color === 'accent' ? 'accent' : t.color + '-2'})`,
+        close: () => this.setState((st) => ({ toasts: st.toasts.filter((x) => x.id !== t.id) })),
+      })),
+    };
   }
 }
+
+// --- 実APIレスポンス → 既存レンダリングロジックが期待する形へのマッピング -------
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const z = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`;
+}
+function providerColor(p) {
+  if (/anthropic|claude/i.test(p)) return 'var(--accent)';
+  if (/openai|codex/i.test(p)) return 'var(--blue-2)';
+  if (/deepseek/i.test(p)) return 'var(--green-2)';
+  return 'var(--purple)';
+}
+function mapUser(u) {
+  return { id: u.id, name: u.name, dept: u.dept || '—', role: u.role, last: u.last_login_at ? fmtDate(u.last_login_at) : '—' };
+}
+function mapProject(p) {
+  return {
+    key: p.project_code, _id: p.id, title: p.title, status: p.status, owner: p.owner_id, risk: p.risk,
+    summary: p.description, created: (p.created_at || '').slice(0, 10),
+    kpis: (p.kpis || []).map((k) => ({ n: k.name, t: Number(k.target), c: Number(k.current), u: k.unit })),
+    repo: p.repo || '—', notion: p.notion_ref || '—', slack: p.slack_ref || '—',
+  };
+}
+function mapTask(t) {
+  return {
+    id: t.task_code, _id: t.id, pk: t.project_code, title: t.title, agent: t.agent_name, provider: t.provider, model: t.model,
+    status: t.status, tin: Number(t.tokens_in), tout: Number(t.tokens_out), cost: Number(t.cost), lat: Number(t.latency_ms),
+    at: fmtDate(t.occurred_at), err: t.error_message || null, blockedBy: t.blocked_by_code || null,
+    tools: (t.toolCalls || []).map((tc) => [tc.name, tc.risk, tc.decision]),
+  };
+}
+function deriveApprovalStatus(a) {
+  if (a.status === 'approved') return 'approved';
+  if (a.status === 'rejected') return 'rejected';
+  const anyDecided = (a.steps || []).some((s) => s.status !== 'pending');
+  return anyDecided ? 'in_review' : 'requested';
+}
+function mapApproval(a) {
+  return {
+    id: a.approval_code, _id: a.id, pk: a.project_code, type: a.type, title: a.target, risk: a.risk,
+    status: deriveApprovalStatus(a), by: a.requested_by_name, at: fmtDate(a.created_at), target: a.target, evidence: [],
+    steps: (a.steps || []).map((s) => ({ _id: s.id, role: s.role, who: s.assigned_user_name || `${s.role}ロール担当`, st: s.status, at: s.decided_at ? fmtDate(s.decided_at) : '' })),
+    log: (a.steps || []).filter((s) => s.status !== 'pending').map((s) => ({ at: s.decided_at ? fmtDate(s.decided_at) : '', who: s.assigned_user_name || s.role, action: s.status, reason: s.reason || '' })),
+  };
+}
+function mapKnowledge(k) {
+  return {
+    id: k.kc_code, _id: k.id, title: k.title, type: k.type, pk: k.project_code || '—', score: k.score, status: k.status,
+    summary: k.summary, src: k.source, dup: k.duplicate_note || '重複なし', notion: k.notion_ref || null,
+  };
+}
+function fmtAuditSummary(a) {
+  const d = a.detail || {};
+  const type = a.action || '';
+  if (type === 'request.create') return `依頼登録 (${d.code || ''})`;
+  if (type === 'request.promote') return '依頼をProjectへ昇格';
+  if (type === 'project.transition_requested') return `状態遷移申請 → ${d.to || ''}（承認待ち）`;
+  if (type === 'project.transition') return `${d.from || ''} → ${d.to || ''}`;
+  if (type === 'project.update') return 'Project情報を更新';
+  if (type === 'project.seed') return `デモデータ投入 (${d.code || ''})`;
+  if (type === 'approval.approved') return `承認（${d.step || ''}）${d.target_status ? ' → ' + d.target_status : ''}`;
+  if (type === 'approval.rejected') return `却下（${d.step || ''}）${d.reason ? ': ' + d.reason : ''}`;
+  if (type === 'approval.step_approved') return `${d.step || ''} 承認 → 次は ${d.next_step || ''}`;
+  if (type === 'knowledge.create') return `Knowledge候補登録 (${d.kcCode || ''})`;
+  if (type === 'knowledge.promoted') return 'Knowledge候補をNotionへ昇格';
+  if (type === 'knowledge.rejected') return 'Knowledge候補を却下';
+  if (type === 'task.create') return `Task登録 (${d.taskCode || ''})`;
+  if (type.startsWith('task.')) return `Task状態変更 → ${d.status || type.slice(5)}`;
+  if (type === 'integration.update') return `連携状態を更新 → ${d.status || ''}`;
+  if (type === 'user.update') return `ユーザー情報を更新（role: ${d.role || '—'}, dept: ${d.dept || '—'}）`;
+  return type;
+}
+function mapAudit(a) {
+  return {
+    id: 'AE-' + String(a.id).padStart(5, '0'), at: fmtDate(a.created_at), actorType: a.actor_type, actor: a.actor_name,
+    type: a.action, resType: a.resource_type, resId: a.resource_id, summary: fmtAuditSummary(a), prev: a.prev_hash, hash: a.hash,
+  };
+}
+function mapIntegration(i) {
+  return { id: i.id, name: i.name, role: i.role, status: i.status, last: i.last_sync_at ? fmtDate(i.last_sync_at) : '—', detail: i.detail, note: i.note };
+}
+function mapAgent(a) {
+  return { id: a.id, name: a.name, duty: a.duty, skills: a.skills, model: a.model, on: a.enabled };
+}
+function mapSkill(s) {
+  return [s.name, s.version, s.owner_role, s.risk, s.status];
+}
+function mapRouterRow(r) {
+  return { cat: r.category, model: r.model };
+}
+function mapUsage(u) {
+  return { p: u.provider, tok: Number(u.tokens), cost: Number(u.cost), runs: u.runs, color: providerColor(u.provider) };
+}
+function mapChatMessages(rows) {
+  return rows.map((m) => ({
+    role: m.role, text: m.text,
+    idea: m.idea_json ? m.idea_json.idea : undefined,
+    ideaTitle: m.idea_json ? m.idea_json.title : undefined,
+    intent: m.idea_json ? m.idea_json.intent : undefined,
+    risk: m.idea_json ? m.idea_json.risk : undefined,
+  }));
+}
+
 </script>
 </body>
 </html>
