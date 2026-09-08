@@ -14,9 +14,8 @@ ExecStart=/home/kensan/.nvm/versions/node/v22.22.3/bin/node src/server.js
 Restart=on-failure
 RestartSec=5
 
-IPAddressAllow=127.0.0.1/8 ::1/128
-IPAddressDeny=any
-
+# AI相談（Chat）からDeepSeek API（外部）を呼び出すため、ループバック限定は撤廃した
+# （2026-09-08、ユーザー承認済み）。DBは引き続きUnix socket/loopbackのみで運用する。
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
