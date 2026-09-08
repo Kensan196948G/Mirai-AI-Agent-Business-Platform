@@ -331,19 +331,21 @@ flowchart LR
 2026-09-08 のユーザー明示指示に基づく例外である。** 恒久方針としての変更ではない。
 
 `doc/`（要件定義書・技術設計概要）が定義する Agentic Operating System「Mirai AgentOS」のうち、
-**主要 User Journey 1本（案件依頼登録 → Project 昇格 → Gate 承認）** を実 PostgreSQL・実セッション認証で
-動かす MVP を `app/` に実装した。
+**ログイン後の全11画面**（ダッシュボード / AI相談 / 案件 / タスク・実行 / 承認 / Knowledge /
+監査ログ / 外部連携 / 監視 / エージェント設定 / ユーザー・ロール）を実 PostgreSQL・実セッション認証で
+動かす本格実装を `app/` に構築した（2026-09-08）。実 AI エージェント実行・外部API自動連携は
+本スコープ外（`doc/` 参照。詳細は [`app/README.md`](app/README.md)）。
 
 | 項目 | 状態 |
 |---|:---:|
-| 主要 User Journey（登録→昇格→承認） | ✅ 実装・E2Eテスト済み |
+| 主要 User Journey（登録→昇格→9状態ワークフロー遷移） | ✅ 実装・E2Eテスト済み |
 | Local PostgreSQL（本番/MVP/テスト DB 分離） | ✅ |
-| 認証（email+password、セッション即時失効） | ✅ |
+| 認証（email+password、セッション即時失効、ログアウト導線） | ✅ |
 | CI（`app-ci.yml`、マイグレーション冪等性・脆弱性監査・E2E） | ✅ |
 | systemd（本番/MVP、ループバック限定） | ✅ 導入・起動済み |
 | Cloudflare（`mirai-agent-os` / `mirai-agent-os-mvp` サブドメイン公開） | ✅ 実施済み（Tunnel・DNS・Cloudflare Access で管理者アカウントのみに制限） |
-| WebUI（ログイン後の11画面） | 🟡 Claude Design 正本から移植済み・**全画面モックデータ**（実データ接続は別途） |
-| Notion / Slack / Gmail / GitHub 連携、Model Router、Workflow Engine | ⏳ 未実装（`doc/` 参照） |
+| WebUI（ログイン後の11画面） | ✅ Claude Design 正本を移植し**全画面を実 PostgreSQL データへ接続**（Tasks/Knowledge/Approvals多段階/監査Hash Chain含む） |
+| Notion / Slack / Gmail / GitHub 連携、実AIエージェント実行、Model Router実行 | ⏳ 未実装（Integrations/Agents/Routerは設定管理のみ。`doc/` 参照） |
 
 セットアップ・API・既知の制約は **[`app/README.md`](app/README.md)** を参照。
 
