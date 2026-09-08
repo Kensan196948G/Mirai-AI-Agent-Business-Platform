@@ -139,7 +139,8 @@ async function knowledgeQualityReview(ctx) {
 }
 
 async function knowledgeDedup(ctx) {
-  const searchResult = await ctx.callTool('knowledge.search-approved', { query: ctx.input.title, sourceType: null, projectId: null });
+  // knowledge_candidates（昇格済みKnowledge）を検索する。source_records（技術カタログ等の出典）とは別物。
+  const searchResult = await ctx.callTool('knowledge.search-promoted', { query: ctx.input.title });
   if (searchResult.candidates.length === 0) {
     return { knowledge_candidate_id: ctx.input.knowledge_candidate_id, duplicates: [], conflicts: [], unknowns: [] };
   }

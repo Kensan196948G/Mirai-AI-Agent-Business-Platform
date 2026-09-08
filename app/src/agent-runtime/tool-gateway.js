@@ -35,6 +35,24 @@ async function toolKnowledgeSearchApproved(client, { query, sourceType, projectI
   return { candidates: rows.map((r) => ({ source_record_id: Number(r.id), title: r.title, summary: r.summary, evidence_type: r.evidence_type })) };
 }
 
+/** 既存の昇格済みKnowledge（knowledge_candidates.status='promoted'）を検索する。source_recordsとは別物。 */
+async function toolKnowledgeSearchPromoted(client, { query }) {
+  const tokens = String(query || '')
+    .trim()
+    .split(/\s+/)
+    .map((t) => t.replace(/[%_]/g, ''))
+    .filter((t) => t.length >= 2)
+    .slice(0, 10);
+  if (tokens.length === 0) return { candidates: [] };
+
+  const likeClauses = tokens.map((_, i) => `(title ILIKE $${i + 1} OR summary ILIKE $${i + 1})`).join(' OR ');
+  const { rows } = await client.query(
+    `SELECT id, title, summary FROM knowledge_candidates WHERE status = 'promoted' AND (${likeClauses}) ORDER BY id LIMIT 10`,
+    tokens.map((t) => `%${t}%`),
+  );
+  return { candidates: rows.map((r) => ({ knowledge_id: Number(r.id), title: r.title, summary: r.summary })) };
+}
+
 async function toolSourceReadApprovedSnapshot(client, { run, sourceRecordId }) {
   const { rows } = await client.query(`SELECT * FROM source_records WHERE id = $1`, [sourceRecordId]);
   if (rows.length === 0) throw new PolicyDeniedError(`source_record ${sourceRecordId} が見つかりません`);
@@ -67,6 +85,7 @@ async function toolArtifactWriteDraft(client, { run, kind, title, content }) {
 
 const TOOL_HANDLERS = {
   'knowledge.search-approved': (client, args) => toolKnowledgeSearchApproved(client, args),
+  'knowledge.search-promoted': (client, args) => toolKnowledgeSearchPromoted(client, args),
   'source.read-approved-snapshot': (client, args) => toolSourceReadApprovedSnapshot(client, args),
   'artifact.write-draft': (client, args) => toolArtifactWriteDraft(client, args),
 };

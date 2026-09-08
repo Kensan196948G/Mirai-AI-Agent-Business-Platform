@@ -76,3 +76,8 @@ test('authorizeBudget: 予約額内なら許可される', () => {
   const reservation = { reserved_usd: 0.5, spent_usd: 0.1 };
   assert.doesNotThrow(() => authorizeBudget({ reservation, additionalCost: 0.1 }));
 });
+
+test('authorizeToolCall: knowledge.search-promoted は登録済みToolとして許可される', () => {
+  const skillVersion = { skill_id: 'knowledge-dedup', status: 'approved', allowed_tools: ['knowledge.search-promoted'] };
+  assert.doesNotThrow(() => authorizeToolCall({ skillVersion, toolName: 'knowledge.search-promoted' }));
+});
