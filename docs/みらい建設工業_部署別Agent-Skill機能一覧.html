@@ -39,6 +39,11 @@
   .lbl.no{color:var(--red)}
   ul.no{color:var(--red);font-size:11.5px;margin-top:6px}
   .wishcol{display:flex;flex-direction:column;gap:8px}
+  ul.wl{margin:0 0 4px;padding-left:16px} ul.wl li{margin:2px 0;display:flex;gap:6px;align-items:flex-start} ul.wl li span{flex:1;word-break:break-word}
+  ul.wl li button{padding:0 6px;font-size:11px;line-height:18px;color:var(--red);border-color:transparent;background:none} ul.wl li button:hover{background:var(--red-bg)}
+  .addrow{display:flex;gap:6px} .addrow input{flex:1;min-width:120px;border:1px solid var(--line);border-radius:7px;padding:5px 8px;font:12.5px inherit;background:#fffdf8} .addrow input:focus{outline:2px solid var(--accent);outline-offset:-1px}
+  .addrow button{padding:5px 10px;white-space:nowrap}
+  .empty{color:var(--muted);font-size:11.5px}
   textarea{width:100%;min-width:200px;min-height:56px;border:1px solid var(--line);border-radius:7px;padding:6px 8px;font:12.5px/1.5 inherit;resize:vertical;background:#fffdf8}
   textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
   .wish{background:#fffbf3}
@@ -189,6 +194,13 @@ function save(silent){ try { localStorage.setItem(KEY, JSON.stringify(state)); i
 function get(id, k){ return (state[id] && state[id][k]) || ""; }
 function set(id, k, v){ state[id] = state[id] || {}; state[id][k] = v; save(true); }
 function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function getList(id, k){ const v = (state[id] && state[id][k]); if (Array.isArray(v)) return v; if (typeof v === "string" && v.trim()) return v.split(/\r?\n/).map(x=>x.replace(/^[・\-•]\s*/, "").trim()).filter(Boolean); return []; }
+function wishList(id, k, label, ph){
+  const items = getList(id, k);
+  return `<div><div class="lbl">${esc(label)}</div>` +
+    (items.length ? `<ul class="wl">${items.map((x,i)=>`<li><span>${esc(x)}</span><button type="button" data-del="${k}" data-i="${i}" title="削除">✕</button></li>`).join("")}</ul>` : `<div class="empty">（未記入）</div>`) +
+    `<div class="addrow"><input data-add="${k}" placeholder="${esc(ph)}"><button type="button" data-addbtn="${k}">追加</button></div></div>`;
+}
 function bullets(text, sep){ return String(text||"").split(sep).map(x=>x.trim().replace(/[。、]$/,"")).filter(Boolean); }
 function stageChip(s){ const cls = s==="P1"?"p1":s==="P2"?"p2":s==="P3"?"p3":s==="基盤"?"base":"none"; const label = s==="P1"?"P1 実装済み":s==="P2"||s==="P3"?s+" 候補":s; return `<span class="chip ${cls}">${label}</span>`; }
 
@@ -202,11 +214,7 @@ function render(){
         <td><div class="agent">${esc(a.name)}</div><div class="id">${esc(a.id)}</div><div style="margin-top:4px">${stageChip(a.stage)} <span class="lv">${esc(a.level)}</span></div><div class="id" style="margin-top:2px">責任者: ${esc(a.owner)}</div></td>
         <td><div class="lbl">目的</div><ul class="bul">${bullets(a.purpose, /。/).map(x=>`<li>${esc(x)}</li>`).join("")}</ul><div class="lbl no" style="margin-top:6px">できないこと</div><ul class="bul no">${bullets(a.not, /、/).map(x=>`<li>${esc(x)}</li>`).join("")}</ul></td>
         <td><ul class="skills">${a.skills.map(s=>`<li>${esc(s)}</li>`).join("")}</ul></td>
-        <td class="wish"><div class="wishcol"><div><div class="lbl">Agent 追加希望</div><textarea data-k="wishAgent" placeholder="・目的
-・成果物
-・責任者">${esc(get(a.id,"wishAgent"))}</textarea></div><div><div class="lbl">Skill 追加希望</div><textarea data-k="wishSkill" placeholder="・作業
-・入力／出力
-・使う資料">${esc(get(a.id,"wishSkill"))}</textarea></div></div></td>
+        <td class="wish"><div class="wishcol">${wishList(a.id,"wishAgent","Agent 追加希望","例: 現場写真の整理支援（目的・成果物・責任者）")}${wishList(a.id,"wishSkill","Skill 追加希望","例: 気象データの鮮度確認（作業・入力／出力・資料）")}</div></td>
         <td class="wish"><textarea data-k="memo" placeholder="備考・懸念・確認事項">${esc(get(a.id,"memo"))}</textarea></td>
       </tr>`).join("");
     const closed = get("__dept"+di, "closed") ? " closed" : "";
@@ -227,6 +235,10 @@ function render(){
     const id = tr.dataset.id;
     tr.querySelector('input[type=checkbox]').addEventListener("change", e => set(id, "checked", e.target.checked));
     tr.querySelectorAll("textarea").forEach(t => t.addEventListener("input", e => set(id, t.dataset.k, e.target.value)));
+    const addItem = (k, input) => { const v = input.value.trim(); if(!v) return; set(id, k, [...getList(id,k), v]); render(); const again = document.querySelector(`tr[data-id="${CSS.escape(id)}"] input[data-add="${k}"]`); if (again) again.focus(); };
+    tr.querySelectorAll("input[data-add]").forEach(inp => inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addItem(inp.dataset.add, inp); } }));
+    tr.querySelectorAll("button[data-addbtn]").forEach(b => b.addEventListener("click", () => addItem(b.dataset.addbtn, tr.querySelector(`input[data-add="${b.dataset.addbtn}"]`))));
+    tr.querySelectorAll("button[data-del]").forEach(b => b.addEventListener("click", () => { const k = b.dataset.del; const list = getList(id,k).slice(); list.splice(Number(b.dataset.i), 1); set(id, k, list); render(); }));
   });
   app.querySelectorAll(".dh").forEach(h => h.addEventListener("click", () => {
     const sec = h.closest("section"); sec.classList.toggle("closed"); set("__dept"+sec.dataset.di, "closed", sec.classList.contains("closed"));
@@ -236,13 +248,13 @@ function render(){
 function refreshStat(){
   const total = DATA.reduce((n,d)=>n+d.agents.length,0);
   const checked = DATA.reduce((n,d)=>n+d.agents.filter(a=>get(a.id,"checked")).length,0);
-  const wishes = DATA.reduce((n,d)=>n+d.agents.filter(a=>get(a.id,"wishAgent")||get(a.id,"wishSkill")).length,0);
+  const wishes = DATA.reduce((n,d)=>n+d.agents.filter(a=>getList(a.id,"wishAgent").length||getList(a.id,"wishSkill").length).length,0);
   document.getElementById("stat").textContent = `確認 ${checked}/${total} · 追加希望あり ${wishes} 件`;
 }
 function exportJson(){
   const out = { exported_at: new Date().toISOString(), items: [] };
   DATA.forEach(d => d.agents.forEach(a => out.items.push({ code: d.code, dept: d.dept, org: d.org, agent_id: a.id, agent: a.name, stage: a.stage,
-    checked: !!get(a.id,"checked"), wish_agent: get(a.id,"wishAgent"), wish_skill: get(a.id,"wishSkill"), memo: get(a.id,"memo") })));
+    checked: !!get(a.id,"checked"), wish_agent: getList(a.id,"wishAgent"), wish_skill: getList(a.id,"wishSkill"), memo: get(a.id,"memo") })));
   return JSON.stringify(out, null, 2);
 }
 function toast(m){ const t=document.getElementById("toast"); t.textContent=m; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
@@ -257,7 +269,7 @@ document.getElementById("btnCopy").onclick = async () => { try { await navigator
 document.getElementById("btnImport").onclick = () => document.getElementById("fileImport").click();
 document.getElementById("fileImport").onchange = e => {
   const f = e.target.files[0]; if(!f) return;
-  f.text().then(t => { const j = JSON.parse(t); (j.items||[]).forEach(it => { state[it.agent_id] = { checked: !!it.checked, wishAgent: it.wish_agent||"", wishSkill: it.wish_skill||"", memo: it.memo||"" }; });
+  f.text().then(t => { const j = JSON.parse(t); (j.items||[]).forEach(it => { state[it.agent_id] = { checked: !!it.checked, wishAgent: Array.isArray(it.wish_agent)?it.wish_agent:(it.wish_agent||""), wishSkill: Array.isArray(it.wish_skill)?it.wish_skill:(it.wish_skill||""), memo: it.memo||"" }; });
     save(true); render(); toast("読み込みました"); }).catch(() => toast("JSON を読み込めませんでした"));
   e.target.value = "";
 };
