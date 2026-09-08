@@ -2,7 +2,7 @@
   "name": "mira-agent-os",
   "version": "0.1.0",
   "private": true,
-  "description": "Mirai AgentOS MVP — 案件依頼登録→Project昇格→Gate承認の垂直スライス実装",
+  "description": "Mirai AgentOS — ログイン後全11画面を実PostgreSQLに接続したバックエンド実装",
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -10,8 +10,9 @@
   "scripts": {
     "migrate": "node migrate.mjs",
     "seed-admin": "node seed-admin.mjs",
+    "seed-demo": "node seed-demo-data.mjs",
     "start": "node src/server.js",
-    "test:unit": "node --test test/unit.test.mjs",
+    "test:unit": "node --test test/unit.test.mjs test/workflow.test.mjs test/audit.test.mjs",
     "test:e2e": "node --test test/e2e.test.mjs",
     "test": "npm run test:unit"
   },

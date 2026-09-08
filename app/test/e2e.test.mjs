@@ -29,13 +29,20 @@ if (!/test/.test(process.env.DATABASE_URL)) {
   throw new Error('安全のため DATABASE_URL に "test" を含む使い捨てDBのみ許可する');
 }
 
+const ALL_TABLES = [
+  'chat_messages', 'chat_conversations', 'task_tool_calls', 'tasks', 'knowledge_candidates',
+  'approval_steps', 'approval_requests', 'project_kpis', 'projects', 'requests',
+  'integrations', 'agents_config', 'skills_registry', 'model_router',
+  'audit_log', 'users', 'schema_migrations',
+];
+
 let server;
 let baseUrl;
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 
 before(async () => {
   // テーブルを作り直して常に空の状態から開始する（テスト専用DB前提）
-  await pool.query('DROP TABLE IF EXISTS audit_log, approval_requests, projects, requests, users, schema_migrations CASCADE');
+  await pool.query(`DROP TABLE IF EXISTS ${ALL_TABLES.join(', ')} CASCADE`);
   const migrationsDir = join(__dirname, '..', 'migrations');
   for (const file of readdirSync(migrationsDir).filter((f) => f.endsWith('.sql')).sort()) {
     await pool.query(readFileSync(join(migrationsDir, file), 'utf8'));
@@ -65,31 +72,33 @@ async function call(path, { method = 'GET', body, cookie } = {}) {
   return { status: res.status, data, cookie: setCookie };
 }
 
-test('主要 User Journey: 依頼登録 → Project 昇格 → Gate 承認', async () => {
-  // 事前データ: Administrator ユーザーを直接投入（seed-admin.mjs と同じ scrypt 形式）
-  const hash = await hashPassword('e2e-test-password'); // doc003-allow: 使い捨てテストDB専用の固定値
-  await pool.query(
-    `INSERT INTO users (email, name, role, password_hash) VALUES ($1, $2, 'Administrator', $3)`,
-    ['e2e-admin@example.com', 'E2E Admin', hash],
+async function loginAs(email, password) {
+  const login = await call('/api/auth/login', { method: 'POST', body: { email, password } });
+  assert.equal(login.status, 200, `login failed for ${email}: ${JSON.stringify(login.data)}`);
+  return login.cookie.split(';')[0];
+}
+
+async function createUser(email, name, role, password) {
+  const hash = await hashPassword(password); // doc003-allow: 使い捨てテストDB専用の固定値
+  const { rows } = await pool.query(
+    `INSERT INTO users (email, name, role, password_hash) VALUES ($1, $2, $3, $4) RETURNING id`,
+    [email, name, role, hash],
   );
+  return rows[0].id;
+}
+
+test('主要 User Journey: 依頼登録 → Project昇格 → 状態遷移 → Gate承認', async () => {
+  await createUser('e2e-admin@example.com', 'E2E Admin', 'Administrator', 'e2e-test-password'); // doc003-allow: 使い捨てテストDB専用の固定値
+  const cookie = await loginAs('e2e-admin@example.com', 'e2e-test-password'); // doc003-allow: 使い捨てテストDB専用の固定値
 
   const bad = await call('/api/auth/login', { method: 'POST', body: { email: 'e2e-admin@example.com', password: 'wrong' } });
   assert.equal(bad.status, 401);
-
-  const login = await call('/api/auth/login', {
-    method: 'POST',
-    body: { email: 'e2e-admin@example.com', password: 'e2e-test-password' }, // doc003-allow: 使い捨てテストDB専用の固定値
-  });
-  assert.equal(login.status, 200);
-  const cookie = login.cookie.split(';')[0];
 
   const unauth = await call('/api/requests');
   assert.equal(unauth.status, 401);
 
   const created = await call('/api/requests', {
-    method: 'POST',
-    cookie,
-    body: { title: 'E2E テスト依頼', description: '自動テストで作成' },
+    method: 'POST', cookie, body: { title: 'E2E テスト依頼', description: '自動テストで作成' },
   });
   assert.equal(created.status, 201);
   assert.match(created.data.request.request_code, /^REQ-\d{4}-0001$/);
@@ -98,27 +107,46 @@ test('主要 User Journey: 依頼登録 → Project 昇格 → Gate 承認', asy
   const promoted = await call(`/api/requests/${created.data.request.id}/promote`, { method: 'POST', cookie });
   assert.equal(promoted.status, 201);
   assert.match(promoted.data.project.project_code, /^AGENTOS-\d{4}-0001$/);
-  assert.equal(promoted.data.project.status, 'pending_approval');
+  assert.equal(promoted.data.project.status, 'idea');
+  const projectId = promoted.data.project.id;
+
+  // idea → proposed（承認不要の低リスク遷移）
+  const t1 = await call(`/api/projects/${projectId}/transition`, { method: 'POST', cookie, body: { to: 'proposed' } });
+  assert.equal(t1.status, 200);
+  assert.equal(t1.data.project.status, 'proposed');
+
+  // proposed → approved（project_gate 承認が必要。project状態はまだ変わらない）
+  const t2 = await call(`/api/projects/${projectId}/transition`, { method: 'POST', cookie, body: { to: 'approved' } });
+  assert.equal(t2.status, 200);
+  assert.ok(t2.data.pending_approval);
+  assert.match(t2.data.pending_approval.approval_code, /^APR-\d+$/);
+
+  const stillProposed = await call(`/api/projects/${projectId}`, { cookie });
+  assert.equal(stillProposed.data.project.status, 'proposed');
 
   const approvals = await call('/api/approvals', { cookie });
   assert.equal(approvals.data.approvals.length, 1);
   const approvalId = approvals.data.approvals[0].id;
 
-  const decided = await call(`/api/approvals/${approvalId}/decide`, {
-    method: 'POST',
-    cookie,
-    body: { decision: 'approved', comment: 'E2E 承認' },
+  const detail = await call(`/api/approvals/${approvalId}`, { cookie });
+  assert.equal(detail.data.steps.length, 1);
+  assert.equal(detail.data.steps[0].role, 'Approver');
+  const stepId = detail.data.steps[0].id;
+
+  // Administrator は role制約を越えて（全ロール代理として）決裁できる
+  const decided = await call(`/api/approvals/${approvalId}/steps/${stepId}/decide`, {
+    method: 'POST', cookie, body: { decision: 'approved', reason: 'E2E 承認' },
   });
   assert.equal(decided.status, 200);
+  assert.equal(decided.data.status, 'approved');
+  assert.equal(decided.data.project_status, 'approved');
 
-  const projects = await call('/api/projects', { cookie });
-  assert.equal(projects.data.projects[0].status, 'approved');
+  const afterApproval = await call(`/api/projects/${projectId}`, { cookie });
+  assert.equal(afterApproval.data.project.status, 'approved');
 
-  // 二重判定は拒否される（状態遷移の不正遷移防止）
-  const redecided = await call(`/api/approvals/${approvalId}/decide`, {
-    method: 'POST',
-    cookie,
-    body: { decision: 'rejected' },
+  // 二重判定は拒否される
+  const redecided = await call(`/api/approvals/${approvalId}/steps/${stepId}/decide`, {
+    method: 'POST', cookie, body: { decision: 'rejected' },
   });
   assert.equal(redecided.status, 409);
 
@@ -130,24 +158,152 @@ test('主要 User Journey: 依頼登録 → Project 昇格 → Gate 承認', asy
 });
 
 test('権限: Viewer は Project 昇格も承認もできない', async () => {
-  const hash = await hashPassword('viewer-password'); // doc003-allow: 使い捨てテストDB専用の固定値
-  await pool.query(
-    `INSERT INTO users (email, name, role, password_hash) VALUES ($1, $2, 'Viewer', $3)`,
-    ['e2e-viewer@example.com', 'E2E Viewer', hash],
-  );
-  const login = await call('/api/auth/login', {
-    method: 'POST',
-    body: { email: 'e2e-viewer@example.com', password: 'viewer-password' }, // doc003-allow: 使い捨てテストDB専用の固定値
-  });
-  const cookie = login.cookie.split(';')[0];
+  await createUser('e2e-viewer@example.com', 'E2E Viewer', 'Viewer', 'viewer-password'); // doc003-allow: 使い捨てテストDB専用の固定値
+  const cookie = await loginAs('e2e-viewer@example.com', 'viewer-password'); // doc003-allow: 使い捨てテストDB専用の固定値
 
-  const created = await call('/api/requests', {
-    method: 'POST',
-    cookie,
-    body: { title: 'Viewer が作った依頼', description: 'x' },
-  });
+  const created = await call('/api/requests', { method: 'POST', cookie, body: { title: 'Viewer が作った依頼', description: 'x' } });
   assert.equal(created.status, 201);
 
   const promote = await call(`/api/requests/${created.data.request.id}/promote`, { method: 'POST', cookie });
   assert.equal(promote.status, 403);
+});
+
+test('多段階承認: production_release は Reviewer→Approver の2段', async () => {
+  const adminId = await createUser('e2e-admin2@example.com', 'E2E Admin2', 'Administrator', 'admin-password2'); // doc003-allow: 使い捨てテストDB専用の固定値
+  await createUser('e2e-reviewer@example.com', 'E2E Reviewer', 'Reviewer', 'reviewer-password'); // doc003-allow: 使い捨てテストDB専用の固定値
+  await createUser('e2e-approver@example.com', 'E2E Approver', 'Approver', 'approver-password'); // doc003-allow: 使い捨てテストDB専用の固定値
+  const adminCookie = await loginAs('e2e-admin2@example.com', 'admin-password2'); // doc003-allow: 使い捨てテストDB専用の固定値
+
+  const { rows } = await pool.query(
+    `INSERT INTO projects (project_code, title, description, request_id, created_by, owner_id, status)
+     VALUES ('AGENTOS-9999-0001', 'テスト案件', 'x',
+       (SELECT id FROM requests LIMIT 1), $1, $1, 'staging') RETURNING id`,
+    [adminId],
+  );
+  const projectId = rows[0].id;
+
+  const t = await call(`/api/projects/${projectId}/transition`, { method: 'POST', cookie: adminCookie, body: { to: 'production' } });
+  assert.equal(t.status, 200);
+  const approvalId = t.data.pending_approval.id;
+
+  const detail = await call(`/api/approvals/${approvalId}`, { cookie: adminCookie });
+  assert.deepEqual(detail.data.steps.map((s) => s.role), ['Reviewer', 'Approver']);
+  const [reviewerStep, approverStep] = detail.data.steps;
+
+  // Approverが先に決裁しようとしても、前段のReviewerが未承認のため拒否される
+  const approverCookie = await loginAs('e2e-approver@example.com', 'approver-password'); // doc003-allow: 使い捨てテストDB専用の固定値
+  const outOfOrder = await call(`/api/approvals/${approvalId}/steps/${approverStep.id}/decide`, {
+    method: 'POST', cookie: approverCookie, body: { decision: 'approved' },
+  });
+  assert.equal(outOfOrder.status, 409);
+
+  const reviewerCookie = await loginAs('e2e-reviewer@example.com', 'reviewer-password'); // doc003-allow: 使い捨てテストDB専用の固定値
+  const reviewed = await call(`/api/approvals/${approvalId}/steps/${reviewerStep.id}/decide`, {
+    method: 'POST', cookie: reviewerCookie, body: { decision: 'approved' },
+  });
+  assert.equal(reviewed.status, 200);
+  assert.equal(reviewed.data.status, 'in_review');
+
+  const finalDecision = await call(`/api/approvals/${approvalId}/steps/${approverStep.id}/decide`, {
+    method: 'POST', cookie: approverCookie, body: { decision: 'approved' },
+  });
+  assert.equal(finalDecision.status, 200);
+  assert.equal(finalDecision.data.status, 'approved');
+
+  const project = await call(`/api/projects/${projectId}`, { cookie: adminCookie });
+  assert.equal(project.data.project.status, 'production');
+});
+
+test('Task / Knowledge の作成・一覧・Audit Hash Chain 検証', async () => {
+  const adminId = await createUser('e2e-admin3@example.com', 'E2E Admin3', 'Administrator', 'admin-password3'); // doc003-allow: 使い捨てテストDB専用の固定値
+  const cookie = await loginAs('e2e-admin3@example.com', 'admin-password3'); // doc003-allow: 使い捨てテストDB専用の固定値
+
+  const { rows } = await pool.query(
+    `INSERT INTO projects (project_code, title, description, request_id, created_by, owner_id)
+     VALUES ('AGENTOS-9999-0002', 'テスト案件2', 'x', (SELECT id FROM requests LIMIT 1), $1, $1) RETURNING id`,
+    [adminId],
+  );
+  const projectId = rows[0].id;
+
+  const task = await call('/api/tasks', {
+    method: 'POST', cookie,
+    body: { projectId, title: 'テストタスク', agentName: 'Developer Agent', provider: 'Anthropic', model: 'Claude Code', cost: 1.23 },
+  });
+  assert.equal(task.status, 201);
+  assert.match(task.data.task.task_code, /^T-\d+$/);
+
+  const taskList = await call('/api/tasks', { cookie });
+  assert.ok(taskList.data.tasks.some((t) => t.id === task.data.task.id));
+
+  const knowledge = await call('/api/knowledge', {
+    method: 'POST', cookie, body: { title: 'テストKnowledge', type: 'Lesson', projectId, score: 80 },
+  });
+  assert.equal(knowledge.status, 201);
+  assert.match(knowledge.data.knowledge.kc_code, /^KC-\d+$/);
+
+  const promote = await call(`/api/knowledge/${knowledge.data.knowledge.id}`, {
+    method: 'PATCH', cookie, body: { status: 'promoted' },
+  });
+  assert.equal(promote.status, 200);
+  assert.equal(promote.data.knowledge.status, 'promoted');
+
+  const usage = await call('/api/usage', { cookie });
+  const anthropicRow = usage.data.usage.find((u) => u.provider === 'Anthropic');
+  assert.ok(Number(anthropicRow.cost) >= 1.23);
+
+  const verify = await call('/api/audit/verify', { cookie });
+  assert.equal(verify.status, 200);
+  assert.equal(verify.data.ok, true);
+  assert.deepEqual(verify.data.breaks, []);
+  assert.ok(verify.data.count > 0);
+});
+
+test('Chat: メッセージ送信とルールベース応答がDBへ永続化される', async () => {
+  await createUser('e2e-chat@example.com', 'E2E Chat', 'Viewer', 'chat-password'); // doc003-allow: 使い捨てテストDB専用の固定値
+  const cookie = await loginAs('e2e-chat@example.com', 'chat-password'); // doc003-allow: 使い捨てテストDB専用の固定値
+
+  const first = await call('/api/chat/conversations/me', { cookie });
+  assert.equal(first.status, 200);
+  assert.equal(first.data.messages.length, 1); // 初回挨拶メッセージ
+
+  const sent = await call('/api/chat/messages', { method: 'POST', cookie, body: { text: '現場写真の整理を自動化したい' } });
+  assert.equal(sent.status, 201);
+  assert.equal(sent.data.message.role, 'ai');
+  assert.equal(sent.data.message.idea_json.title, '現場写真の自動整理・台帳化');
+
+  const after = await call('/api/chat/conversations/me', { cookie });
+  assert.equal(after.data.messages.length, 3); // 挨拶 + ユーザー発話 + AI応答
+});
+
+test('Users / Integrations / Agents / Router API', async () => {
+  await createUser('e2e-admin4@example.com', 'E2E Admin4', 'Administrator', 'admin-password4'); // doc003-allow: 使い捨てテストDB専用の固定値
+  const cookie = await loginAs('e2e-admin4@example.com', 'admin-password4'); // doc003-allow: 使い捨てテストDB専用の固定値
+
+  const users = await call('/api/users', { cookie });
+  assert.ok(users.data.users.some((u) => u.email === 'e2e-admin4@example.com'));
+
+  await pool.query(
+    `INSERT INTO integrations (id, name, role, status) VALUES ('notion', 'Notion', 'Knowledge SoR', 'attention')`,
+  );
+  const patched = await call('/api/integrations/notion', { method: 'PATCH', cookie, body: { status: 'connected', detail: '手動確認済み' } });
+  assert.equal(patched.status, 200);
+  assert.equal(patched.data.integration.status, 'connected');
+
+  await pool.query(`INSERT INTO model_router (category, model) VALUES ('Research / Classification', 'DeepSeek-V3')`);
+  const routerPatch = await call('/api/router', {
+    method: 'PATCH', cookie, body: { category: 'Research / Classification', model: 'Claude Opus' },
+  });
+  assert.equal(routerPatch.status, 200);
+  assert.equal(routerPatch.data.router.model, 'Claude Opus');
+});
+
+test('Dashboard 集約エンドポイント', async () => {
+  await createUser('e2e-dash@example.com', 'E2E Dash', 'Viewer', 'dash-password'); // doc003-allow: 使い捨てテストDB専用の固定値
+  const cookie = await loginAs('e2e-dash@example.com', 'dash-password'); // doc003-allow: 使い捨てテストDB専用の固定値
+
+  const dash = await call('/api/dashboard', { cookie });
+  assert.equal(dash.status, 200);
+  assert.ok(typeof dash.data.kpis.totalProjects === 'number');
+  assert.ok(Array.isArray(dash.data.pipeline));
+  assert.ok(Array.isArray(dash.data.recentProjects));
 });
