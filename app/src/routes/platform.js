@@ -6,6 +6,7 @@ import express from 'express';
 import { getPool, withTransaction } from '../lib/db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { recordAudit } from '../lib/audit.js';
+import * as llm from '../lib/llm.js';
 
 const router = express.Router();
 
@@ -84,7 +85,11 @@ router.get('/usage', requireAuth, async (_req, res) => {
     `SELECT provider, SUM(cost)::float AS cost, SUM(tokens_in + tokens_out)::bigint AS tokens, COUNT(*)::int AS runs
      FROM tasks GROUP BY provider ORDER BY cost DESC`,
   );
-  res.json({ usage: rows });
+  const llmSpent = llm.isConfigured() ? await llm.currentMonthSpend(getPool()) : 0;
+  res.json({
+    usage: rows,
+    llm: { configured: llm.isConfigured(), monthlySpent: llmSpent, monthlyCap: llm.monthlyCapUsd() },
+  });
 });
 
 export default router;

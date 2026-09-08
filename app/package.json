@@ -12,7 +12,7 @@
     "seed-admin": "node seed-admin.mjs",
     "seed-demo": "node seed-demo-data.mjs",
     "start": "node src/server.js",
-    "test:unit": "node --test test/unit.test.mjs test/workflow.test.mjs test/audit.test.mjs",
+    "test:unit": "node --test test/unit.test.mjs test/workflow.test.mjs test/audit.test.mjs test/llm.test.mjs",
     "test:e2e": "node --test test/e2e.test.mjs",
     "test": "npm run test:unit"
   },
