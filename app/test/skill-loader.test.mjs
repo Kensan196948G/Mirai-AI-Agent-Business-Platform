@@ -68,3 +68,11 @@ test('loadSkillDefinition: 存在しないskill_idはエラー', () => {
 test('loadSkillDefinition: skill_idにパス区切りを含む場合は拒否される（パストラバーサル対策）', () => {
   assert.throws(() => loadSkillDefinition('mirai-construction', '../../../etc/passwd'), SkillLoaderError);
 });
+
+test('loadAgentDefinition: backlog/ 配下のP2/P3候補は agents/ に存在せず実行可能なAgentとしてロードできない', () => {
+  // p2-p3-catalog.yaml に列挙された agent_id は agents/ 配下に定義が無いため、
+  // sync-agent-registry.mjs で誤って承認済み版として登録されることはない。
+  for (const id of ['port-marine-construction-planning', 'ground-improvement-support', 'vessel-machinery-operation']) {
+    assert.throws(() => loadAgentDefinition('mirai-construction', id), SkillLoaderError, `${id} はロードできてはならない`);
+  }
+});

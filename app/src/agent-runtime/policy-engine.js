@@ -18,7 +18,9 @@ const GLOBAL_FORBIDDEN_TOOLS = new Set([
 ]);
 
 // Tool Gatewayが実際に実装している型付きToolのみ（新しいToolを追加する場合はここにも追記する）。
-const REGISTERED_TOOLS = new Set(['knowledge.search-approved', 'source.read-approved-snapshot', 'artifact.write-draft']);
+const REGISTERED_TOOLS = new Set([
+  'knowledge.search-approved', 'knowledge.search-promoted', 'source.read-approved-snapshot', 'artifact.write-draft',
+]);
 
 // Run開始を許可するロール（Viewerは開始できない。既存の requireRole パターンに合わせる）。
 const RUN_STARTER_ROLES = new Set(['Administrator', 'Developer', 'Reviewer', 'Approver', 'Knowledge Curator']);

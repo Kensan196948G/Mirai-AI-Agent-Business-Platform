@@ -1,0 +1,31 @@
+# /etc/systemd/system/mira-agent-os-mvp-worker.service
+# Mirai AgentOS 業務Agent Runtime Worker（MVP）。API（mira-agent-os-mvp-api.service）と同じ
+# .env.mvp / DB を使い、agent_runs キューをポーリングして Step を実行する。
+# DeepSeek API（構造化LLM Step）への外部通信が必要なため、API と同様にループバック限定は設けない。
+[Unit]
+Description=Mirai AgentOS MVP Agent Runtime Worker (mirai-agent-os-mvp.mirai-dx-platform.com)
+After=network-online.target postgresql.service mira-agent-os-mvp-api.service
+Wants=network-online.target
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=kensan
+Group=kensan
+WorkingDirectory=/home/kensan/Projects/Mirai-DX-Project/Mirai-AI-Agent-Business-Platform/app
+EnvironmentFile=/home/kensan/Projects/Mirai-DX-Project/Mirai-AI-Agent-Business-Platform/app/.env.mvp
+Environment=AGENT_WORKER_POLL_MS=2000
+Environment=AGENT_WORKER_LEASE_SECONDS=60
+ExecStart=/home/kensan/.nvm/versions/node/v22.22.3/bin/node src/agent-runtime/worker.js
+Restart=on-failure
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=90
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+
+[Install]
+WantedBy=multi-user.target

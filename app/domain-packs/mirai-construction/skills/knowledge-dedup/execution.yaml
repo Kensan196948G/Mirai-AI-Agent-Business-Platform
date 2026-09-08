@@ -7,7 +7,7 @@ required_source_state: approved
 source_scope: authorized_project_and_public
 execution_mode: structured_llm
 allowed_tools:
-  - knowledge.search-approved
+  - knowledge.search-promoted
 forbidden_actions:
   - equipment.control
   - external.send

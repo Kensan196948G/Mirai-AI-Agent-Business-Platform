@@ -24,13 +24,13 @@ metadata:
 
 ## 手順
 
-1. `knowledge.search-approved`でタイトル・要約の類似候補を検索する。
+1. `knowledge.search-promoted`で既存の昇格済みKnowledgeからタイトル・要約の類似候補を検索する。
 2. 内容が一致・包含関係にあるものは`duplicates`、矛盾する記述は`conflicts`に分けて報告する
    （矛盾を重複として扱わない）。
 
 ## 許可されたTool
 
-- `knowledge.search-approved`
+- `knowledge.search-promoted`
 
 ## 保留・失敗条件
 

@@ -93,7 +93,9 @@ before(async () => {
     `INSERT INTO source_records (source_code, canonical_url, title, source_type, evidence_type, summary, content_hash, classification, status)
      VALUES
        ('SRC-TEST-01','https://www.mirai-const.co.jp/technology/port/3783/','MC-Wake','technology_catalog','marketing_overview',
-        'MC-Wakeは公式サイトで公開されている港湾関連技術。警告記録の説明・確認事項の整理の参考にできる。','h1','public','approved')`,
+        'MC-Wakeは公式サイトで公開されている港湾関連技術。警告記録の説明・確認事項の整理の参考にできる。','h1','public','approved'),
+       ('SRC-TEST-03','https://www.mirai-const.co.jp/work/','海上施工実績サンプル','project_case','synthetic_fixture',
+        '（合成Fixture）海上施工の一般的な実績カテゴリ例。個人情報・位置情報は含まない。','h3','public','approved')`,
   );
   await pool.query(
     `INSERT INTO source_records (source_code, canonical_url, title, source_type, evidence_type, summary, content_hash, classification, status, project_scope)
@@ -289,4 +291,58 @@ test('Run制御: 他人のRunはキャンセルできない', async () => {
 
   const cancelled = await call(`/api/agent-runs/${runId}/cancel`, { method: 'POST', cookie: otherCookie });
   assert.equal(cancelled.status, 403);
+});
+
+test('縦断経路: project-case-research の決定的Stepは完走し、LLM未設定Stepで明示的に停止する', async () => {
+  const created = await call('/api/agent-runs', {
+    method: 'POST', cookie: adminCookie, body: { agentId: 'project-case-research', input: { query: '海上施工実績サンプル' } },
+  });
+  assert.equal(created.status, 201);
+  const runId = created.data.run.id;
+
+  // Step 1: project-case-search（決定的、LLM不要）→ 完了するはず
+  const step1 = await claimAndExecute(runId);
+  assert.equal(step1.done, false);
+  assert.equal(step1.run.current_step, 1);
+
+  const events = await call(`/api/agent-runs/${runId}/events`, { cookie: adminCookie });
+  const step1Completed = events.data.events.find((e) => e.type === 'step_completed' && e.skill_id === 'project-case-search');
+  assert.ok(step1Completed, 'project-case-searchの完了イベントが記録されていること');
+  assert.ok(
+    step1Completed.detail.candidates.some((c) => c.title === '海上施工実績サンプル'),
+    '海上施工実績サンプルが候補として見つかること',
+  );
+
+  // Step 2: case-comparison（structured_llm）→ LLM未設定のため明示的に失敗する
+  const step2 = await claimAndExecute(runId);
+  assert.equal(step2.done, true);
+  assert.equal(step2.run.status, 'failed');
+  assert.match(step2.run.error_message, /LLM未設定/);
+});
+
+test('縦断経路: knowledge-quality はknowledge_candidatesを入力に受け取り、LLM未設定Stepで明示的に停止する', async () => {
+  const { rows } = await pool.query(
+    `INSERT INTO knowledge_candidates (kc_code, title, type, summary, source)
+     VALUES ('KC-TEST-0001', 'テスト用Knowledge候補', 'Lesson', 'テスト用の要約文です。', 'unit-test')
+     RETURNING id`,
+  );
+  // pg は BIGINT を文字列で返すため、JSON Schema（type: integer）に合わせて Number() へ正規化する
+  const knowledgeCandidateId = Number(rows[0].id);
+
+  const created = await call('/api/agent-runs', {
+    method: 'POST', cookie: adminCookie,
+    body: {
+      agentId: 'knowledge-quality',
+      input: { knowledge_candidate_id: knowledgeCandidateId, title: 'テスト用Knowledge候補', summary: 'テスト用の要約文です。', source: 'unit-test' },
+    },
+  });
+  assert.equal(created.status, 201);
+  const runId = created.data.run.id;
+
+  // Step 1: knowledge-quality-review（structured_llm）→ LLM未設定のため明示的に失敗する
+  // （knowledge-quality の3Skillは全てLLMを使うため、テスト環境では最初のStepで止まる想定どおりの挙動）
+  const step1 = await claimAndExecute(runId);
+  assert.equal(step1.done, true);
+  assert.equal(step1.run.status, 'failed');
+  assert.match(step1.run.error_message, /LLM未設定/);
 });
