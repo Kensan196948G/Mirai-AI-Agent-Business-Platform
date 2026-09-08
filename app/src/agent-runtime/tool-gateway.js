@@ -1,0 +1,114 @@
+/**
+ * Tool Gateway: 登録済み・型付きToolのみを実行する。任意のShell/SQL/URL取得/動的JavaScriptは
+ * LLMへ一切与えない。呼び出しは常に authorizeToolCall を経由し、許可・拒否どちらも
+ * run_events へ記録する。
+ */
+import { authorizeToolCall, authorizeSourceAccess, PolicyDeniedError } from './policy-engine.js';
+import { appendEvent } from './job-store.js';
+
+/**
+ * 単純な部分一致検索。利用者の相談文はフレーズ全体が出典タイトルに一致することは稀なため、
+ * 空白区切りの単語（英数字の技術名等）のいずれかがtitle/summaryに含まれればヒットとする。
+ * 2文字未満の断片（助詞の断片化等によるノイズ）は無視する。
+ */
+async function toolKnowledgeSearchApproved(client, { query, sourceType, projectId }) {
+  const tokens = String(query || '')
+    .trim()
+    .split(/\s+/)
+    .map((t) => t.replace(/[%_]/g, ''))
+    .filter((t) => t.length >= 2)
+    .slice(0, 10);
+  if (tokens.length === 0) return { candidates: [] };
+
+  const likeClauses = tokens.map((_, i) => `(title ILIKE $${i + 3} OR summary ILIKE $${i + 3})`).join(' OR ');
+  const { rows } = await client.query(
+    `SELECT id, title, summary, evidence_type, source_type
+     FROM source_records
+     WHERE status = 'approved'
+       AND (classification = 'public' OR ($2::bigint IS NOT NULL AND project_scope = $2))
+       AND ($1::text IS NULL OR source_type = $1)
+       AND (${likeClauses})
+     ORDER BY id LIMIT 10`,
+    [sourceType || null, projectId || null, ...tokens.map((t) => `%${t}%`)],
+  );
+  // pg は BIGINT 列を文字列で返すため、JSON Schema（type: integer）検証に通るよう Number() で正規化する。
+  return { candidates: rows.map((r) => ({ source_record_id: Number(r.id), title: r.title, summary: r.summary, evidence_type: r.evidence_type })) };
+}
+
+async function toolSourceReadApprovedSnapshot(client, { run, sourceRecordId }) {
+  const { rows } = await client.query(`SELECT * FROM source_records WHERE id = $1`, [sourceRecordId]);
+  if (rows.length === 0) throw new PolicyDeniedError(`source_record ${sourceRecordId} が見つかりません`);
+  authorizeSourceAccess({ run, sourceRecord: rows[0] });
+  return { source: rows[0] };
+}
+
+async function nextArtifactCode(client) {
+  const { rows } = await client.query(`SELECT count(*)::int AS n FROM artifacts`);
+  return `ART-${1000 + rows[0].n + 1}`;
+}
+
+async function toolArtifactWriteDraft(client, { run, kind, title, content }) {
+  const artifactCode = await nextArtifactCode(client);
+  const { rows } = await client.query(
+    `INSERT INTO artifacts (artifact_code, run_id, kind, title, content, review_state)
+     VALUES ($1,$2,$3,$4,$5,'draft') RETURNING id, artifact_code, kind, title, review_state`,
+    [artifactCode, run.id, kind, title, JSON.stringify(content)],
+  );
+  const artifact = rows[0];
+  for (const s of content.sources || []) {
+    if (!s.source_record_id) continue;
+    await client.query(
+      `INSERT INTO artifact_citations (artifact_id, source_record_id, locator) VALUES ($1,$2,$3)`,
+      [artifact.id, s.source_record_id, s.locator || null],
+    );
+  }
+  return { artifact };
+}
+
+const TOOL_HANDLERS = {
+  'knowledge.search-approved': (client, args) => toolKnowledgeSearchApproved(client, args),
+  'source.read-approved-snapshot': (client, args) => toolSourceReadApprovedSnapshot(client, args),
+  'artifact.write-draft': (client, args) => toolArtifactWriteDraft(client, args),
+};
+
+/**
+ * Tool呼び出しの唯一の入口。policy-engineでの許可判定 → run_eventsへの記録 → 実行 → 結果記録、の順で行う。
+ */
+export async function callTool(client, { run, skillVersion, toolName, args, seq }) {
+  try {
+    authorizeToolCall({ skillVersion, toolName });
+  } catch (err) {
+    await appendEvent(client, run.id, {
+      seq, type: 'tool_call', skillId: skillVersion.skill_id, skillVersion: skillVersion.version,
+      toolName, status: 'deny', detail: { error: err.message },
+    });
+    throw err;
+  }
+
+  await appendEvent(client, run.id, {
+    seq, type: 'tool_call', skillId: skillVersion.skill_id, skillVersion: skillVersion.version,
+    toolName, status: 'permit', detail: { args: redactArgs(args) },
+  });
+
+  const handler = TOOL_HANDLERS[toolName];
+  if (!handler) throw new PolicyDeniedError(`Tool「${toolName}」の実装がありません`);
+  try {
+    const result = await handler(client, { run, ...args });
+    return result;
+  } catch (err) {
+    await appendEvent(client, run.id, {
+      seq: seq + 0.5, type: 'tool_call', skillId: skillVersion.skill_id, skillVersion: skillVersion.version,
+      toolName, status: 'error', detail: { error: err.message },
+    });
+    throw err;
+  }
+}
+
+/** 秘密・個人情報・位置情報らしき値をログへ残さないための簡易マスク（既知キー名のみ）。 */
+function redactArgs(args) {
+  const clone = { ...args };
+  for (const key of ['password', 'apiKey', 'api_key', 'token', 'secret']) {
+    if (key in clone) clone[key] = '[REDACTED]';
+  }
+  return clone;
+}
