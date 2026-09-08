@@ -8,6 +8,7 @@
 ![Docs](https://img.shields.io/badge/Docs-Idea%20to%20Value-blue)
 ![Custom App](https://img.shields.io/badge/Custom%20App-Not%20Planned%20(SaaS%20Config%20Only)-informational)
 [![docs-quality](https://github.com/Kensan196948G/Mirai-AI-Agent-Business-Platform/actions/workflows/docs-quality.yml/badge.svg)](https://github.com/Kensan196948G/Mirai-AI-Agent-Business-Platform/actions/workflows/docs-quality.yml)
+[![app-ci](https://github.com/Kensan196948G/Mirai-AI-Agent-Business-Platform/actions/workflows/app-ci.yml/badge.svg)](https://github.com/Kensan196948G/Mirai-AI-Agent-Business-Platform/actions/workflows/app-ci.yml)
 
 ---
 
@@ -22,6 +23,7 @@
 7. [🧩 各ツールの役割](#-各ツールの役割)
 8. [🌐 インフラ構成（Phase別拡張）](#-インフラ構成phase別拡張)
 9. [🗂️ リポジトリ構成](#️-リポジトリ構成)
+9.5. [🧩 Mirai AgentOS MVP](#-mirai-agentos-mvp)
 10. [📖 ドキュメント間の関係（正本マップ）](#-ドキュメント間の関係正本マップ)
 11. [✅ 現在のステータス（Q1〜Q7 / P-1〜P-12）](#-現在のステータスq1q7--p-1p-12)
 12. [🛠️ 文書の更新方法とCI](#️-文書の更新方法とci)
@@ -34,8 +36,9 @@
 | 項目 | 内容 |
 |---|---|
 | 🎯 目的 | 全社員の「困りごと」をAIとの壁打ちから事業・業務・システムへ変換する仕組みを、**人が必ず承認する（Human-in-the-Loop）**設計で構築する |
-| 🧱 開発方針 | **自前アプリの新規開発なし**。既存契約済みSaaS（AppSuite / desknet's NEO / Notion / Lightblue / Slack）への設定・テンプレート投入で構築する |
-| 🔭 唯一の将来コード開発対象 | 監視基盤（自前Web構築予定）。ただし本計画のスコープ外・Phase 2・要件未定義（下記「現在のステータス」章のP-6を参照） |
+| 🧱 開発方針（原則） | **自前アプリの新規開発なし**。既存契約済みSaaS（AppSuite / desknet's NEO / Notion / Lightblue / Slack）への設定・テンプレート投入で構築する |
+| ⚠️ 例外（2026-09-08〜） | `app/` に **Mirai AgentOS MVP** を実装中（下記「🧩 Mirai AgentOS MVP」参照）。ユーザーの明示指示による原則の一時的な例外であり、恒久方針の変更ではない |
+| 🔭 将来コード開発対象 | 監視基盤（自前Web構築予定、本計画スコープ外・Phase 2・要件未定義。下記「現在のステータス」章のP-6参照）／Mirai AgentOS（上記例外） |
 | 📁 このリポジトリの中身 | 企画書・プロセス定義・SaaS構築計画書・各ツール設定手順書（すべて`docs/`配下） |
 | 🏢 正本管理 | GitHub（本リポジトリ）をドキュメントの正本とする |
 
@@ -322,6 +325,29 @@ flowchart LR
 
 ---
 
+## 🧩 Mirai AgentOS MVP
+
+⚠️ **本節は「🎯 このリポジトリは何か」の開発方針（自前アプリ開発なし）に対する、
+2026-09-08 のユーザー明示指示に基づく例外である。** 恒久方針としての変更ではない。
+
+`doc/`（要件定義書・技術設計概要）が定義する Agentic Operating System「Mirai AgentOS」のうち、
+**主要 User Journey 1本（案件依頼登録 → Project 昇格 → Gate 承認）** を実 PostgreSQL・実セッション認証で
+動かす MVP を `app/` に実装した。
+
+| 項目 | 状態 |
+|---|:---:|
+| 主要 User Journey（登録→昇格→承認） | ✅ 実装・E2Eテスト済み |
+| Local PostgreSQL（本番/MVP/テスト DB 分離） | ✅ |
+| 認証（email+password、セッション即時失効） | ✅ |
+| CI（`app-ci.yml`、マイグレーション冪等性・脆弱性監査・E2E） | ✅ |
+| systemd（本番/MVP、ループバック限定） | 🟡 unit 作成済み・導入は Human Gate（後述） |
+| Cloudflare（`mira-agent-os` / `mira-agent-os-mvp` サブドメイン公開） | ⏳ 未実施（custom domain 変更は Approval 対象） |
+| Notion / Slack / Gmail / GitHub 連携、Model Router、Workflow Engine | ⏳ 未実装（`doc/` 参照） |
+
+セットアップ・API・既知の制約は **[`app/README.md`](app/README.md)** を参照。
+
+---
+
 ## 🗂️ リポジトリ構成
 
 ```text
@@ -337,6 +363,10 @@ Mirai-AI-Agent-Business-Platform/
 ├── 📁 tools/
 │   ├── 🔍 check-docs.mjs                                  ← 文書整合性チェッカ（DOC001〜DOC006）
 │   └── 🧪 check-docs.test.mjs                             ← 上記のユニットテスト
+├── 📁 app/                                                ← 🧩 Mirai AgentOS MVP 実装（開発方針の例外。詳細は app/README.md）
+├── 📁 systemd/                                            ← mira-agent-os の systemd unit（本番/MVP）
+├── 📁 doc/                                                ← 🧩 Mirai AgentOS 要件定義書・設計仕様書（app/ の正本仕様）
+├── 📁 webui/                                              ← 🧩 Mirai AgentOS WebUI 初期モックアップ（Claude Design、実DBなし）
 └── 📁 docs/
     ├── 📘 ai-dx-dev-process.md / .html                    ← 🏛️ プロセス定義（確定版・正本）
     ├── 📗 ai-dx-dev-saas-setup-guide.md / .html            ← 🏗️ SaaS構築・設定計画書（レビュー版v0.5）
