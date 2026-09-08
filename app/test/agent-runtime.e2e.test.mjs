@@ -71,9 +71,9 @@ before(async () => {
 
   // Domain Pack をDBへ同期する（本番運用ではsync-agent-registry.mjsをAdministratorが実行する）。
   await withTransaction(async (client) => {
-    await syncAgent(client, 'mirai-construction', 'technology-selection', '1.0.0', { approvedByUserId: adminId });
-    await syncAgent(client, 'mirai-construction', 'project-case-research', '1.0.0', { approvedByUserId: adminId });
-    await syncAgent(client, 'mirai-construction', 'knowledge-quality', '1.0.0', { approvedByUserId: adminId });
+    await syncAgent(client, 'mirai-construction', 'technology-selection', '1.0.0', { approvedByUserId: adminId, status: 'approved' });
+    await syncAgent(client, 'mirai-construction', 'project-case-research', '1.0.0', { approvedByUserId: adminId, status: 'approved' });
+    await syncAgent(client, 'mirai-construction', 'knowledge-quality', '1.0.0', { approvedByUserId: adminId, status: 'approved' });
   });
 
   // 案件越境テスト用に、実在するprojectを1件作る（project_scopeのFK制約を満たすため）。
@@ -345,4 +345,63 @@ test('縦断経路: knowledge-quality はknowledge_candidatesを入力に受け�
   assert.equal(step1.done, true);
   assert.equal(step1.run.status, 'failed');
   assert.match(step1.run.error_message, /LLM未設定/);
+});
+
+test('Registry承認: draft同期の版は実行不可、Administratorの承認後に実行可能になる', async () => {
+  // 別Agentを draft として再同期し、承認前後の挙動を確認する（他テストは approved 同期済みの版に依存するため
+  // 内容ハッシュを変えない = 既存の approved 状態は維持される。ここでは新しい版番号ではなく status 遷移のみを検証）。
+  await pool.query(`UPDATE agent_versions SET status = 'draft', approved_by = NULL, approved_at = NULL WHERE agent_id = 'project-case-research'`);
+
+  const catalog = await call('/api/agent-catalog', { cookie: adminCookie });
+  assert.equal(catalog.status, 200);
+  const pcr = catalog.data.agents.find((a) => a.agent_id === 'project-case-research');
+  assert.ok(pcr, 'カタログに project-case-research が含まれること');
+  assert.equal(pcr.runnable, false, 'draft の Agent 版は runnable=false');
+  assert.ok(pcr.purpose.length > 0 && pcr.does_not.length > 0, '用途・できないことが返ること');
+
+  // 未承認版では Run を開始できない（承認済み版が無い）
+  const blocked = await call('/api/agent-runs', {
+    method: 'POST', cookie: adminCookie, body: { agentId: 'project-case-research', input: { query: 'x' } },
+  });
+  assert.equal(blocked.status, 409);
+
+  // Viewer/Reviewer は承認できない
+  const reviewerCookie = await loginAs('e2e-other-admin@example.com', 'other-password'); // doc003-allow: 使い捨てテストDB専用の固定値
+  const versions = await call('/api/agent-catalog/versions', { cookie: adminCookie });
+  const draftAgent = versions.data.agents.find((v) => v.name === 'project-case-research');
+  assert.equal(draftAgent.status, 'draft');
+  const denied = await call(`/api/agent-catalog/versions/agent/${draftAgent.id}/approve`, { method: 'POST', cookie: reviewerCookie });
+  assert.equal(denied.status, 403);
+
+  // Administrator が承認 → runnable になり Run を開始できる
+  const approved = await call(`/api/agent-catalog/versions/agent/${draftAgent.id}/approve`, { method: 'POST', cookie: adminCookie });
+  assert.equal(approved.status, 200);
+  assert.equal(approved.data.version.status, 'approved');
+  const again = await call(`/api/agent-catalog/versions/agent/${draftAgent.id}/approve`, { method: 'POST', cookie: adminCookie });
+  assert.equal(again.status, 409, '二重承認は拒否される');
+
+  const catalog2 = await call('/api/agent-catalog', { cookie: adminCookie });
+  assert.equal(catalog2.data.agents.find((a) => a.agent_id === 'project-case-research').runnable, true);
+  const ok = await call('/api/agent-runs', {
+    method: 'POST', cookie: adminCookie, body: { agentId: 'project-case-research', input: { query: 'x' } },
+  });
+  assert.equal(ok.status, 201);
+
+  // 承認取消（deprecate）→ 実行不可に戻る。監査ログに記録される
+  const dep = await call(`/api/agent-catalog/versions/agent/${draftAgent.id}/deprecate`, { method: 'POST', cookie: adminCookie });
+  assert.equal(dep.status, 200);
+  const blocked2 = await call('/api/agent-runs', {
+    method: 'POST', cookie: adminCookie, body: { agentId: 'project-case-research', input: { query: 'x' } },
+  });
+  assert.equal(blocked2.status, 409);
+  const { rows: audit } = await pool.query(`SELECT action FROM audit_log WHERE action IN ('agent_version.approve','agent_version.deprecate') ORDER BY id`);
+  assert.deepEqual(audit.map((r) => r.action), ['agent_version.approve', 'agent_version.deprecate']);
+});
+
+test('Registry同期: 内容ハッシュが変わらない再同期は承認状態を維持し、draft同期でも承認を取り消さない', async () => {
+  const before = await pool.query(`SELECT status FROM agent_versions WHERE agent_id = 'technology-selection'`);
+  assert.equal(before.rows[0].status, 'approved');
+  await withTransaction((client) => syncAgent(client, 'mirai-construction', 'technology-selection', '1.0.0', { approvedByUserId: adminId }));
+  const after = await pool.query(`SELECT status FROM agent_versions WHERE agent_id = 'technology-selection'`);
+  assert.equal(after.rows[0].status, 'approved', '同一ハッシュの draft 再同期で承認が失われないこと');
 });

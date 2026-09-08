@@ -29,7 +29,7 @@
 | Notion / Slack / Gmail / GitHub 連携 | 🔴 人手 | 「つながっているか」のステータスを人が画面で手動更新するだけ。実際の自動同期はしない |
 | タスクの実行 | 🔴 人手 | AIエージェントが自動で作業するのではなく、実行ログを記録する台帳。Retry/Cancelは状態を書き換えるのみ |
 | Model Router（AIの使い分け） | 🔴 人手 | 「このカテゴリにはこのモデルを使う」という設定を保存するだけ。実行時に自動で使い分けはしない |
-| 業務Agent（技術選定・施工実績調査・Knowledge品質） | 🟡 API限定・検証途中 | `POST /api/agent-runs` で起動できる実行基盤（P0）+ みらい建設向け3Agent・12Skill（P1）を実装。**WebUI画面はまだ無く、API経由のみ**。実行できるのは検索・比較・草案作成まで（下記「🧩 業務Agent Runtime」参照） |
+| 業務Agent（技術選定・施工実績調査・Knowledge品質） | 🟡 設定次第 | 実行基盤（P0）+ みらい建設向け3Agent・12Skill（P1）+ WebUI「業務Agent」画面。実行できるのは検索・比較・草案作成まで。構造化StepはDeepSeek設定時のみ本物のAIが動く（下記「🧩 業務Agent Runtime」参照） |
 
 `doc/` の要件定義書・技術設計概要が定義する Agentic Operating System の中で、上表が
 「本格実装フェーズ（2026-09-08〜）」として実 PostgreSQL・実認証まで作り込んだ範囲。
@@ -172,8 +172,8 @@ Playwright（`playwright-core` + 既存 Chrome）でログイン→全画面遷�
 `docs/Mirai-Agent-Skill-Architecture.md` を参照。
 
 - 😊 **かんたんに言うと**：AIが「技術資料を探して比較する」ところまでは自動でやってくれるが、
-  「本当に使えるか」の最終判断は必ず人がレビューする、という枠組みをAPIとして用意した段階。
-  **WebUI画面はまだ無い**（Postmanやスクリプトからしか動かせない）。
+  「本当に使えるか」の最終判断は必ず人がレビューする、という枠組み。
+  サイドバー「業務Agent（Agent Runs）」から Run の開始・監視・成果物レビュー・版の承認ができる。
 
 | 項目 | 状態 |
 |---|:---:|
@@ -181,15 +181,17 @@ Playwright（`playwright-core` + 既存 Chrome）でログイン→全画面遷�
 | Policy Engine（Tool許可判定・案件越境防止・予算上限・グローバル禁止Tool） | ✅ 実装・単体テスト済み |
 | Tool Gateway（登録済み型付きToolのみ実行。任意Shell/SQL/URL取得は不可） | ✅ 実装 |
 | 永続Worker（Lease/Heartbeat/Checkpoint、cancel/resume） | ✅ 実装・E2Eテスト済み |
+| 版の承認フロー（draft同期 → Administrator承認 / 取消、内容ハッシュ変更で自動draft化） | ✅ 実装・E2Eテスト済み（`/api/agent-catalog/versions/:kind/:id/approve`） |
 | `technology-selection` Agent（技術検索→適用条件整理→比較→草案） | 🟡 決定的Stepは完走確認済み。**構造化LLM StepはDeepSeek APIキー設定時のみ動作**（テスト環境ではLLM未設定として明示的に失敗することを確認） |
 | `project-case-research` / `knowledge-quality` Agent | 🟡 決定的Step（施工実績検索）は完走確認済み。構造化LLM StepはDeepSeek APIキー設定時のみ動作（テスト環境ではLLM未設定として明示的に失敗することを確認） |
-| WebUI（Agent起動・Run監視・成果物レビュー画面） | ⏳ 未実装（現状は `/api/agent-runs` 等をAPI経由で直接呼ぶ必要がある） |
+| WebUI「業務Agent（Agent Runs）」画面 | ✅ Agent一覧（用途・できないこと）、Run開始、Run監視（イベント・成果物）、成果物レビュー、Agent/Skill版の承認・取消 |
 | P2（港湾・地盤・維持管理等の業務拡張）/ P3（専門システム連携） | ⏳ 実行不能なカタログのみ整備（`domain-packs/mirai-construction/backlog/p2-p3-catalog.yaml`。責任者・必要資料・評価条件・禁止事項を列挙。ADR-001参照） |
 
 セットアップ（Domain Packの登録）:
 
 ```bash
-node sync-agent-registry.mjs <Administratorのemail>   # domain-packs/ をDBへ承認済み版として同期
+node sync-agent-registry.mjs <Administratorのemail>            # domain-packs/ を draft（未承認）として同期
+node sync-agent-registry.mjs <Administratorのemail> --approve  # 同期と同時に承認（運用者＝承認者の暫定運用）
 node seed-agent-fixtures.mjs                            # 公開技術情報Fixtureを投入（冪等）
 npm run worker                                          # 別プロセスとしてWorkerを起動（ポーリング実行）
 ```
@@ -208,5 +210,5 @@ curl -X POST http://127.0.0.1:<PORT>/api/agent-runs \
 - Chat の実LLM応答は自然言語部分のみ。Intent分類・Risk推定・Idea構造化は常にルールベース
 - Task の実行・完了は実際のAIエージェントが行わない（Retry/CancelはStatus更新のみ）
 - 承認ステップは「ロール」ベースで割り当てる（正本のような特定個人への事前割当ではない）
-- 業務Agent RuntimeにWebUI画面が無い（API限定）。Domain Pack同期（`sync-agent-registry.mjs`）の
-  承認は暫定的に「実行できる運用者＝承認者」としており、WebUI上の正式な承認フローは未実装（Backlog）
+- Agent/Skill版の承認は Runtime 内の版承認であり、正式なGate承認（desknet's NEO）とは別物。
+  `--approve` 同期は運用者＝承認者の暫定運用（WebUI承認と使い分ける）
