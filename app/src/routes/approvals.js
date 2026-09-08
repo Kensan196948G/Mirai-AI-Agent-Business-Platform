@@ -96,12 +96,16 @@ router.post('/:id/steps/:stepId/decide', requireAuth, async (req, res) => {
   try {
     const result = await withTransaction(async (client) => {
       const { rows: aprRows } = await client.query(
-        `SELECT id, project_id, status, target_status FROM approval_requests WHERE id = $1 FOR UPDATE`,
+        `SELECT id, project_id, status, target_status, requested_by FROM approval_requests WHERE id = $1 FOR UPDATE`,
         [approvalId],
       );
       if (aprRows.length === 0) throw Object.assign(new Error('approval が見つかりません'), { status: 404 });
       if (aprRows[0].status !== 'pending') {
         throw Object.assign(new Error(`既に判定済みです（現在: ${aprRows[0].status}）`), { status: 409 });
+      }
+      // SoD: 申請者本人は自分の申請を承認・却下できない（Administratorであっても例外にしない）。
+      if (Number(aprRows[0].requested_by) === Number(req.user.id)) {
+        throw Object.assign(new Error('申請者本人はこの承認を判定できません（職務分離）'), { status: 403 });
       }
 
       const { rows: steps } = await client.query(

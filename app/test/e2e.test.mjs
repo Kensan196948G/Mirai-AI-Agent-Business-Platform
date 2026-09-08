@@ -30,6 +30,8 @@ if (!/test/.test(process.env.DATABASE_URL)) {
 }
 
 const ALL_TABLES = [
+  'artifact_citations', 'artifacts', 'effect_ledger', 'budget_reservations', 'run_events', 'agent_runs',
+  'source_records', 'agent_skill_bindings', 'skill_versions', 'agent_versions',
   'chat_messages', 'chat_conversations', 'task_tool_calls', 'tasks', 'knowledge_candidates',
   'approval_steps', 'approval_requests', 'project_kpis', 'projects', 'requests',
   'integrations', 'agents_config', 'skills_registry', 'model_router',
@@ -90,6 +92,9 @@ async function createUser(email, name, role, password) {
 test('主要 User Journey: 依頼登録 → Project昇格 → 状態遷移 → Gate承認', async () => {
   await createUser('e2e-admin@example.com', 'E2E Admin', 'Administrator', 'e2e-test-password'); // doc003-allow: 使い捨てテストDB専用の固定値
   const cookie = await loginAs('e2e-admin@example.com', 'e2e-test-password'); // doc003-allow: 使い捨てテストDB専用の固定値
+  // SoD: 申請者本人は自分の承認を判定できないため、決裁は別のAdministratorで行う。
+  await createUser('e2e-admin-approver@example.com', 'E2E Admin Approver', 'Administrator', 'e2e-test-password2'); // doc003-allow: 使い捨てテストDB専用の固定値
+  const approverCookie = await loginAs('e2e-admin-approver@example.com', 'e2e-test-password2'); // doc003-allow: 使い捨てテストDB専用の固定値
 
   const bad = await call('/api/auth/login', { method: 'POST', body: { email: 'e2e-admin@example.com', password: 'wrong' } });
   assert.equal(bad.status, 401);
@@ -133,9 +138,15 @@ test('主要 User Journey: 依頼登録 → Project昇格 → 状態遷移 → G
   assert.equal(detail.data.steps[0].role, 'Approver');
   const stepId = detail.data.steps[0].id;
 
-  // Administrator は role制約を越えて（全ロール代理として）決裁できる
+  // 申請者本人（e2e-admin）は自分の承認を判定できない（SoD）
+  const selfDecide = await call(`/api/approvals/${approvalId}/steps/${stepId}/decide`, {
+    method: 'POST', cookie, body: { decision: 'approved', reason: '自己承認テスト' },
+  });
+  assert.equal(selfDecide.status, 403);
+
+  // Administrator は role制約を越えて（全ロール代理として）決裁できる。ただし別人であること。
   const decided = await call(`/api/approvals/${approvalId}/steps/${stepId}/decide`, {
-    method: 'POST', cookie, body: { decision: 'approved', reason: 'E2E 承認' },
+    method: 'POST', cookie: approverCookie, body: { decision: 'approved', reason: 'E2E 承認' },
   });
   assert.equal(decided.status, 200);
   assert.equal(decided.data.status, 'approved');
@@ -146,7 +157,7 @@ test('主要 User Journey: 依頼登録 → Project昇格 → 状態遷移 → G
 
   // 二重判定は拒否される
   const redecided = await call(`/api/approvals/${approvalId}/steps/${stepId}/decide`, {
-    method: 'POST', cookie, body: { decision: 'rejected' },
+    method: 'POST', cookie: approverCookie, body: { decision: 'rejected' },
   });
   assert.equal(redecided.status, 409);
 
