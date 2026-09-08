@@ -444,3 +444,35 @@ test('月次上限: AI相談と業務Agent Runの利用額が合算される', a
   const after = await withTransaction((client) => currentMonthSpend(client));
   assert.ok(Math.abs(after - before - 0.25) < 1e-6, `Run の利用額 0.25 が合算されること（before=${before}, after=${after}）`);
 });
+
+test('evidence-backed-draft: 実DBで草案を保存した戻り値が output schema に適合する（artifact_id は integer）', async () => {
+  const Ajv = (await import('ajv')).default;
+  const { SKILL_HANDLERS } = await import('../src/agent-runtime/skills/index.js');
+  const { loadSkillDefinition } = await import('../src/agent-runtime/skill-loader.js');
+  const { callTool } = await import('../src/agent-runtime/tool-gateway.js');
+  const { validateCitations } = await import('../src/agent-runtime/evidence-validator.js');
+
+  const created = await call('/api/agent-runs', {
+    method: 'POST', cookie: adminCookie, body: { agentId: 'technology-selection', input: { query: '草案戻り値テスト' } },
+  });
+  const run = { id: created.data.run.id, run_code: created.data.run.run_code, project_id: null };
+  const { rows: sv } = await pool.query(`SELECT * FROM skill_versions WHERE skill_id = 'evidence-backed-draft' LIMIT 1`);
+  const def = loadSkillDefinition('mirai-construction', 'evidence-backed-draft', '1.0.0');
+
+  // 情報不足（比較表・根拠なし）の入力 → LLM を呼ばず「保留の草案」を実DBへ保存する決定的経路
+  const output = await withTransaction((client) => SKILL_HANDLERS['evidence-backed-draft']({
+    client, run, agentVersion: { version: '1.0.0' }, skillDef: def, skillVersion: sv[0],
+    allSkillVersions: [{ skill_id: 'evidence-backed-draft', version: '1.0.0' }],
+    input: { comparison_table: [], gaps: [], unknowns: ['情報不足'], assumptions: [] },
+    callTool: (toolName, args) => callTool(client, { run, skillVersion: sv[0], toolName, args }),
+    validateCitations: (sources) => validateCitations(client, { run, sources }),
+    structuredComplete: async () => { throw new Error('この経路では LLM を呼ばない'); },
+  }));
+  const validate = new Ajv({ allErrors: true, strict: false }).compile(def.outputSchema);
+  assert.ok(validate(output), `output schema 不適合: ${new Ajv().errorsText(validate.errors)}`);
+  assert.equal(typeof output.artifact_id, 'number', 'pg の BIGINT 文字列が Number に正規化されていること');
+  assert.equal(output.requires_human_review, true);
+  const { rows: art } = await pool.query(`SELECT id, review_state FROM artifacts WHERE run_id = $1`, [run.id]);
+  assert.equal(art.length, 1);
+  assert.equal(Number(art[0].id), output.artifact_id);
+});
