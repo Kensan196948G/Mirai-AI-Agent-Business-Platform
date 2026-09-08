@@ -1,0 +1,53 @@
+name: docs-quality
+
+# 本リポジトリは「自前アプリの新規開発を行わない」ドキュメント正本のため、
+# CI の対象はアプリのビルドではなく「文書の整合性・秘密情報混入の有無」である。
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: 文書整合性・秘密情報検査
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: チェックアウト（全履歴：秘密情報の履歴走査に必要）
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Node.js セットアップ
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: 依存関係の確認（外部依存ゼロであること）
+        run: |
+          if [ -d node_modules ]; then
+            echo "node_modules がコミットされている" >&2
+            exit 1
+          fi
+          node -e "const p=require('./package.json'); if (p.dependencies || p.devDependencies) { console.error('本リポジトリは外部依存ゼロを維持する'); process.exit(1); }"
+
+      - name: ユニットテスト（node --test）
+        run: npm test
+
+      - name: 文書整合性チェック（DOC001-DOC006）
+        run: npm run check
+
+      - name: 追跡対象に .env が含まれていないこと
+        run: |
+          if git ls-files | grep -E '(^|/)\.env($|\.)' ; then
+            echo "::error::.env が Git 管理下にある" && exit 1
+          fi
+          echo "OK: .env は追跡されていない"
