@@ -5,3 +5,9 @@ node_modules/
 .env
 .env.*
 !.env.example
+
+# --- app/ (Mirai AgentOS MVP) ---
+app/.env
+app/.env.*
+!app/.env.example
+app/node_modules/

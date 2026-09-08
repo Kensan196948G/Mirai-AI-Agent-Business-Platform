@@ -147,10 +147,18 @@ export const SECRET_PATTERNS = [
   { name: '平文の資格情報代入', re: /\b(?:password|passwd|api[_-]?key|secret[_-]?key|access[_-]?token)\s*[:=]\s*["'][^"'\s]{8,}["']/gi },
 ];
 
+/**
+ * 意図的な非秘密値（CI の使い捨て認証情報、テストフィクスチャ等）を明示的に許可するマーカー。
+ * `doc003-allow: <理由>` を同じ行のコメントに書くと、その行の検出をスキップする。
+ * パス単位の一括除外にしないのは、除外理由を書いた本人以外にも一目で分かるようにするため。
+ */
+const ALLOW_MARKER = /doc003-allow:\s*\S/;
+
 /** 検出値そのものは絶対に出力しない（値の代わりに位置と種別のみ報告する） */
 export function scanSecrets(file, text) {
   const out = [];
   text.split('\n').forEach((line, i) => {
+    if (ALLOW_MARKER.test(line)) return;
     for (const { name, re } of SECRET_PATTERNS) {
       for (const m of line.matchAll(new RegExp(re.source, re.flags))) {
         const hit = m[0];
