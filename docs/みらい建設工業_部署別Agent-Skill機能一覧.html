@@ -34,7 +34,11 @@
   td.chk{text-align:center;width:52px} td.chk input{width:16px;height:16px;cursor:pointer}
   .agent{font-weight:600} .id{font-family:var(--mono);font-size:11px;color:var(--muted)}
   ul.skills{margin:0;padding-left:16px} ul.skills li{margin:1px 0}
-  .no{color:var(--red);font-size:11.5px}
+  ul.bul{margin:0;padding-left:16px} ul.bul li{margin:1px 0}
+  .lbl{font-size:11px;font-weight:600;color:var(--ink2);margin:0 0 3px}
+  .lbl.no{color:var(--red)}
+  ul.no{color:var(--red);font-size:11.5px;margin-top:6px}
+  .wishcol{display:flex;flex-direction:column;gap:8px}
   textarea{width:100%;min-width:200px;min-height:56px;border:1px solid var(--line);border-radius:7px;padding:6px 8px;font:12.5px/1.5 inherit;resize:vertical;background:#fffdf8}
   textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
   .wish{background:#fffbf3}
@@ -185,6 +189,7 @@ function save(silent){ try { localStorage.setItem(KEY, JSON.stringify(state)); i
 function get(id, k){ return (state[id] && state[id][k]) || ""; }
 function set(id, k, v){ state[id] = state[id] || {}; state[id][k] = v; save(true); }
 function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function bullets(text, sep){ return String(text||"").split(sep).map(x=>x.trim().replace(/[。、]$/,"")).filter(Boolean); }
 function stageChip(s){ const cls = s==="P1"?"p1":s==="P2"?"p2":s==="P3"?"p3":s==="基盤"?"base":"none"; const label = s==="P1"?"P1 実装済み":s==="P2"||s==="P3"?s+" 候補":s; return `<span class="chip ${cls}">${label}</span>`; }
 
 function render(){
@@ -195,10 +200,13 @@ function render(){
       <tr data-id="${esc(a.id)}">
         <td class="chk"><input type="checkbox" data-k="checked" ${get(a.id,"checked")?"checked":""} title="確認済み"></td>
         <td><div class="agent">${esc(a.name)}</div><div class="id">${esc(a.id)}</div><div style="margin-top:4px">${stageChip(a.stage)} <span class="lv">${esc(a.level)}</span></div><div class="id" style="margin-top:2px">責任者: ${esc(a.owner)}</div></td>
-        <td>${esc(a.purpose)}<div class="no" style="margin-top:6px">できないこと: ${esc(a.not)}</div></td>
+        <td><div class="lbl">目的</div><ul class="bul">${bullets(a.purpose, /。/).map(x=>`<li>${esc(x)}</li>`).join("")}</ul><div class="lbl no" style="margin-top:6px">できないこと</div><ul class="bul no">${bullets(a.not, /、/).map(x=>`<li>${esc(x)}</li>`).join("")}</ul></td>
         <td><ul class="skills">${a.skills.map(s=>`<li>${esc(s)}</li>`).join("")}</ul></td>
-        <td class="wish"><textarea data-k="wishAgent" placeholder="この組織で追加してほしい Agent（目的・成果物・責任者）">${esc(get(a.id,"wishAgent"))}</textarea></td>
-        <td class="wish"><textarea data-k="wishSkill" placeholder="追加してほしい Skill（作業・入力・出力・使う資料）">${esc(get(a.id,"wishSkill"))}</textarea></td>
+        <td class="wish"><div class="wishcol"><div><div class="lbl">Agent 追加希望</div><textarea data-k="wishAgent" placeholder="・目的
+・成果物
+・責任者">${esc(get(a.id,"wishAgent"))}</textarea></div><div><div class="lbl">Skill 追加希望</div><textarea data-k="wishSkill" placeholder="・作業
+・入力／出力
+・使う資料">${esc(get(a.id,"wishSkill"))}</textarea></div></div></td>
         <td class="wish"><textarea data-k="memo" placeholder="備考・懸念・確認事項">${esc(get(a.id,"memo"))}</textarea></td>
       </tr>`).join("");
     const closed = get("__dept"+di, "closed") ? " closed" : "";
@@ -207,7 +215,7 @@ function render(){
         <div class="dh"><span class="tog">▾</span><h2>${d.code}_${esc(d.dept)}<span class="org">対象組織: ${esc(d.org)}</span></h2><span class="cnt">Agent ${d.agents.length} 件</span></div>
         <div class="body">
           <table>
-            <thead><tr><th>確認</th><th style="width:200px">Agent</th><th style="min-width:280px">目的 / できないこと</th><th style="min-width:230px">Skill</th><th style="min-width:200px">Agent 追加希望</th><th style="min-width:200px">Skill 追加希望</th><th style="min-width:160px">備考</th></tr></thead>
+            <thead><tr><th>確認</th><th style="width:200px">Agent</th><th style="min-width:300px">目的 / できないこと</th><th style="min-width:230px">Skill</th><th style="min-width:260px">追加希望（Agent / Skill）</th><th style="min-width:160px">備考</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>
           ${d.note ? `<div class="note">${esc(d.note)}</div>` : ""}
