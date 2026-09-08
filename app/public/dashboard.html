@@ -147,6 +147,7 @@ input::placeholder,textarea::placeholder{color:var(--muted)}
               <sc-for list="{{ messages }}" as="m" hint-placeholder-count="2">
                 <div style="display:flex;justify-content:{{ m.justify }}">
                   <div style="max-width:78%;display:flex;flex-direction:column;gap:8px">
+                    <sc-if value="{{ m.showSource }}" hint-placeholder-val="{{ false }}"><span style="font-size:10.5px;color:var(--muted);font-weight:600;letter-spacing:.3px">{{ m.sourceLabel }}</span></sc-if>
                     <div style="padding:11px 14px;border-radius:12px;font-size:13.5px;line-height:1.65;white-space:pre-wrap;background:{{ m.bg }};color:{{ m.fg }};border:1px solid {{ m.border }}">{{ m.text }}</div>
                     <sc-if value="{{ m.hasIdea }}" hint-placeholder-val="{{ false }}">
                       <div style="border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)">
@@ -326,6 +327,7 @@ input::placeholder,textarea::placeholder{color:var(--muted)}
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;align-items:start">
           <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)"><div style="padding:15px 18px;border-bottom:1px solid var(--line-2)"><div style="font-size:14px;font-weight:600">Provider別 Token / Cost</div><div style="font-size:11.5px;color:var(--muted);font-family:var(--mono)">agentos_model_tokens_total / agentos_model_cost_total</div></div><div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px"><sc-for list="{{ usageRows }}" as="u" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:5px"><div style="display:flex;justify-content:space-between;font-size:12.5px"><span style="color:var(--ink-2)">{{ u.p }}</span><span style="font-family:var(--mono);font-weight:600">{{ u.tokFmt }} tok · {{ u.costFmt }} · {{ u.runs }} runs</span></div><div style="height:8px;background:var(--line-2);border-radius:4px;overflow:hidden"><span style="display:block;height:100%;border-radius:4px;width:{{ u.pct }}%;background:{{ u.color }}"></span></div></div></sc-for></div></section>
           <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)"><div style="padding:15px 18px;border-bottom:1px solid var(--line-2)"><div style="font-size:14px;font-weight:600">Agent Run 状態</div><div style="font-size:11.5px;color:var(--muted);font-family:var(--mono)">agentos_agent_runs_total{status}</div></div><div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px"><div style="display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--line-2)"><sc-for list="{{ runDist }}" as="r" hint-placeholder-count="4"><span style="width:{{ r.pct }}%;background:{{ r.color }};display:block"></span></sc-for></div><div style="display:flex;flex-direction:column;gap:9px"><sc-for list="{{ runDist }}" as="r" hint-placeholder-count="4"><div style="display:flex;align-items:center;gap:10px"><span style="width:9px;height:9px;border-radius:3px;background:{{ r.color }}"></span><span style="flex:1;font-size:12.5px;color:var(--ink-2)">{{ r.label }}</span><span style="font-family:var(--mono);font-size:12.5px;font-weight:600">{{ r.n }}</span></div></sc-for></div></div></section>
+          <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)"><div style="padding:15px 18px;border-bottom:1px solid var(--line-2)"><div style="font-size:14px;font-weight:600">AI相談 LLM月次予算</div><div style="font-size:11.5px;color:var(--muted)">{{ llmBudget.statusLabel }}</div></div><div style="padding:16px 18px;display:flex;flex-direction:column;gap:8px"><div style="display:flex;justify-content:space-between;font-size:12.5px"><span style="color:var(--ink-2)">当月利用額</span><span style="font-family:var(--mono);font-weight:600">{{ llmBudget.spentFmt }} / {{ llmBudget.capFmt }}</span></div><div style="height:8px;background:var(--line-2);border-radius:4px;overflow:hidden"><span style="display:block;height:100%;border-radius:4px;width:{{ llmBudget.pct }}%;background:{{ llmBudget.color }}"></span></div><div style="font-size:11px;color:var(--muted)">上限到達時は自動でルールベース応答へフォールバックします</div></div></section>
           <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)"><div style="padding:15px 18px;border-bottom:1px solid var(--line-2)"><div style="font-size:14px;font-weight:600">Approval / Policy</div><div style="font-size:11.5px;color:var(--muted);font-family:var(--mono)">agentos_approval_pending_total{risk} / agentos_policy_denied_total</div></div><div style="padding:16px 18px;display:flex;flex-direction:column;gap:9px"><sc-for list="{{ riskDist }}" as="r" hint-placeholder-count="4"><div style="display:flex;align-items:center;gap:10px"><span style="font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;color:{{ r.fg }};background:{{ r.bg }};width:38px;text-align:center">{{ r.risk }}</span><div style="flex:1;height:6px;background:var(--line-2);border-radius:3px;overflow:hidden"><span style="display:block;height:100%;width:{{ r.pct }}%;background:{{ r.fg }}"></span></div><span style="font-family:var(--mono);font-size:12.5px;font-weight:600;width:20px;text-align:right">{{ r.n }}</span></div></sc-for><div style="display:flex;justify-content:space-between;font-size:12.5px;padding-top:8px;border-top:1px solid var(--line-2);margin-top:4px"><span style="color:var(--ink-2)">Policy DENY（期間内）</span><span style="font-family:var(--mono);font-weight:600;color:var(--red)">{{ deniedCount }}</span></div></div></section>
         </div>
       </sc-if>
@@ -349,9 +351,9 @@ input::placeholder,textarea::placeholder{color:var(--muted)}
       <sc-if value="{{ isUsers }}" hint-placeholder-val="{{ false }}">
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:16px"><sc-for list="{{ roleCards }}" as="r" hint-placeholder-count="6"><div style="background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;box-shadow:var(--shadow)"><div style="font-size:11.5px;color:var(--muted);font-weight:500">{{ r.role }}</div><div style="font-size:22px;font-weight:600;margin:6px 0 4px;font-variant-numeric:tabular-nums">{{ r.n }}</div><div style="font-size:11px;color:var(--ink-2)">{{ r.desc }}</div></div></sc-for></div>
         <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden">
-          <div style="padding:15px 18px;border-bottom:1px solid var(--line-2);display:flex;align-items:center"><div style="flex:1"><div style="font-size:14px;font-weight:600">ユーザー一覧</div><div style="font-size:11.5px;color:var(--muted)">Identity: authentik（OIDC）· Administrator も Audit は改ざん不可</div></div><button onClick="{{ resetAll }}" style="border:1px solid var(--line);background:var(--surface);color:var(--ink-2);padding:6px 11px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer" style-hover="background:var(--subtle)">デモデータを初期化</button></div>
-          <table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">氏名</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">部署</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Role</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">最終ログイン</th></tr></thead>
-          <tbody><sc-for list="{{ userRows }}" as="u" hint-placeholder-count="6"><tr style-hover="background:var(--hover)"><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2)"><div style="display:flex;align-items:center;gap:10px"><span style="width:30px;height:30px;border-radius:50%;background:var(--subtle);color:var(--ink-2);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px">{{ u.initial }}</span><span style="font-weight:500">{{ u.name }}</span></div></td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);color:var(--ink-2)">{{ u.dept }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2)"><select value="{{ u.role }}" onChange="{{ u.setRole }}" style="width:auto;padding:5px 26px 5px 8px;font-size:12px"><sc-for list="{{ roles }}" as="r" hint-placeholder-count="6"><option value="{{ r }}">{{ r }}</option></sc-for></select></td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);font-family:var(--mono);font-size:11.5px;color:var(--muted)">{{ u.last }}</td></tr></sc-for></tbody></table>
+          <div style="padding:15px 18px;border-bottom:1px solid var(--line-2);display:flex;align-items:center;gap:8px"><div style="flex:1"><div style="font-size:14px;font-weight:600">ユーザー一覧</div><div style="font-size:11.5px;color:var(--muted)">Identity: authentik（OIDC）· Administrator も Audit は改ざん不可</div></div><button onClick="{{ openNewUser }}" style="background:var(--accent);color:#fff;border:1px solid var(--accent);padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer" style-hover="background:var(--accent-d)">+ 新規ユーザー</button><button onClick="{{ resetAll }}" style="border:1px solid var(--line);background:var(--surface);color:var(--ink-2);padding:6px 11px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer" style-hover="background:var(--subtle)">デモデータを初期化</button></div>
+          <table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">氏名</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Email</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">部署</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Role</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">最終ログイン</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">状態</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">操作</th></tr></thead>
+          <tbody><sc-for list="{{ userRows }}" as="u" hint-placeholder-count="6"><tr style-hover="background:var(--hover)"><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2)"><div style="display:flex;align-items:center;gap:10px"><span style="width:30px;height:30px;border-radius:50%;background:var(--subtle);color:var(--ink-2);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px">{{ u.initial }}</span><span style="font-weight:500">{{ u.name }}</span></div></td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);color:var(--ink-2);font-family:var(--mono);font-size:11.5px">{{ u.email }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);color:var(--ink-2)">{{ u.dept }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2)"><select value="{{ u.role }}" onChange="{{ u.setRole }}" style="width:auto;padding:5px 26px 5px 8px;font-size:12px"><sc-for list="{{ roles }}" as="r" hint-placeholder-count="6"><option value="{{ r }}">{{ r }}</option></sc-for></select></td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);font-family:var(--mono);font-size:11.5px;color:var(--muted)">{{ u.last }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2)"><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:{{ u.activeFg }};background:{{ u.activeBg }}">{{ u.activeLabel }}</span></td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2)"><div style="display:flex;gap:6px"><button onClick="{{ u.toggleActive }}" style="border:1px solid var(--line);background:var(--surface);color:var(--ink-2);padding:4px 9px;border-radius:7px;font-size:11.5px;font-weight:600;cursor:pointer" style-hover="background:var(--subtle)">{{ u.toggleLabel }}</button><button onClick="{{ u.resetPassword }}" style="border:1px solid var(--line);background:var(--surface);color:var(--ink-2);padding:4px 9px;border-radius:7px;font-size:11.5px;font-weight:600;cursor:pointer" style-hover="background:var(--subtle)">PW再発行</button></div></td></tr></sc-for></tbody></table>
         </section>
       </sc-if>
     </div>
@@ -364,9 +366,33 @@ input::placeholder,textarea::placeholder{color:var(--muted)}
         <div style="padding:18px 20px;display:flex;flex-direction:column;gap:12px">
           <div style="display:flex;flex-direction:column;gap:5px"><label style="font-size:12px;font-weight:600;color:var(--ink-2)">案件名</label><input value="{{ np.title }}" onChange="{{ npTitle }}" placeholder="例：安全巡視記録の音声入力化"></div>
           <div style="display:flex;flex-direction:column;gap:5px"><label style="font-size:12px;font-weight:600;color:var(--ink-2)">概要</label><textarea value="{{ np.summary }}" onChange="{{ npSummary }}" rows="3" placeholder="対象業務・現状・期待効果" style="resize:vertical"></textarea></div>
-          <div style="display:flex;gap:10px"><div style="display:flex;flex-direction:column;gap:5px;flex:1"><label style="font-size:12px;font-weight:600;color:var(--ink-2)">Owner</label><select value="{{ np.owner }}" onChange="{{ npOwner }}"><sc-for list="{{ userRows }}" as="u" hint-placeholder-count="6"><option value="{{ u.id }}">{{ u.name }}（{{ u.dept }}）</option></sc-for></select></div><div style="display:flex;flex-direction:column;gap:5px;width:130px"><label style="font-size:12px;font-weight:600;color:var(--ink-2)">Risk候補</label><select value="{{ np.risk }}" onChange="{{ npRisk }}"><option value="R1">R1</option><option value="R2">R2</option><option value="R3">R3</option><option value="R4">R4</option></select></div></div>
+          <div style="display:flex;gap:10px"><div style="display:flex;flex-direction:column;gap:5px;flex:1"><label style="font-size:12px;font-weight:600;color:var(--ink-2)">Owner</label><select value="{{ np.owner }}" onChange="{{ npOwner }}"><sc-for list="{{ activeUserRows }}" as="u" hint-placeholder-count="6"><option value="{{ u.id }}">{{ u.name }}（{{ u.dept }}）</option></sc-for></select></div><div style="display:flex;flex-direction:column;gap:5px;width:130px"><label style="font-size:12px;font-weight:600;color:var(--ink-2)">Risk候補</label><select value="{{ np.risk }}" onChange="{{ npRisk }}"><option value="R1">R1</option><option value="R2">R2</option><option value="R3">R3</option><option value="R4">R4</option></select></div></div>
         </div>
         <div style="padding:13px 20px;border-top:1px solid var(--line-2);display:flex;gap:8px;justify-content:flex-end"><button onClick="{{ closeModal }}" style="border:1px solid var(--line);background:var(--surface);color:var(--ink-2);padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer">キャンセル</button><button onClick="{{ createProject }}" style="background:var(--accent);color:#fff;border:1px solid var(--accent);padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--accent-d)">登録</button></div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ modalNewUser }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position:fixed;inset:0;background:var(--overlay);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px">
+      <div onClick="{{ stop }}" style="width:100%;max-width:480px;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 40px rgba(16,24,40,.2);overflow:hidden">
+        <div style="padding:16px 20px;border-bottom:1px solid var(--line-2)"><div style="font-size:15px;font-weight:600">新規ユーザーを追加</div><div style="font-size:11.5px;color:var(--muted)">初期パスワードはランダム発行され、作成直後に一度だけ表示されます</div></div>
+        <div style="padding:18px 20px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:5px"><label style="font-size:12px;font-weight:600;color:var(--ink-2)">氏名</label><input value="{{ nu.name }}" onChange="{{ nuName }}" placeholder="例：山田 太郎"></div>
+          <div style="display:flex;flex-direction:column;gap:5px"><label style="font-size:12px;font-weight:600;color:var(--ink-2)">Email</label><input value="{{ nu.email }}" onChange="{{ nuEmail }}" placeholder="例：yamada@example.com"></div>
+          <div style="display:flex;gap:10px"><div style="display:flex;flex-direction:column;gap:5px;flex:1"><label style="font-size:12px;font-weight:600;color:var(--ink-2)">部署</label><input value="{{ nu.dept }}" onChange="{{ nuDept }}" placeholder="例：土木部"></div><div style="display:flex;flex-direction:column;gap:5px;width:170px"><label style="font-size:12px;font-weight:600;color:var(--ink-2)">Role</label><select value="{{ nu.role }}" onChange="{{ nuRole }}"><sc-for list="{{ roles }}" as="r" hint-placeholder-count="6"><option value="{{ r }}">{{ r }}</option></sc-for></select></div></div>
+        </div>
+        <div style="padding:13px 20px;border-top:1px solid var(--line-2);display:flex;gap:8px;justify-content:flex-end"><button onClick="{{ closeModal }}" style="border:1px solid var(--line);background:var(--surface);color:var(--ink-2);padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer">キャンセル</button><button onClick="{{ createUser }}" style="background:var(--accent);color:#fff;border:1px solid var(--accent);padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--accent-d)">作成</button></div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ credentialResult }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeCredential }}" style="position:fixed;inset:0;background:var(--overlay);display:flex;align-items:center;justify-content:center;z-index:55;padding:24px">
+      <div onClick="{{ stop }}" style="width:100%;max-width:440px;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 40px rgba(16,24,40,.2);overflow:hidden">
+        <div style="padding:16px 20px;border-bottom:1px solid var(--line-2)"><div style="font-size:15px;font-weight:600">{{ credentialResult.title }}</div><div style="font-size:11.5px;color:var(--red)">この画面を閉じると二度と表示されません。今すぐ本人へ安全な方法で伝達してください</div></div>
+        <div style="padding:18px 20px;display:flex;flex-direction:column;gap:8px"><label style="font-size:12px;font-weight:600;color:var(--ink-2)">初期パスワード</label><input value="{{ credentialResult.password }}" readonly onFocus="{{ selectAll }}" style="font-family:var(--mono);font-size:13px"></div>
+        <div style="padding:13px 20px;border-top:1px solid var(--line-2);display:flex;justify-content:flex-end"><button onClick="{{ closeCredential }}" style="background:var(--accent);color:#fff;border:1px solid var(--accent);padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--accent-d)">閉じる</button></div>
       </div>
     </div>
   </sc-if>
@@ -387,6 +413,8 @@ class Component extends DCLogic {
       typing: false,
       modal: null,
       np: { title: '', owner: '', risk: 'R2', summary: '' },
+      nu: { name: '', email: '', dept: '', role: 'Viewer' },
+      credentialResult: null,
       reason: '',
       chatInput: '',
       q: '',
@@ -465,6 +493,7 @@ class Component extends DCLogic {
       skills: skills.skills.map(mapSkill),
       router: router.router.map(mapRouterRow),
       usage: usage.usage.map(mapUsage),
+      llm: usage.llm || { configured: false, monthlySpent: 0, monthlyCap: 0 },
       chat: { messages: mapChatMessages(chat.messages), topic: -1, step: Math.max(0, chat.messages.length - 1) },
       openGroups: this.state.openGroups || { g1: true, g2: true, g3: true, g4: true },
       screen: this.state.screen || 'dashboard',
@@ -639,6 +668,40 @@ class Component extends DCLogic {
     });
   }
 
+  createUser() {
+    const nu = this.state.nu;
+    if (!nu.name.trim() || !nu.email.trim()) return this.toast('氏名とEmailを入力してください', 'red');
+    this.guarded('create-user', async () => {
+      const { initialPassword } = await this.api('/api/users', {
+        method: 'POST', body: { name: nu.name, email: nu.email, dept: nu.dept, role: nu.role },
+      });
+      await this.refreshAll();
+      this.setState({
+        modal: null, nu: { name: '', email: '', dept: '', role: 'Viewer' },
+        credentialResult: { title: `${nu.name} を作成しました`, password: initialPassword },
+      });
+    });
+  }
+
+  toggleActive(id, nextActive) {
+    this.guarded('user-active', async () => {
+      const { user } = await this.api(`/api/users/${id}`, { method: 'PATCH', body: { active: nextActive } });
+      await this.refreshAll();
+      this.toast(`${user.name} を${nextActive ? '有効化' : '無効化'}しました`, nextActive ? 'green' : 'amber');
+    });
+  }
+
+  resetPassword(id, name) {
+    this.guarded('user-reset-password', async () => {
+      const { newPassword } = await this.api(`/api/users/${id}/reset-password`, { method: 'POST' });
+      this.setState({ credentialResult: { title: `${name} のパスワードを再発行しました`, password: newPassword } });
+    });
+  }
+
+  closeCredential() {
+    this.setState({ credentialResult: null });
+  }
+
   send(text) {
     const msg = (text ?? this.state.chatInput).trim();
     if (!msg) return;
@@ -653,7 +716,7 @@ class Component extends DCLogic {
         chat: Object.assign({}, s.chat, {
           step: s.chat.step + 1,
           messages: [...s.chat.messages, {
-            role: 'ai', text: message.text,
+            role: 'ai', text: message.text, source: message.source,
             idea: message.idea_json ? message.idea_json.idea : undefined,
             ideaTitle: message.idea_json ? message.idea_json.title : undefined,
             intent: message.idea_json ? message.idea_json.intent : undefined,
@@ -764,6 +827,14 @@ class Component extends DCLogic {
       pct: (u.tok / maxTok) * 100, color: u.color,
     }));
     const scoreColor = (n) => (n >= 80 ? 'var(--green)' : n >= 60 ? 'var(--amber)' : 'var(--red)');
+    const llm = s.llm || { configured: false, monthlySpent: 0, monthlyCap: 0 };
+    const llmPct = llm.monthlyCap > 0 ? Math.min(100, (llm.monthlySpent / llm.monthlyCap) * 100) : 0;
+    const llmBudget = {
+      configured: llm.configured,
+      statusLabel: llm.configured ? 'DeepSeek 接続中' : '未接続（ルールベース応答のみ）',
+      spentFmt: this.fmtCost(llm.monthlySpent), capFmt: this.fmtCost(llm.monthlyCap),
+      pct: llmPct, color: llmPct >= 90 ? 'var(--red)' : llmPct >= 70 ? 'var(--amber)' : 'var(--green)',
+    };
 
     // projects
     const pf = s.projFilter;
@@ -971,7 +1042,10 @@ class Component extends DCLogic {
     };
     const roleCards = roles.map((r) => ({ role: r, n: s.users.filter((u) => u.role === r).length, desc: rdesc[r] }));
     const userRows = s.users.map((u) => ({
-      id: u.id, name: u.name, dept: u.dept, role: u.role, last: u.last, initial: u.name[0],
+      id: u.id, name: u.name, email: u.email, dept: u.dept, role: u.role, last: u.last, initial: u.name[0],
+      active: u.active, activeLabel: u.active ? '有効' : '無効',
+      activeFg: u.active ? 'var(--green)' : 'var(--muted)', activeBg: u.active ? 'var(--green-bg)' : 'var(--subtle)',
+      toggleLabel: u.active ? '無効化' : '有効化',
       setRole: (e) => {
         const v = e.target.value;
         if (!canU) return this.deny('users', 'ロール変更');
@@ -981,7 +1055,16 @@ class Component extends DCLogic {
           this.toast(`${u.name} のロールを ${v} に変更しました`, 'green');
         });
       },
+      toggleActive: () => {
+        if (!canU) return this.deny('users', u.active ? 'ユーザー無効化' : 'ユーザー有効化');
+        this.toggleActive(u.id, !u.active);
+      },
+      resetPassword: () => {
+        if (!canU) return this.deny('users', 'パスワード再発行');
+        this.resetPassword(u.id, u.name);
+      },
     }));
+    const activeUserRows = userRows.filter((u) => u.active);
 
     // chat
     const messages = s.chat.messages.map((m) => {
@@ -991,6 +1074,8 @@ class Component extends DCLogic {
         fg: ai ? 'var(--ink)' : '#fff', border: ai ? 'var(--line-2)' : 'var(--accent)',
         hasIdea: !!m.idea, idea: (m.idea || []).map(([k, v]) => ({ k, v })), ideaTitle: m.ideaTitle || '', intent: m.intent || '',
         risk: m.risk || '', riskFg: this.risk(m.risk || 'R1').fg, riskBg: this.risk(m.risk || 'R1').bg,
+        showSource: ai && !!m.source,
+        sourceLabel: m.source === 'llm' ? 'DeepSeek 応答' : 'シナリオ応答',
         promote: () => this.createProject({ title: m.ideaTitle, owner: me.id, risk: m.risk, summary: (m.idea || []).slice(0, 3).map((x) => x[1]).join('。') }),
       };
     });
@@ -1019,7 +1104,7 @@ class Component extends DCLogic {
       recentProjects: s.projects.slice(0, 5).map(projRow),
       recentTasks: s.tasks.slice(0, 4).map(taskRow),
       pendingApprovals: pendA.map(aprRow), noPending: pendA.length === 0,
-      usageRows, knPendingCount: knPend.length,
+      usageRows, llmBudget, knPendingCount: knPend.length,
       knPendingRows: knPend.slice(0, 3).map((k) => ({ type: k.type, title: k.title, score: k.score, scoreColor: scoreColor(k.score) })),
       goProjects: () => this.go('projects'), goTasks: () => this.go('tasks'), goObs: () => this.go('observability'), goKnowledge: () => this.go('knowledge'),
       messages, typing: s.typing, chatInput: s.chatInput,
@@ -1046,7 +1131,7 @@ class Component extends DCLogic {
       agentPolicyNote: canA ? '変更は Audit に記録されます' : '閲覧のみ（Administrator / Developer が変更可）',
       routerWarn: same ? '警告: 実装モデルと Review モデルが同系列です。Independence 評価により分離を推奨（FR-205）' : 'OK: 実装モデルと Review モデルは分離されています（FR-205）',
       routerWarnColor: same ? 'var(--red)' : 'var(--green)',
-      roleCards, userRows,
+      roleCards, userRows, activeUserRows,
       resetAll: () => this.refreshAllWithToast(),
       modalNew: s.modal === 'new', closeModal: () => this.setState({ modal: null }), stop: (e) => e.stopPropagation(),
       np: s.np,
@@ -1055,6 +1140,20 @@ class Component extends DCLogic {
       npOwner: (e) => this.setState((st) => ({ np: Object.assign({}, st.np, { owner: e.target.value }) })),
       npRisk: (e) => this.setState((st) => ({ np: Object.assign({}, st.np, { risk: e.target.value }) })),
       createProject: () => this.createProject(),
+      modalNewUser: s.modal === 'newUser',
+      openNewUser: () => {
+        if (!canU) return this.deny('users', '新規ユーザー作成');
+        this.setState({ modal: 'newUser' });
+      },
+      nu: s.nu,
+      nuName: (e) => this.setState((st) => ({ nu: Object.assign({}, st.nu, { name: e.target.value }) })),
+      nuEmail: (e) => this.setState((st) => ({ nu: Object.assign({}, st.nu, { email: e.target.value }) })),
+      nuDept: (e) => this.setState((st) => ({ nu: Object.assign({}, st.nu, { dept: e.target.value }) })),
+      nuRole: (e) => this.setState((st) => ({ nu: Object.assign({}, st.nu, { role: e.target.value }) })),
+      createUser: () => this.createUser(),
+      credentialResult: s.credentialResult,
+      closeCredential: () => this.closeCredential(),
+      selectAll: (e) => e.target.select(),
       toasts: s.toasts.map((t) => ({
         text: t.text, color: `var(--${t.color === 'accent' ? 'accent' : t.color + '-2'})`,
         close: () => this.setState((st) => ({ toasts: st.toasts.filter((x) => x.id !== t.id) })),
@@ -1077,7 +1176,10 @@ function providerColor(p) {
   return 'var(--purple)';
 }
 function mapUser(u) {
-  return { id: u.id, name: u.name, dept: u.dept || '—', role: u.role, last: u.last_login_at ? fmtDate(u.last_login_at) : '—' };
+  return {
+    id: u.id, name: u.name, email: u.email, dept: u.dept || '—', role: u.role, active: u.active,
+    last: u.last_login_at ? fmtDate(u.last_login_at) : '—',
+  };
 }
 function mapProject(p) {
   return {
@@ -1159,7 +1261,7 @@ function mapUsage(u) {
 }
 function mapChatMessages(rows) {
   return rows.map((m) => ({
-    role: m.role, text: m.text,
+    role: m.role, text: m.text, source: m.source,
     idea: m.idea_json ? m.idea_json.idea : undefined,
     ideaTitle: m.idea_json ? m.idea_json.title : undefined,
     intent: m.idea_json ? m.idea_json.intent : undefined,

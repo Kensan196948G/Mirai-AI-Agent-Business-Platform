@@ -270,6 +270,8 @@ test('Chat: メッセージ送信とルールベース応答がDBへ永続化さ
   assert.equal(sent.status, 201);
   assert.equal(sent.data.message.role, 'ai');
   assert.equal(sent.data.message.idea_json.title, '現場写真の自動整理・台帳化');
+  // テスト環境では LLM_PROVIDER/LLM_API_KEY を設定しないため、必ずルールベース応答になる。
+  assert.equal(sent.data.message.source, 'scripted');
 
   const after = await call('/api/chat/conversations/me', { cookie });
   assert.equal(after.data.messages.length, 3); // 挨拶 + ユーザー発話 + AI応答
@@ -295,6 +297,59 @@ test('Users / Integrations / Agents / Router API', async () => {
   });
   assert.equal(routerPatch.status, 200);
   assert.equal(routerPatch.data.router.model, 'Claude Opus');
+});
+
+test('ユーザーCRUD: 作成・PWリセット・無効化でログイン不可・最後のAdministratorは無効化不可', async () => {
+  await createUser('e2e-admin5@example.com', 'E2E Admin5', 'Administrator', 'admin-password5'); // doc003-allow: 使い捨てテストDB専用の固定値
+  const admin5Id = (await pool.query(`SELECT id FROM users WHERE email = 'e2e-admin5@example.com'`)).rows[0].id;
+  const cookie = await loginAs('e2e-admin5@example.com', 'admin-password5'); // doc003-allow: 使い捨てテストDB専用の固定値
+
+  // 作成: 初期パスワードが一度だけ返る
+  const created = await call('/api/users', {
+    method: 'POST', cookie, body: { email: 'e2e-newbie@example.com', name: 'E2E Newbie', role: 'Viewer', dept: '品質保証部' },
+  });
+  assert.equal(created.status, 201);
+  assert.ok(created.data.initialPassword.length >= 16);
+  const newbieId = created.data.user.id;
+
+  // 作成直後の初期パスワードでログインできる
+  const newbieCookie = await loginAs('e2e-newbie@example.com', created.data.initialPassword);
+  const me = await call('/api/auth/me', { cookie: newbieCookie });
+  assert.equal(me.data.user.email, 'e2e-newbie@example.com');
+
+  // パスワード再発行後は旧パスワードでログインできない
+  const reset = await call(`/api/users/${newbieId}/reset-password`, { method: 'POST', cookie });
+  assert.equal(reset.status, 200);
+  const oldLogin = await call('/api/auth/login', { method: 'POST', body: { email: 'e2e-newbie@example.com', password: created.data.initialPassword } });
+  assert.equal(oldLogin.status, 401);
+  await loginAs('e2e-newbie@example.com', reset.data.newPassword); // 新パスワードでは成功する
+
+  // 無効化するとログインできなくなる
+  const deactivated = await call(`/api/users/${newbieId}`, { method: 'PATCH', cookie, body: { active: false } });
+  assert.equal(deactivated.status, 200);
+  assert.equal(deactivated.data.user.active, false);
+  const loginAfterDeactivate = await call('/api/auth/login', { method: 'POST', body: { email: 'e2e-newbie@example.com', password: reset.data.newPassword } });
+  assert.equal(loginAfterDeactivate.status, 401);
+
+  // 再度有効化すればログインできる
+  await call(`/api/users/${newbieId}`, { method: 'PATCH', cookie, body: { active: true } });
+  await loginAs('e2e-newbie@example.com', reset.data.newPassword);
+
+  // 自分自身を無効化することはできない
+  const selfDeactivate = await call(`/api/users/${admin5Id}`, { method: 'PATCH', cookie, body: { active: false } });
+  assert.equal(selfDeactivate.status, 400);
+
+  // 唯一の Administrator を Viewer へ降格することはできない。
+  // 同一ファイル内の先行テストが作成した他の Administrator が残っているため、
+  // ここで admin5 だけを有効な Administrator にしてから検証する。
+  await pool.query(`UPDATE users SET active = false WHERE role = 'Administrator' AND id != $1`, [admin5Id]);
+  const demoteOnlyAdmin = await call(`/api/users/${admin5Id}`, { method: 'PATCH', cookie, body: { role: 'Viewer' } });
+  assert.equal(demoteOnlyAdmin.status, 400);
+
+  // DELETE は論理削除（無効化）として扱われる
+  const deleted = await call(`/api/users/${newbieId}`, { method: 'DELETE', cookie });
+  assert.equal(deleted.status, 200);
+  assert.equal(deleted.data.user.active, false);
 });
 
 test('Dashboard 集約エンドポイント', async () => {
