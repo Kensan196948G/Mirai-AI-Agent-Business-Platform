@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Gate 承認の申請
+    url: https://github.com/Kensan196948G/Mirai-AI-Agent-Business-Platform/blob/main/README.md#-5-stage-gate進捗承認ゲート
+    about: Gate 1〜5 の正式承認は GitHub Issue ではなく desknet's NEO Workflow で申請します（承認の正本）。
