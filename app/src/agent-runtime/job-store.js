@@ -48,9 +48,14 @@ export async function heartbeat(client, runId, workerId, leaseSeconds = 60) {
   );
 }
 
+/**
+ * run_events へ追記する。seq は Run 全体で単調増加する連番を常にサーバ側で採番する
+ * （呼び出し側の指定は受け付けない）。1 つの Run は Lease を持つ 1 Worker だけが書くため
+ * MAX+1 で衝突しない。
+ */
 export async function appendEvent(client, runId, event) {
   const { rows } = await client.query(`SELECT COALESCE(MAX(seq), 0) + 1 AS seq FROM run_events WHERE run_id = $1`, [runId]);
-  const seq = event.seq && Number.isInteger(event.seq) ? event.seq : rows[0].seq;
+  const seq = rows[0].seq;
   await client.query(
     `INSERT INTO run_events (run_id, seq, type, skill_id, skill_version, tool_name, status, detail, tokens_in, tokens_out, cost)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
