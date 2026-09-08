@@ -37,14 +37,14 @@ export const TRANSITIONS = {
 export const MODELS = ['Claude Opus','Claude Sonnet','Claude Code','Codex','DeepSeek-V3','DeepSeek Harness'];
 export const NAV = [
   {id:'g1',label:'概要（OVERVIEW）',items:[{key:'dashboard',label:'ダッシュボード（Dashboard）',ico:'📊'},{key:'chat',label:'AI相談（AI Consultation）',ico:'💬'}]},
-  {id:'g2',label:'案件管理（PROJECTS）',items:[{key:'projects',label:'案件（Project）',ico:'📁'},{key:'tasks',label:'タスク・実行（Task / Agent Run）',ico:'🤖'},{key:'approvals',label:'承認（Approval）',ico:'✅'}]},
+  {id:'g2',label:'案件管理（PROJECTS）',items:[{key:'projects',label:'案件（Project）',ico:'📁'},{key:'tasks',label:'タスク・実行（Task / Agent Run）',ico:'🤖'},{key:'approvals',label:'承認（Approval）',ico:'✅'},{key:'agentruns',label:'業務Agent（Agent Runs）',ico:'🛠️',perm:'create'}]},
   {id:'g3',label:'ナレッジ・監査（KNOWLEDGE / AUDIT）',items:[{key:'knowledge',label:'ナレッジ候補（Knowledge）',ico:'📚'},{key:'audit',label:'監査ログ（Audit Log）',ico:'🧾'}]},
   {id:'g4',label:'プラットフォーム（PLATFORM）',items:[{key:'integrations',label:'外部連携（Integrations）',ico:'🔗'},{key:'observability',label:'監視（Observability）',ico:'📈'},{key:'agents',label:'エージェント設定（Agent / Router）',ico:'🧩'},{key:'users',label:'ユーザー・ロール（Users）',ico:'👥',perm:'users'}]}
 ];
 export const TITLES = {
   dashboard:['ダッシュボード','案件・承認・Agent実行・AIコストの現在地'], chat:['AI相談','困りごと・アイデアを自然な日本語で。Intent分類 → Idea構造化 → 案件化'],
   projects:['案件（Project）','Phase / Gate / KPI / Task を PostgreSQL で一元管理'], tasks:['Task / Agent Run','Agent実行、Model Run、Tool Call、Cost の追跡'],
-  approvals:['承認（Approval）','Risk R3以上のActionは人間承認を必須化'], knowledge:['Knowledge候補','Agent実行結果からの抽出 → 人間レビュー → Notion反映'],
+  approvals:['承認（Approval）','Risk R3以上のActionは人間承認を必須化'], agentruns:['業務Agent（Agent Runs）','技術検索・比較・草案作成まで自動。採用判断は必ず人がレビュー'], knowledge:['Knowledge候補','Agent実行結果からの抽出 → 人間レビュー → Notion反映'],
   audit:['Audit Log','追記型・Hash Chainによる改ざん検知'], integrations:['Integrations','Notion / Slack / Gmail / GitHub 連携状態'],
   observability:['Observability','Metrics / AI Usage / Cost / Queue'], agents:['Agent / Skill / Model Router','Agent登録、Skill Registry、モデル選択ルール'], users:['ユーザー・ロール','authentik RBAC（AgentOS独立認証）']
 };
