@@ -1,6 +1,6 @@
 # /etc/systemd/system/mira-agent-os-api.service
 [Unit]
-Description=Mirai AgentOS API (mira-agent-os.mirai-dx-platform.com, local Postgres backend)
+Description=Mirai AgentOS API (mirai-agent-os.mirai-dx-platform.com, local Postgres backend)
 After=network.target postgresql.service
 Requires=postgresql.service
 

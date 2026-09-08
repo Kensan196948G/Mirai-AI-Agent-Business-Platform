@@ -7,6 +7,11 @@
 Intent Router / Planner / Agent Orchestrator / Model Router / Notion・Slack・Gmail・GitHub 連携 /
 authentik / Tailscale / Prometheus・Loki・Grafana は本 MVP のスコープ外（`doc/` 参照）。
 
+> ℹ️ **命名について**：公開ドメインは `mirai-agent-os(-mvp).mirai-dx-platform.com`（2026-09-08 訂正済み）。
+> DB名・systemd unit名・npmパッケージ名は初期実装時の `mira-agent-os`（"i" 抜け）のまま据え置いている
+> （稼働中DBのリネームはダウンタイムを伴うため）。姉妹プロダクトにも内部識別子と公開ドメインが
+> 完全一致しない例がある。まとめてリネームする場合は別PRで対応する。
+
 ## 構成
 
 | 項目 | 内容 |

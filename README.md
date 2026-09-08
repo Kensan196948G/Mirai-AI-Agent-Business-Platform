@@ -341,7 +341,7 @@ flowchart LR
 | 認証（email+password、セッション即時失効） | ✅ |
 | CI（`app-ci.yml`、マイグレーション冪等性・脆弱性監査・E2E） | ✅ |
 | systemd（本番/MVP、ループバック限定） | 🟡 unit 作成済み・導入は Human Gate（後述） |
-| Cloudflare（`mira-agent-os` / `mira-agent-os-mvp` サブドメイン公開） | ⏳ 未実施（custom domain 変更は Approval 対象） |
+| Cloudflare（`mirai-agent-os` / `mirai-agent-os-mvp` サブドメイン公開） | ✅ 実施済み（Tunnel・DNS・Cloudflare Access で管理者アカウントのみに制限。systemd常駐は導入手順に従い実施） |
 | Notion / Slack / Gmail / GitHub 連携、Model Router、Workflow Engine | ⏳ 未実装（`doc/` 参照） |
 
 セットアップ・API・既知の制約は **[`app/README.md`](app/README.md)** を参照。
