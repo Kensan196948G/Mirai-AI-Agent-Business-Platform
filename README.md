@@ -460,7 +460,7 @@ flowchart TD
     SETUP -->|Phase構築内容の詳細分解| BUILD
     SETUP -->|各ツール設定の詳細手順| MANUAL
     SETUP -->|複数ツール横断のCSV投入手順| CSV
-    SETUP -.->|監視基盤VLAN予約(P-6)| INFRA
+    SETUP -.->|"監視基盤VLAN予約（P-6）"| INFRA
 
     style PROC fill:#dbeafe,stroke:#2563eb,stroke-width:2px
     style SETUP fill:#dcfce7,stroke:#16a34a,stroke-width:2px
