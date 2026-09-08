@@ -1,0 +1,16 @@
+{
+  "name": "mirai-ai-agent-business-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "みらいAIエージェント事業推進基盤のドキュメント正本。文書品質ゲート（依存ゼロ）を同梱する。",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "check": "node tools/check-docs.mjs",
+    "test": "node --test \"tools/**/*.test.mjs\"",
+    "verify": "npm run check && npm test"
+  },
+  "license": "UNLICENSED"
+}
