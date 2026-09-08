@@ -248,8 +248,11 @@ export function runChecks(root) {
     if (file.endsWith('.md')) {
       findings.push(...checkReferences(file, text, fileList));
       findings.push(...checkDocumentInfo(file, text));
-      // GitHub の Issue / PR テンプレートは h1 を持たない書式が正しいため対象外
-      if (!file.startsWith('.github/')) findings.push(...checkSingleH1(file, text));
+      // GitHub の Issue / PR テンプレート、および domain-packs/ 配下の SKILL.md
+      // （Agent Skills形式: frontmatter + 本文セクションが正で、h1見出しを持たない）は対象外。
+      // 参照解決（DOC001）・秘密情報検査（DOC003）は他のmdファイルと同様に適用する。
+      const isSkillMd = /(^|\/)domain-packs\/.+\/SKILL\.md$/.test(file);
+      if (!file.startsWith('.github/') && !isSkillMd) findings.push(...checkSingleH1(file, text));
     }
     findings.push(...scanSecrets(file, text));
   }

@@ -1,0 +1,1 @@
+{"case_id": "TCM-01", "input": {"gaps": [{"source_record_id": 1, "confirmed": ["公開概要あり"], "missing": ["現場条件"]}]}, "expect": {"comparison_table_min": 0, "notes": "confirmed情報が無い比較軸は不明として出力する"}}

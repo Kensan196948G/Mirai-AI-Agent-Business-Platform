@@ -1,0 +1,61 @@
+/**
+ * Agent Runtime Worker（別プロセス）。
+ * キューをポーリングしてRunを1件排他取得（Lease）し、Stepを1つずつ実行する。
+ * LLM／外部応答待ちの間、DBトランザクションを保持しない（Step単位の短いトランザクションのみ）。
+ *
+ * 起動方法: node src/agent-runtime/worker.js
+ * 停止方法: SIGTERM/SIGINT でグレースフルシャットダウン（実行中のStepの完了を待つ）。
+ */
+import { randomUUID } from 'node:crypto';
+import { getPool, withTransaction } from '../lib/db.js';
+import * as jobStore from './job-store.js';
+import { executeNextStep } from './workflow-engine.js';
+
+const WORKER_ID = `worker-${process.pid}-${randomUUID().slice(0, 8)}`;
+const POLL_INTERVAL_MS = Number(process.env.AGENT_WORKER_POLL_MS || 2000);
+const LEASE_SECONDS = Number(process.env.AGENT_WORKER_LEASE_SECONDS || 60);
+
+let shuttingDown = false;
+
+async function tick() {
+  const run = await withTransaction((client) => jobStore.claimNextRun(client, { workerId: WORKER_ID, leaseSeconds: LEASE_SECONDS }));
+  if (!run) return false;
+
+  // eslint-disable-next-line no-console
+  console.log(`[${WORKER_ID}] claimed ${run.run_code} (step ${run.current_step})`);
+  try {
+    let done = false;
+    while (!done && !shuttingDown) {
+      await withTransaction((client) => jobStore.heartbeat(client, run.id, WORKER_ID, LEASE_SECONDS));
+      const result = await executeNextStep(run.id, { workerId: WORKER_ID });
+      done = result.done;
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(`[${WORKER_ID}] Run ${run.run_code} で予期しないエラー:`, err.message);
+    await withTransaction((client) => jobStore.finishRun(client, run.id, { status: 'failed', errorMessage: `Worker内部エラー: ${err.message}` }));
+  }
+  return true;
+}
+
+async function loop() {
+  while (!shuttingDown) {
+    const worked = await tick();
+    if (!worked) await sleep(POLL_INTERVAL_MS);
+  }
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+process.on('SIGTERM', () => { shuttingDown = true; });
+process.on('SIGINT', () => { shuttingDown = true; });
+
+// eslint-disable-next-line no-console
+console.log(`[${WORKER_ID}] Agent Runtime Worker 起動`);
+loop().then(async () => {
+  await getPool().end();
+  // eslint-disable-next-line no-console
+  console.log(`[${WORKER_ID}] 停止しました`);
+});

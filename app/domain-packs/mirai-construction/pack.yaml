@@ -1,0 +1,18 @@
+schema_version: "mirai.domain-pack/v1"
+pack_id: "mirai-construction"
+version: "1.0.0"
+title: "みらい建設 業務Agent Domain Pack"
+description: >
+  みらい建設工業向けの業務Agent／Skill定義。設計参考: docs/Mirai-Agent-Skill-Architecture.md。
+  実行できるのは検索・比較・草案作成（実行レベルA0〜A1）まで。設備・船舶制御、警報変更、
+  外部への確定書き込み（Notion確定登録・Slack送信等）は一切含まない。
+owner_role: "IT/DX"
+stage: "P1"
+initial_evaluation_limit: 3
+data_policy:
+  allowed_classification: ["public"]
+  forbidden: ["personal_information", "location_data", "trade_secret", "credentials"]
+  evidence_types: ["marketing_overview", "synthetic_fixture"]
+notes: >
+  公式サイト情報は docs/Mirai-Agent-Skill-Architecture.md が2026-09-08時点で確認済みの要約を
+  そのまま source_records の種本として使う（本セッションでの追加WebFetchは行っていない）。

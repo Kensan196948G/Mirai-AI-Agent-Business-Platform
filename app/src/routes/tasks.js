@@ -87,8 +87,13 @@ router.patch('/:id', requireAuth, requireRole('Administrator', 'Developer'), asy
   }
   try {
     const result = await withTransaction(async (client) => {
-      const { rows: current } = await client.query(`SELECT status FROM tasks WHERE id = $1 FOR UPDATE`, [id]);
+      const { rows: current } = await client.query(`SELECT status, source FROM tasks WHERE id = $1 FOR UPDATE`, [id]);
       if (current.length === 0) throw Object.assign(new Error('task が見つかりません'), { status: 404 });
+      // Runtime管理のTask（Agent Runと連動）は、このAPIから直接書き換えられると
+      // 実行結果・費用を偽装できてしまうため拒否する。更新はWorkerプロセスのみが行う。
+      if (current[0].source === 'runtime') {
+        throw Object.assign(new Error('Runtime管理のTaskはこのAPIから直接更新できません'), { status: 409 });
+      }
       if (current[0].status === 'blocked' && status === 'running') {
         throw Object.assign(new Error('承認待ちのTaskはRetryできません'), { status: 409 });
       }

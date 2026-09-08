@@ -29,11 +29,13 @@
 | Notion / Slack / Gmail / GitHub 連携 | 🔴 人手 | 「つながっているか」のステータスを人が画面で手動更新するだけ。実際の自動同期はしない |
 | タスクの実行 | 🔴 人手 | AIエージェントが自動で作業するのではなく、実行ログを記録する台帳。Retry/Cancelは状態を書き換えるのみ |
 | Model Router（AIの使い分け） | 🔴 人手 | 「このカテゴリにはこのモデルを使う」という設定を保存するだけ。実行時に自動で使い分けはしない |
+| 業務Agent（技術選定・施工実績調査・Knowledge品質） | 🟡 API限定・検証途中 | `POST /api/agent-runs` で起動できる実行基盤（P0）+ みらい建設向け3Agent・12Skill（P1）を実装。**WebUI画面はまだ無く、API経由のみ**。実行できるのは検索・比較・草案作成まで（下記「🧩 業務Agent Runtime」参照） |
 
 `doc/` の要件定義書・技術設計概要が定義する Agentic Operating System の中で、上表が
 「本格実装フェーズ（2026-09-08〜）」として実 PostgreSQL・実認証まで作り込んだ範囲。
-Intent Router / Planner / Agent Orchestrator といった、AIが自律的に判断・実行する部分は
-本スコープ外（`doc/` 参照）。
+Intent Router / Planner / Agent Orchestrator といった、AIが自律的に判断・実行する部分の
+一部（技術選定支援等の限定Agent）はP0/P1として実装したが、P2（港湾・地盤等の業務拡張）・
+P3（専門システムとの外部連携）は無効なBacklogのまま（`docs/decisions/ADR-001-agent-skill-runtime.md` 参照）。
 
 > ℹ️ **命名について**：公開ドメインは `mirai-agent-os(-mvp).mirai-dx-platform.com`（2026-09-08 訂正済み）。
 > 一方、内部識別子は初期実装時の `mira-agent-os`（"i" 抜け）系列のまま据え置いている：
@@ -162,6 +164,43 @@ Administrator は Users 画面（または API）から次を行える。
 Playwright（`playwright-core` + 既存 Chrome）でログイン→全画面遷移→ログアウト、および
 承認の実操作（クリック → API → Audit記録）を目視・ログの両方で確認済み。
 
+## 🧩 業務Agent Runtime（P0/P1、API限定）
+
+`app/src/agent-runtime/` に、みらい建設工業向けの業務Agentを安全に実行するための
+共通基盤（P0）と、初期3Agent・12Skill（P1）を実装した。設計判断は
+`docs/decisions/ADR-001-agent-skill-runtime.md`、詳細な調査は
+`docs/Mirai-Agent-Skill-Architecture.md` を参照。
+
+- 😊 **かんたんに言うと**：AIが「技術資料を探して比較する」ところまでは自動でやってくれるが、
+  「本当に使えるか」の最終判断は必ず人がレビューする、という枠組みをAPIとして用意した段階。
+  **WebUI画面はまだ無い**（Postmanやスクリプトからしか動かせない）。
+
+| 項目 | 状態 |
+|---|:---:|
+| Registry（版付きAgent/Skill管理、パストラバーサル対策込みローダー） | ✅ 実装・単体テスト済み |
+| Policy Engine（Tool許可判定・案件越境防止・予算上限・グローバル禁止Tool） | ✅ 実装・単体テスト済み |
+| Tool Gateway（登録済み型付きToolのみ実行。任意Shell/SQL/URL取得は不可） | ✅ 実装 |
+| 永続Worker（Lease/Heartbeat/Checkpoint、cancel/resume） | ✅ 実装・E2Eテスト済み |
+| `technology-selection` Agent（技術検索→適用条件整理→比較→草案） | 🟡 決定的Stepは完走確認済み。**構造化LLM StepはDeepSeek APIキー設定時のみ動作**（テスト環境ではLLM未設定として明示的に失敗することを確認） |
+| `project-case-research` / `knowledge-quality` Agent | 🟡 定義・Registry登録は完了。E2Eでの完走確認は未実施（Backlog） |
+| WebUI（Agent起動・Run監視・成果物レビュー画面） | ⏳ 未実装（現状は `/api/agent-runs` 等をAPI経由で直接呼ぶ必要がある） |
+| P2（港湾・地盤・維持管理等の業務拡張）/ P3（専門システム連携） | ⏳ 未着手（無効なBacklog。ADR-001参照） |
+
+セットアップ（Domain Packの登録）:
+
+```bash
+node sync-agent-registry.mjs <Administratorのemail>   # domain-packs/ をDBへ承認済み版として同期
+node seed-agent-fixtures.mjs                            # 公開技術情報Fixtureを投入（冪等）
+npm run worker                                          # 別プロセスとしてWorkerを起動（ポーリング実行）
+```
+
+```bash
+# Agent Runの起動例（Administrator/Developer/Reviewer/Approver/Knowledge Curatorのみ）
+curl -X POST http://127.0.0.1:<PORT>/api/agent-runs \
+  -H 'Content-Type: application/json' -b "session=<cookie>" \
+  -d '{"agentId":"technology-selection","input":{"query":"汚濁防止膜の管理に関係する保有技術"}}'
+```
+
 ## 🚧 既知の制約（本格実装スコープ）
 
 - authentik / SSO 未統合。単一 email+password のみ
@@ -169,3 +208,6 @@ Playwright（`playwright-core` + 既存 Chrome）でログイン→全画面遷�
 - Chat の実LLM応答は自然言語部分のみ。Intent分類・Risk推定・Idea構造化は常にルールベース
 - Task の実行・完了は実際のAIエージェントが行わない（Retry/CancelはStatus更新のみ）
 - 承認ステップは「ロール」ベースで割り当てる（正本のような特定個人への事前割当ではない）
+- 業務Agent RuntimeにWebUI画面が無い（API限定）。`project-case-research`/`knowledge-quality`の
+  E2E完走確認が未実施。Domain Pack同期（`sync-agent-registry.mjs`）の承認は暫定的に
+  「実行できる運用者＝承認者」としており、WebUI上の正式な承認フローは未実装（いずれもBacklog）

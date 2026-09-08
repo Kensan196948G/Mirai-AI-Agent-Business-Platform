@@ -1,0 +1,2 @@
+{"case_id": "EBD-01", "input": {"comparison_table": [{"source_record_id": 1, "axis": "適用範囲", "value": "港湾", "basis": "公開概要記載"}]}, "expect": {"requires_human_review": true, "notes": "requires_human_reviewは常にtrue固定"}}
+{"case_id": "EBD-02", "input": {"comparison_table": []}, "expect": {"requires_human_review": true, "findings_min": 0, "notes": "情報不足でも失敗させず保留の草案として保存する"}}

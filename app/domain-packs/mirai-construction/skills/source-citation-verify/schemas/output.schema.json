@@ -1,0 +1,9 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["valid", "invalid"],
+  "properties": {
+    "valid": { "type": "array", "items": { "type": "integer" } },
+    "invalid": { "type": "array", "items": { "type": "object", "properties": { "source_record_id": { "type": "integer" }, "reason": { "type": "string" } } } }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["knowledge_candidate_id", "duplicates", "conflicts", "unknowns"],
+  "properties": {
+    "knowledge_candidate_id": { "type": "integer" },
+    "duplicates": { "type": "array", "items": { "type": "integer" } },
+    "conflicts": { "type": "array", "items": { "type": "object", "properties": { "knowledge_id": { "type": "integer" }, "reason": { "type": "string" } } } },
+    "unknowns": { "type": "array", "items": { "type": "string" } }
+  }
+}

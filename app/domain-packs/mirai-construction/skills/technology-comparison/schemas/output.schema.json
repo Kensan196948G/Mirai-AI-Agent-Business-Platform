@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["comparison_table", "unknowns"],
+  "additionalProperties": false,
+  "properties": {
+    "comparison_table": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["source_record_id", "axis", "value", "basis"],
+        "additionalProperties": false,
+        "properties": {
+          "source_record_id": { "type": "integer" },
+          "axis": { "type": "string" },
+          "value": { "type": "string" },
+          "basis": { "type": "string" }
+        }
+      }
+    },
+    "unknowns": { "type": "array", "items": { "type": "string" } }
+  }
+}

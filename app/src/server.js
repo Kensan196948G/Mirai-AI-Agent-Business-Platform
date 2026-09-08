@@ -12,6 +12,9 @@ import userRoutes from './routes/users.js';
 import platformRoutes from './routes/platform.js';
 import dashboardRoutes from './routes/dashboard.js';
 import chatRoutes from './routes/chat.js';
+import agentRunRoutes from './routes/agent-runs.js';
+import artifactRoutes from './routes/artifacts.js';
+import skillVersionRoutes from './routes/skill-versions.js';
 
 const app = express();
 app.disable('x-powered-by');
@@ -31,6 +34,9 @@ app.use('/api/users', userRoutes);
 app.use('/api', platformRoutes); // /api/integrations, /api/agents, /api/skills, /api/router, /api/usage
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/agent-runs', agentRunRoutes);
+app.use('/api/artifacts', artifactRoutes);
+app.use('/api/skills', skillVersionRoutes); // /api/skills/:id/versions（platformRoutesのGET /skillsとはパスが異なり衝突しない）
 
 // eslint-disable-next-line no-unused-vars
 app.use((err, _req, res, _next) => {

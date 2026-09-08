@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["comparisons", "unknowns"],
+  "properties": {
+    "comparisons": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "source_record_id": { "type": "integer" },
+          "similarities": { "type": "array", "items": { "type": "string" } },
+          "differences": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "unknowns": { "type": "array", "items": { "type": "string" } }
+  }
+}

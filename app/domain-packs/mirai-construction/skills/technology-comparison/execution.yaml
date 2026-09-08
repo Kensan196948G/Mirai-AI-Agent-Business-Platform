@@ -1,0 +1,17 @@
+schema_version: mirai.skill-execution/v1
+skill_id: technology-comparison
+version: 1.0.0
+input_schema: schemas/input.schema.json
+output_schema: schemas/output.schema.json
+required_source_state: approved
+source_scope: authorized_project_and_public
+execution_mode: structured_llm
+allowed_tools: []
+forbidden_actions:
+  - equipment.control
+  - external.send
+  - formal-approval.decide
+result_class: intermediate
+require_domain_review: false
+on_missing_evidence: abstain
+max_attempts: 3
