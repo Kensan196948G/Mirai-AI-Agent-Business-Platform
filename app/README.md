@@ -182,9 +182,9 @@ Playwright（`playwright-core` + 既存 Chrome）でログイン→全画面遷�
 | Tool Gateway（登録済み型付きToolのみ実行。任意Shell/SQL/URL取得は不可） | ✅ 実装 |
 | 永続Worker（Lease/Heartbeat/Checkpoint、cancel/resume） | ✅ 実装・E2Eテスト済み |
 | `technology-selection` Agent（技術検索→適用条件整理→比較→草案） | 🟡 決定的Stepは完走確認済み。**構造化LLM StepはDeepSeek APIキー設定時のみ動作**（テスト環境ではLLM未設定として明示的に失敗することを確認） |
-| `project-case-research` / `knowledge-quality` Agent | 🟡 定義・Registry登録は完了。E2Eでの完走確認は未実施（Backlog） |
+| `project-case-research` / `knowledge-quality` Agent | 🟡 決定的Step（施工実績検索）は完走確認済み。構造化LLM StepはDeepSeek APIキー設定時のみ動作（テスト環境ではLLM未設定として明示的に失敗することを確認） |
 | WebUI（Agent起動・Run監視・成果物レビュー画面） | ⏳ 未実装（現状は `/api/agent-runs` 等をAPI経由で直接呼ぶ必要がある） |
-| P2（港湾・地盤・維持管理等の業務拡張）/ P3（専門システム連携） | ⏳ 未着手（無効なBacklog。ADR-001参照） |
+| P2（港湾・地盤・維持管理等の業務拡張）/ P3（専門システム連携） | ⏳ 実行不能なカタログのみ整備（`domain-packs/mirai-construction/backlog/p2-p3-catalog.yaml`。責任者・必要資料・評価条件・禁止事項を列挙。ADR-001参照） |
 
 セットアップ（Domain Packの登録）:
 
@@ -208,6 +208,5 @@ curl -X POST http://127.0.0.1:<PORT>/api/agent-runs \
 - Chat の実LLM応答は自然言語部分のみ。Intent分類・Risk推定・Idea構造化は常にルールベース
 - Task の実行・完了は実際のAIエージェントが行わない（Retry/CancelはStatus更新のみ）
 - 承認ステップは「ロール」ベースで割り当てる（正本のような特定個人への事前割当ではない）
-- 業務Agent RuntimeにWebUI画面が無い（API限定）。`project-case-research`/`knowledge-quality`の
-  E2E完走確認が未実施。Domain Pack同期（`sync-agent-registry.mjs`）の承認は暫定的に
-  「実行できる運用者＝承認者」としており、WebUI上の正式な承認フローは未実装（いずれもBacklog）
+- 業務Agent RuntimeにWebUI画面が無い（API限定）。Domain Pack同期（`sync-agent-registry.mjs`）の
+  承認は暫定的に「実行できる運用者＝承認者」としており、WebUI上の正式な承認フローは未実装（Backlog）
