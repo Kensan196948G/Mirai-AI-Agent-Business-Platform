@@ -1,0 +1,160 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mirai-AgentOS 開発フェーズ別 AI 分担ガイド</title><style>
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans JP','Yu Gothic',Meiryo,sans-serif;background:#f5f7fb;color:#172033;line-height:1.7}
+header{background:linear-gradient(135deg,#10233f,#183153 55%,#164e63);color:#fff;padding:56px 24px}
+.wrap{max-width:1180px;margin:auto}h1{font-size:46px;line-height:1.2;margin:10px 0}.sub{color:#dbeafe;font-size:18px;max-width:920px}
+nav{position:sticky;top:0;background:#ffffffee;border-bottom:1px solid #dfe5ee;padding:10px 18px;z-index:10}nav .wrap{display:flex;gap:8px;overflow:auto}nav a{color:#42516a;text-decoration:none;font-weight:700;font-size:13px;padding:8px 10px;border-radius:8px}
+main{max-width:1180px;margin:auto;padding:32px 18px 70px}section{margin-bottom:44px}.st{display:flex;gap:12px;align-items:center;margin-bottom:16px}.n{width:38px;height:38px;border-radius:12px;background:#183153;color:#fff;display:grid;place-items:center;font-weight:800}
+h2{margin:0;font-size:28px}.lead,.note,.warn,.ok{padding:16px 18px;border-radius:12px;margin:14px 0}.lead{background:#eef5ff;border-left:5px solid #2563eb}.note{background:#ecfeff;border-left:4px solid #0891b2}.warn{background:#fff7ed;border-left:4px solid #b45309}.ok{background:#f0fdf4;border-left:4px solid #15803d}
+table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid #dfe5ee;border-radius:14px;overflow:hidden}th,td{padding:12px 13px;border-bottom:1px solid #dfe5ee;vertical-align:top}th{background:#f1f5f9;text-align:left;font-size:13px}tr:last-child td{border-bottom:0}
+pre{margin:0}.arch{background:#0f172a;color:#e5eefc;padding:22px;border-radius:18px;overflow:auto;font:14px/1.55 Consolas,monospace}
+.phase{background:#fff;border:1px solid #dfe5ee;border-radius:16px;margin-bottom:14px;overflow:hidden}.ph{display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:center;padding:15px 16px;background:#fbfcfe;border-bottom:1px solid #dfe5ee}.pn{width:48px;height:48px;border-radius:13px;background:#183153;color:#fff;display:grid;place-items:center;font-weight:900}.tool{font-size:12px;font-weight:800;background:#eef2f7;padding:6px 9px;border-radius:999px}.pb{padding:16px}.pb ul{margin:6px 0;padding-left:20px}
+.roles{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.card{background:#fff;border:1px solid #dfe5ee;border-radius:16px;padding:18px}.big{font-size:24px;font-weight:900;margin:8px 0;color:#183153}.quote{padding:22px;border-radius:18px;background:linear-gradient(135deg,#eff6ff,#f5f3ff);border:1px solid #dbeafe;text-align:center;font-size:22px;font-weight:900;color:#1e3a8a}
+code{background:#eef2f7;padding:2px 6px;border-radius:6px;font-family:Consolas,monospace}.footer{text-align:center;color:#617083;border-top:1px solid #dfe5ee;padding-top:20px;margin-top:40px}
+@media(max-width:900px){.roles{grid-template-columns:1fr}.ph{grid-template-columns:56px 1fr}.tool{grid-column:2;justify-self:start}}@media print{nav{display:none}.phase{break-inside:avoid}body{background:#fff}}
+</style></head>
+<body>
+<header><div class="wrap"><div>MIRAI-AGENTOS / AI DEVELOPMENT GOVERNANCE</div><h1>開発フェーズ別 AI 分担ガイド</h1><p class="sub">Claude Code、Codex、DeepSeek Harnessを同じフェーズ内で混在させず、フェーズごとに主担当AIを固定し、Gateで成果物を次のAIへ引き渡す運用モデル。</p></div></header>
+<nav><div class="wrap"><a href="#principle">原則</a><a href="#matrix">分担表</a><a href="#flow">全体フロー</a><a href="#phases">P0-P11</a><a href="#roles">役割</a><a href="#rules">運用ルール</a></div></nav>
+<main>
+<section id="principle"><div class="st"><div class="n">01</div><h2>基本原則</h2></div>
+<div class="lead"><strong>同じフェーズで3つを混ぜない。</strong> フェーズごとに主担当AIを固定し、成果物とGateを明確にして次のAIへ引き渡す。</div>
+</section>
+
+<section id="matrix"><div class="st"><div class="n">02</div><h2>推奨フェーズ分担</h2></div>
+<table><thead><tr><th>Phase</th><th>内容</th><th>主担当</th><th>理由</th></tr></thead><tbody>
+<tr><td><b>P0</b></td><td>要件・設計確定</td><td><b>Claude Code</b></td><td>全体構造・要件整合性に強い</td></tr>
+<tr><td><b>P1</b></td><td>Repository・Docker・DB基盤</td><td><b>Claude Code</b></td><td>初期Architectureを一貫して構築</td></tr>
+<tr><td><b>P2</b></td><td>Core機能実装</td><td><b>Claude Code</b></td><td>PostgreSQL/API/Workflow/Approval実装</td></tr>
+<tr><td><b>P3</b></td><td>Core独立レビュー</td><td><b>Codex</b></td><td>Claude実装を別モデルで検証</td></tr>
+<tr><td><b>P4</b></td><td>Agent Kernel・Runtime接続</td><td><b>Claude Code</b></td><td>Orchestrator/Router/Adapter設計</td></tr>
+<tr><td><b>P5</b></td><td>Agent実行・長時間Loop検証</td><td><b>DeepSeek Harness</b></td><td>Agent Runtimeとして本領を発揮</td></tr>
+<tr><td><b>P6</b></td><td>Security・Test・Regression</td><td><b>Codex</b></td><td>独立Checkerとして利用</td></tr>
+<tr><td><b>P7</b></td><td>Slack/Gmail/Notion/GitHub統合</td><td><b>Claude Code</b></td><td>複数Integrationの整合性を維持</td></tr>
+<tr><td><b>P8</b></td><td>Agent E2E・負荷・大量試験</td><td><b>DeepSeek Harness</b></td><td>大量反復・自律実行向き</td></tr>
+<tr><td><b>P9</b></td><td>Release Candidateレビュー</td><td><b>Codex</b></td><td>最終独立Review</td></tr>
+<tr><td><b>P10</b></td><td>Production準備・文書整備</td><td><b>Claude Code</b></td><td>Runbook/Architecture/Docs整合</td></tr>
+<tr><td><b>P11</b></td><td>運用・継続評価・自己改善</td><td><b>DeepSeek Harness</b></td><td>継続Agent実行・Skill改善</td></tr>
+</tbody></table></section>
+
+<section id="flow"><div class="st"><div class="n">03</div><h2>全体の流れ</h2></div>
+<div class="arch"><pre>P0 Claude Code  要件・Architecture
+        ↓
+P1 Claude Code  基盤構築
+        ↓
+P2 Claude Code  Core実装
+        ↓
+P3 Codex        独立Review
+        ↓ Gate-1
+
+P4 Claude Code  Agent Kernel実装
+        ↓
+P5 DeepSeek Harness  Agent Runtime検証
+        ↓
+P6 Codex        Security / Test Review
+        ↓ Gate-2
+
+P7 Claude Code  外部Integration
+        ↓
+P8 DeepSeek Harness  E2E / Long Run / Load
+        ↓
+P9 Codex        Release Review
+        ↓ Gate-3
+
+P10 Claude Code Production準備
+        ↓
+Human Approval
+        ↓
+Production
+        ↓
+P11 DeepSeek Harness 運用 / Evaluation / Improvement</pre></div></section>
+
+<section id="phases"><div class="st"><div class="n">04</div><h2>P0〜P11 詳細</h2></div>
+    <article class="phase">
+      <div class="ph"><div class="pn">P0</div><h3>要件・Architecture確定</h3><div class="tool">Claude Code</div></div>
+      <div class="pb"><ul><li>要件定義書・詳細設計仕様書・AgentOS技術設計概要を読み込み、実装前Architectureを確定。</li><li>Requirements / Architecture / Repository Boundary / Technology Stack</li><li>Directory Structure / Data Model / API Boundary / Agent Boundary / Security Boundary</li><li>docs/、architecture/、ADR、README、CLAUDE.md、CODEX.mdを固める</li></ul><div class="ok"><strong>Gate：Architecture矛盾なし、SoR定義済み、PostgreSQL境界確定、Agent/Model分離確定、Approval設計確定。</strong></div></div>
+    </article>
+    
+    <article class="phase">
+      <div class="ph"><div class="pn">P1</div><h3>基盤構築</h3><div class="tool">Claude Code</div></div>
+      <div class="pb"><ul><li>Repository構造を作成：apps / kernel / agents / skills / integrations / database / tests / docker</li><li>Docker Compose / PostgreSQL / Migration / API Server / WebUI Skeleton</li><li>authentik / Prometheus / Loki / Grafana</li></ul><div class="ok"><strong>Gate：docker compose up → 全Service正常 → PostgreSQL migration成功 → Health Check PASS。</strong></div></div>
+    </article>
+    
+    <article class="phase">
+      <div class="ph"><div class="pn">P2</div><h3>AgentOS Core実装</h3><div class="tool">Claude Code</div></div>
+      <div class="pb"><ul><li>Project / Phase / Gate / Task</li><li>Workflow Engine / Policy Engine / Approval / Audit</li><li>Artifact / API</li><li>Agentを本格稼働させなくてもProcess Controlが成立する状態を完成させる</li></ul></div>
+    </article>
+    
+    <article class="phase">
+      <div class="ph"><div class="pn">P3</div><h3>Core独立レビュー</h3><div class="tool">Codex</div></div>
+      <div class="pb"><ul><li>Claude Code実装を修正前提ではなく、まず独立評価する</li><li>Architecture / Database Schema / API / RBAC / Policy / Approval / Audit / State Machine</li><li>Tests / Security / 要件定義→詳細設計→実装のTraceability</li></ul><div class="ok"><strong>Gate-1：Critical=0、High=0、Tests PASS、Requirement Coverage OK。</strong></div></div>
+    </article>
+    
+    <article class="phase">
+      <div class="ph"><div class="pn">P4</div><h3>Agent Kernel実装</h3><div class="tool">Claude Code</div></div>
+      <div class="pb"><ul><li>Intent Router / Planner / Agent Orchestrator / Task Scheduler</li><li>Model Router / Skill Registry / Tool Gateway / Runtime Interface</li><li>interface AgentRuntime を先に定義し、ClaudeRuntime / CodexRuntime / DeepSeekHarnessRuntimeを交換可能にする</li></ul></div>
+    </article>
+    
+    <article class="phase">
+      <div class="ph"><div class="pn">P5</div><h3>Agent Runtime検証</h3><div class="tool">DeepSeek Harness</div></div>
+      <div class="pb"><ul><li>主目的は新機能開発ではなく実行検証</li><li>Research / Developer / Reviewer / Knowledge Agent</li><li>Planning Loop / Tool Calls / Retry / Failure Recovery / Context維持 / Skill loading / Agent delegation / Long-running Task</li><li>Goal → 最大8 Round → Tool → Failure → Retry → Strategy Change → Complete</li></ul></div>
+    </article>
+    
+    <article class="phase">
+      <div class="ph"><div class="pn">P6</div><h3>Security・Test・Regression</h3><div class="tool">Codex</div></div>
+      <div class="pb"><ul><li>Unit / Integration / Contract / E2E / Security / Regression / Recovery / Agent Evaluation</li><li>Policy迂回、ApprovalなしProduction、SecretのLog流出、Retry暴走を重点確認</li></ul><div class="ok"><strong>Gate-2：Security bypassなし、必須Test PASS、Recovery成立、重大Runtime欠陥なし。</strong></div></div>
+    </article>
+    
+    <article class="phase">
+      <div class="ph"><div class="pn">P7</div><h3>外部Integration</h3><div class="tool">Claude Code</div></div>
+      <div class="pb"><ul><li>Notion / Slack / Gmail / GitHub</li><li>authentik / Tailscale / Grafana</li><li>Slack → Request → AgentOS → PostgreSQL → Notion → GitHub の一貫性を維持</li></ul></div>
+    </article>
+    
+    <article class="phase">
+      <div class="ph"><div class="pn">P8</div><h3>Agent E2E・負荷・大量試験</h3><div class="tool">DeepSeek Harness</div></div>
+      <div class="pb"><ul><li>多数の擬似案件で Idea → Project → Plan → Agent → Code → Test → Review → Knowledge を反復</li><li>Agent成功率 / 平均Round / Retry率 / 失敗分類 / Token消費 / 処理時間 / Knowledge品質を測定</li></ul></div>
+    </article>
+    
+    <article class="phase">
+      <div class="ph"><div class="pn">P9</div><h3>Release Candidate Review</h3><div class="tool">Codex</div></div>
+      <div class="pb"><ul><li>Release Auditorとしてコード以外も横断評価</li><li>Requirement / Architecture / Implementation / Tests / Security / Operations / Rollback / Monitoring</li></ul><div class="ok"><strong>Gate-3：Critical=0、High=0、Release Blockerなし、Backup/Restore/Monitoring/Rollback成立。</strong></div></div>
+    </article>
+    
+    <article class="phase">
+      <div class="ph"><div class="pn">P10</div><h3>Production準備・文書整備</h3><div class="tool">Claude Code</div></div>
+      <div class="pb"><ul><li>README / Runbook / Backup / Restore / Monitoring / Alert</li><li>Deployment / Rollback / Troubleshooting / Operations Playbook / Architecture Docs / ADR</li><li>Knowledge Baseとの整合を取る</li></ul><div class="ok"><strong>Human Approvalまでで停止し、Production実行は人間承認後。</strong></div></div>
+    </article>
+    
+    <article class="phase">
+      <div class="ph"><div class="pn">P11</div><h3>運用・継続評価・自己改善</h3><div class="tool">DeepSeek Harness</div></div>
+      <div class="pb"><ul><li>Agent Execution → Metrics → Failure → Experience → Improvement Candidate</li><li>Knowledge Discovery / Knowledge Quality Review / Knowledge Lifecycle</li><li>Skill Improvement / Prompt Evaluation / Regression</li><li>改善案 → Test → Codex Review → Human Approval → Promotion</li></ul><div class="ok"><strong>自動でProductionへ改善を昇格させない。</strong></div></div>
+    </article>
+    </section>
+
+<section id="roles"><div class="st"><div class="n">05</div><h2>3製品の役割</h2></div>
+<div class="roles">
+<div class="card"><h3>Claude Code</h3><div class="big">「作る」</div><p><b>Builder / Architect</b><br>要件・設計・基盤・Core・Agent Kernel・Integration・Production準備。</p></div>
+<div class="card"><h3>Codex</h3><div class="big">「疑う・検証する」</div><p><b>Reviewer / Auditor</b><br>Core Review、Security/Test、Release Candidate Review。</p></div>
+<div class="card"><h3>DeepSeek Harness</h3><div class="big">「大量に動かす・試す」</div><p><b>Executor / Validator / Learner</b><br>長時間Loop、E2E、大量試験、継続評価、改善候補。</p></div>
+</div></section>
+
+<section id="rules"><div class="st"><div class="n">06</div><h2>特に重要な運用ルール</h2></div>
+<div class="warn"><strong>同じフェーズ内で主担当AIを混ぜない。</strong><br>P2をClaude Codeが実装中にCodexへ途中修正させない。P2完了後に成果物を固定してからCodexへ渡す。</div>
+<div class="arch"><pre>P2 Claude Code 完了
+        ↓
+git commit / tag
+phase/p2-core-complete
+        ↓
+P3 Codex Review
+        ↓
+git commit / tag
+phase/p3-review-complete
+        ↓
+Gate-1
+        ↓
+P4へ</pre></div>
+<div class="ok"><strong>狙い：</strong>誰が何を作ったか、どのAIが何をレビューしたか、どのGateで承認されたかを明確にする。Mirai-AgentOSが重視するApproval/Audit思想を、開発プロセス自身にも適用する。</div>
+<div class="quote">Builder ≠ Reviewer ≠ Executor<br>作るAI・疑うAI・大量実行するAIを分離する</div>
+</section>
+
+<div class="footer">Mirai-AgentOS 開発フェーズ別 AI 分担ガイド — Standalone HTML</div>
+</main></body></html>

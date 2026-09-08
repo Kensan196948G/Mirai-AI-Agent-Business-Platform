@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mirai-AgentOS AgentとSkills 全社員向け説明資料</title><style>
+:root{
+  --bg:#f5f7fb;--panel:#fff;--ink:#172033;--muted:#617083;--line:#dfe5ee;
+  --navy:#183153;--blue:#2563eb;--cyan:#0891b2;--green:#15803d;--amber:#b45309;
+  --purple:#7c3aed;--red:#b91c1c;--dark:#0f172a;--softblue:#eef5ff;--softgreen:#f0fdf4;
+  --softamber:#fff7ed;--shadow:0 8px 24px rgba(20,32,51,.08);--radius:18px
+}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP","Yu Gothic",Meiryo,sans-serif;background:var(--bg);color:var(--ink);line-height:1.75}
+a{color:inherit;text-decoration:none}
+.hero{background:radial-gradient(circle at 88% 12%,rgba(37,99,235,.18),transparent 28%),linear-gradient(135deg,#10233f,#183153 55%,#164e63);color:#fff;padding:64px 24px 48px}
+.wrap{max-width:1220px;margin:auto}.eyebrow{display:inline-block;padding:6px 12px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);border-radius:999px;font-size:13px;font-weight:800;letter-spacing:.05em}
+h1{font-size:clamp(30px,4vw,54px);line-height:1.2;margin:18px 0 12px}.hero p{max-width:980px;color:#dbeafe;font-size:18px;margin:0}.meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:24px}.tag{padding:7px 11px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);font-size:12px}
+.nav{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}.nav .wrap{display:flex;gap:8px;overflow:auto;padding:10px 16px}.nav a{white-space:nowrap;padding:8px 11px;border-radius:9px;font-size:13px;font-weight:800;color:#42516a}.nav a:hover{background:#edf4ff;color:var(--blue)}
+main{max-width:1220px;margin:auto;padding:34px 18px 76px}section{margin:0 0 46px}.st{display:flex;align-items:center;gap:12px;margin-bottom:18px}.num{width:38px;height:38px;border-radius:12px;background:var(--navy);color:#fff;display:grid;place-items:center;font-weight:900}h2{margin:0;font-size:28px;line-height:1.3}h3{margin:0 0 8px;font-size:19px}
+.lead,.note,.warn,.ok{border-radius:14px;padding:16px 18px;margin:14px 0}.lead{background:var(--softblue);border:1px solid #d7e7ff;border-left:5px solid var(--blue)}.note{background:#ecfeff;border-left:4px solid var(--cyan);color:#164e63}.warn{background:var(--softamber);border-left:4px solid var(--amber);color:#7c2d12}.ok{background:var(--softgreen);border-left:4px solid var(--green);color:#14532d}
+.grid{display:grid;gap:16px}.cols2{grid-template-columns:repeat(2,minmax(0,1fr))}.cols3{grid-template-columns:repeat(3,minmax(0,1fr))}.cols4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:19px;box-shadow:var(--shadow)}.card p{margin:0;color:var(--muted)}.badge{display:inline-block;padding:4px 9px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:12px;font-weight:900;margin-bottom:8px}
+table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden}th,td{padding:12px 13px;border-bottom:1px solid var(--line);vertical-align:top}th{background:#f1f5f9;text-align:left;font-size:13px;color:#334155}tr:last-child td{border-bottom:0}
+.arch{background:var(--dark);color:#e5eefc;border-radius:20px;padding:22px;overflow:auto;box-shadow:var(--shadow)}.arch pre{margin:0;font:14px/1.6 Consolas,"SFMono-Regular",monospace}
+.org{background:#fff;border:1px solid var(--line);border-radius:18px;margin:0 0 14px;overflow:hidden}.orgh{display:grid;grid-template-columns:70px 1fr auto;gap:14px;align-items:center;padding:16px 18px;background:#fbfcfe;border-bottom:1px solid var(--line)}.orgno{width:52px;height:52px;border-radius:14px;background:var(--navy);color:#fff;display:grid;place-items:center;font-weight:900}.orgbody{padding:18px}.pill{font-size:12px;font-weight:900;background:#eef2f7;padding:6px 10px;border-radius:999px}.skills{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.skill{background:#f8fafc;border:1px solid #dfe5ee;border-radius:999px;padding:6px 9px;font-size:12px}
+.quote{padding:22px;border-radius:18px;background:linear-gradient(135deg,#eff6ff,#f5f3ff);border:1px solid #dbeafe;text-align:center;font-size:22px;font-weight:900;color:#1e3a8a}
+.legend{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.legend .card{padding:14px}
+code{background:#eef2f7;padding:2px 6px;border-radius:6px;font-family:Consolas,monospace;font-size:.92em}
+.footer{margin-top:48px;border-top:1px solid var(--line);padding-top:22px;color:var(--muted);font-size:13px;text-align:center}
+@media(max-width:980px){.cols3,.cols4,.legend{grid-template-columns:1fr 1fr}.orgh{grid-template-columns:60px 1fr}.pill{grid-column:2;justify-self:start}}
+@media(max-width:640px){.cols2,.cols3,.cols4,.legend{grid-template-columns:1fr}.hero{padding-top:44px}main{padding-left:14px;padding-right:14px}}
+@media print{.nav{display:none}.card,.org,.arch{box-shadow:none}body{background:#fff}.org{break-inside:avoid}}
+</style></head>
+<body>
+<header class="hero"><div class="wrap">
+<span class="eyebrow">MIRAI-AGENTOS / AGENT & SKILL GUIDE</span>
+<h1>Agent（エージェント）と Skills（スキル）<br>全社員向け説明資料</h1>
+<p>Mirai-AgentOSで使うAgent（専門家役のAI）とSkills（そのAIが使う能力）を、会社組織・土木建設専門分野・人間の確認ポイントまで含めて、IT部門以外の社員にも分かりやすく整理した資料です。</p>
+<div class="meta"><span class="tag">非エンジニア向け</span><span class="tag">日本語＋英語併記</span><span class="tag">組織Agent</span><span class="tag">土木専門Agent</span><span class="tag">再利用Skills</span><span class="tag">Human-in-the-Loop</span></div>
+</div></header>
+
+<nav class="nav"><div class="wrap">
+<a href="#basic">まず理解</a><a href="#layers">全体構造</a><a href="#org">組織別Agent</a><a href="#civil">土木専門Agent</a><a href="#skill">Skills</a><a href="#flow">利用例</a><a href="#review">人の確認</a><a href="#rules">設計ルール</a>
+</div></nav>
+
+<main>
+<section id="basic"><div class="st"><div class="num">01</div><h2>まず理解する：AgentとSkillの違い</h2></div>
+<div class="lead"><strong>一番簡単な考え方：</strong> Agent（エージェント）は「専門家役」、Skill（スキル）は「その専門家が使う能力」です。</div>
+<div class="legend">
+<div class="card"><span class="badge">Agent / エージェント</span><h3>専門家役</h3><p>複数の情報やSkillを使って考え、仕事を組み立てます。</p></div>
+<div class="card"><span class="badge">Skill / スキル</span><h3>専門能力</h3><p>数量算出、基準検索、施工計画レビューなど、具体的な能力です。</p></div>
+<div class="card"><span class="badge">Knowledge / ナレッジ</span><h3>知識</h3><p>基準、過去事例、ADR、研究結果、Playbookなど。</p></div>
+<div class="card"><span class="badge">Tool / ツール</span><h3>道具</h3><p>CAD、GIS、計算、GitHub、検索など実際の処理手段。</p></div>
+<div class="card"><span class="badge">Policy / ポリシー</span><h3>ルール</h3><p>AIに任せてよい範囲と、人が必ず確認する範囲。</p></div>
+</div>
+<div class="arch"><pre>
+例：構造技術Agent / Structural Engineering Agent
+        │
+        ├─ 擁壁レビューSkill / Retaining Wall Review
+        ├─ 杭基礎チェックSkill / Pile Foundation Check
+        ├─ 荷重組合せ確認Skill / Load Combination Check
+        │
+        ├─ Knowledge / 知識
+        │    ├─ 設計基準
+        │    ├─ 過去案件
+        │    └─ 技術判断記録
+        │
+        └─ Tools / 道具
+             ├─ 計算ツール
+             ├─ CAD
+             └─ 解析ソフト
+</pre></div>
+</section>
+
+<section id="layers"><div class="st"><div class="num">02</div><h2>Mirai-AgentOSのAgent全体構造</h2></div>
+<div class="arch"><pre>
+利用者 / User
+   ↓
+司令塔Agent / CTO Orchestrator
+   ↓
+┌─────────────────────────────────────┐
+│ 組織責務Agent / Organization Agents │
+│ 01～09                              │
+└─────────────────────────────────────┘
+   ↓ 必要に応じて連携
+┌─────────────────────────────────────┐
+│ 土木専門Agent / Civil Expert Agents │
+│ 港湾・地盤・構造・施工・CAD等       │
+└─────────────────────────────────────┘
+   ↓
+Skills / スキル
+   ↓
+Knowledge / ナレッジ ＋ Tools / ツール
+   ↓
+横断レビュー / Cross Review
+   ↓
+人間の確認・承認 / Human Review & Approval
+</pre></div>
+<div class="ok"><strong>重要：</strong>「会社の誰の仕事か」を表すのが組織Agent、「何の専門家か」を表すのが土木専門Agentです。</div>
+</section>
+
+<section id="org"><div class="st"><div class="num">03</div><h2>01〜09 組織別AgentとSkills</h2></div>
+
+    <article class="org">
+      <div class="orgh"><div class="orgno">01</div><h3>経営・統治・委員会</h3><div class="pill">Executive Governance / 経営・統治</div></div>
+      <div class="orgbody">
+        <div class="grid cols2">
+          <div><strong>推奨Agent / Recommended Agents</strong><ul><li>経営戦略支援Agent / Executive Strategy Agent</li><li>ガバナンスAgent / Governance Agent</li><li>委員会支援Agent / Committee Support Agent</li><li>リスク・コンプライアンスAgent / Risk & Compliance Agent</li></ul></div>
+          <div><strong>主なSkills / Main Skills</strong><div class="skills"><span class="skill">経営会議資料作成 / Executive Briefing</span><span class="skill">KPIレビュー / KPI Review</span><span class="skill">案件ポートフォリオ評価 / Portfolio Review</span><span class="skill">意思決定記録 / Decision Log</span><span class="skill">リスク評価 / Risk Assessment</span><span class="skill">職務分掌確認 / SoD Check</span></div></div>
+        </div>
+        <div class="note">経営判断そのものをAIが決定するのではなく、選択肢・根拠・リスクを整理して人間の意思決定を支援する。</div>
+      </div>
+    </article>
+    
+    <article class="org">
+      <div class="orgh"><div class="orgno">02</div><h3>営業・案件形成</h3><div class="pill">Sales & Opportunity / 営業・案件形成</div></div>
+      <div class="orgbody">
+        <div class="grid cols2">
+          <div><strong>推奨Agent / Recommended Agents</strong><ul><li>営業案件形成Agent / Sales Opportunity Agent</li><li>提案支援Agent / Proposal Agent</li><li>案件化Agent / Project Formation Agent</li><li>顧客情報整理Agent / Customer Intelligence Agent</li></ul></div>
+          <div><strong>主なSkills / Main Skills</strong><div class="skills"><span class="skill">案件適格性評価 / Opportunity Qualification</span><span class="skill">入札資料解析 / Tender Analysis</span><span class="skill">提案書作成支援 / Proposal Drafting</span><span class="skill">類似実績検索 / Similar Project Search</span><span class="skill">技術部門連携 / Technical Coordination</span><span class="skill">受注・失注分析 / Win-Loss Analysis</span></div></div>
+        </div>
+        <div class="note">営業Agentに土木技術を全部持たせず、必要に応じて港湾・地盤・構造等の専門Agentを呼び出す。</div>
+      </div>
+    </article>
+    
+    <article class="org">
+      <div class="orgh"><div class="orgno">03</div><h3>施工・調達・作業所</h3><div class="pill">Construction & Procurement / 施工・調達</div></div>
+      <div class="orgbody">
+        <div class="grid cols2">
+          <div><strong>推奨Agent / Recommended Agents</strong><ul><li>施工管理Agent / Construction Management Agent</li><li>施工計画Agent / Construction Planning Agent</li><li>調達Agent / Procurement Agent</li><li>作業所運営Agent / Site Operations Agent</li></ul></div>
+          <div><strong>主なSkills / Main Skills</strong><div class="skills"><span class="skill">施工方法検討 / Construction Method Planning</span><span class="skill">工程計画 / Schedule Planning</span><span class="skill">施工性レビュー / Constructability Review</span><span class="skill">仮設計画 / Temporary Works Planning</span><span class="skill">重機計画 / Equipment Planning</span><span class="skill">数量算出 / Quantity Takeoff</span><span class="skill">進捗分析 / Progress Analysis</span></div></div>
+        </div>
+        <div class="note">現場の最終施工判断は人間。Agentは計画案、リスク、代替案、過去事例を整理する。</div>
+      </div>
+    </article>
+    
+    <article class="org">
+      <div class="orgh"><div class="orgno">04</div><h3>技術・研究開発</h3><div class="pill">Technology & R&D / 技術・研究開発</div></div>
+      <div class="orgbody">
+        <div class="grid cols2">
+          <div><strong>推奨Agent / Recommended Agents</strong><ul><li>技術検討Agent / Technical Engineering Agent</li><li>研究開発Agent / R&D Agent</li><li>技術評価Agent / Technology Evaluation Agent</li><li>基準・研究調査Agent / Standards & Research Agent</li><li>特許・知財Agent / IP & Patent Agent</li></ul></div>
+          <div><strong>主なSkills / Main Skills</strong><div class="skills"><span class="skill">技術文献調査 / Literature Review</span><span class="skill">研究計画 / Research Planning</span><span class="skill">PoC計画 / PoC Planning</span><span class="skill">技術比較 / Technology Comparison</span><span class="skill">基準検索 / Standard Search</span><span class="skill">特許調査 / Patent Search</span><span class="skill">根拠検証 / Evidence Verification</span></div></div>
+        </div>
+        <div class="note">専門技術Agent群と連携して、研究・比較・技術評価・知識化までを支援する。</div>
+      </div>
+    </article>
+    
+    <article class="org">
+      <div class="orgh"><div class="orgno">05</div><h3>安全・品質・環境</h3><div class="pill">Safety, Quality & Environment / 安全・品質・環境</div></div>
+      <div class="orgbody">
+        <div class="grid cols2">
+          <div><strong>推奨Agent / Recommended Agents</strong><ul><li>安全Agent / Safety Engineering Agent</li><li>品質Agent / Quality Management Agent</li><li>環境Agent / Environmental Management Agent</li><li>事故・不適合分析Agent / Incident & NCR Analysis Agent</li></ul></div>
+          <div><strong>主なSkills / Main Skills</strong><div class="skills"><span class="skill">危険源抽出 / Hazard Identification</span><span class="skill">リスクアセスメント / Risk Assessment</span><span class="skill">作業手順安全レビュー / Safety Review</span><span class="skill">品質計画レビュー / Quality Plan Review</span><span class="skill">不適合分析 / Nonconformance Analysis</span><span class="skill">環境影響確認 / Environmental Impact Review</span></div></div>
+        </div>
+        <div class="note">安全・品質・環境の重要判断はAI単独では確定しない。必ず担当者・責任者の確認を通す。</div>
+      </div>
+    </article>
+    
+    <article class="org">
+      <div class="orgh"><div class="orgno">06</div><h3>管理本部・経営企画室</h3><div class="pill">Corporate Management & Planning / 管理・経営企画</div></div>
+      <div class="orgbody">
+        <div class="grid cols2">
+          <div><strong>推奨Agent / Recommended Agents</strong><ul><li>経営企画Agent / Management Planning Agent</li><li>管理業務支援Agent / Administration Agent</li><li>DXガバナンスAgent / DX Governance Agent</li><li>投資評価Agent / Investment Evaluation Agent</li></ul></div>
+          <div><strong>主なSkills / Main Skills</strong><div class="skills"><span class="skill">事業計画 / Business Planning</span><span class="skill">予算・コスト分析 / Budget & Cost Analysis</span><span class="skill">ROI評価 / ROI Analysis</span><span class="skill">経営レポート / Management Reporting</span><span class="skill">DX案件評価 / DX Portfolio Review</span><span class="skill">AI利用リスク評価 / AI Risk Assessment</span></div></div>
+        </div>
+        <div class="note">管理・経営企画では『何を自動化したか』より『なぜ進めるか・効果が出たか・説明できるか』を重視する。</div>
+      </div>
+    </article>
+    
+    <article class="org">
+      <div class="orgh"><div class="orgno">07</div><h3>支店・営業支店・営業所</h3><div class="pill">Branch Operations / 支店・営業所</div></div>
+      <div class="orgbody">
+        <div class="grid cols2">
+          <div><strong>推奨Agent / Recommended Agents</strong><ul><li>支店運営Agent / Branch Operations Agent</li></ul></div>
+          <div><strong>主なSkills / Main Skills</strong><div class="skills"><span class="skill">地域案件一覧 / Regional Project Overview</span><span class="skill">支店営業支援 / Branch Sales Support</span><span class="skill">現場状況要約 / Site Status Summary</span><span class="skill">支店KPI / Branch KPI</span><span class="skill">過去案件検索 / Past Project Retrieval</span><span class="skill">地域リスク整理 / Regional Risk</span></div></div>
+        </div>
+        <div class="note">支店ごとに別Agentを作らず、共通のBranch Agentに地域・案件・顧客Contextを与える。</div>
+      </div>
+    </article>
+    
+    <article class="org">
+      <div class="orgh"><div class="orgno">08</div><h3>船舶事業部</h3><div class="pill">Marine Vessel Business / 船舶事業</div></div>
+      <div class="orgbody">
+        <div class="grid cols2">
+          <div><strong>推奨Agent / Recommended Agents</strong><ul><li>船舶運用Agent / Marine Vessel Operations Agent</li><li>船団計画Agent / Fleet Planning Agent</li><li>船舶保全Agent / Vessel Maintenance Agent</li><li>海上設備Agent / Marine Equipment Agent</li></ul></div>
+          <div><strong>主なSkills / Main Skills</strong><div class="skills"><span class="skill">船舶割当 / Vessel Assignment</span><span class="skill">配船計画 / Fleet Scheduling</span><span class="skill">保全計画 / Maintenance Planning</span><span class="skill">海上物流 / Marine Logistics</span><span class="skill">浚渫船計画 / Dredging Vessel Planning</span><span class="skill">気象海象確認 / Weather & Sea Condition Review</span><span class="skill">海上安全レビュー / Marine Safety Review</span></div></div>
+        </div>
+        <div class="note">施工Agent・港湾Agent・安全Agentと連携させ、船舶運用だけで完結させない。</div>
+      </div>
+    </article>
+    
+    <article class="org">
+      <div class="orgh"><div class="orgno">09</div><h3>社外向けDX</h3><div class="pill">External DX Services / 社外向けDX</div></div>
+      <div class="orgbody">
+        <div class="grid cols2">
+          <div><strong>推奨Agent / Recommended Agents</strong><ul><li>社外DX提案Agent / External DX Solution Agent</li><li>ソリューション設計Agent / Solution Architect Agent</li><li>顧客支援Agent / Customer Success Agent</li><li>社外セキュリティ確認Agent / External Security Review Agent</li></ul></div>
+          <div><strong>主なSkills / Main Skills</strong><div class="skills"><span class="skill">顧客課題整理 / Requirement Discovery</span><span class="skill">DX診断 / DX Assessment</span><span class="skill">PoC計画 / PoC Planning</span><span class="skill">ソリューション設計 / Solution Architecture</span><span class="skill">顧客支援 / Customer Support</span><span class="skill">利用分析 / Usage Analysis</span><span class="skill">セキュリティ評価 / Security Assessment</span></div></div>
+        </div>
+        <div class="note">社外向けは社内AgentOSと直接つなげず、顧客単位の境界・権限・データ分離を設ける。</div>
+      </div>
+    </article>
+    
+</section>
+
+<section id="civil"><div class="st"><div class="num">04</div><h2>横断で使う土木専門Agent / Civil Expert Agents</h2></div>
+<div class="grid cols3">
+<div class="card"><h3>港湾・海上Agent<br><span class="small">Port / Marine Engineering Agent</span></h3><p>岸壁、防波堤、浚渫、埋立、海上施工、港湾ICTなど。</p></div>
+<div class="card"><h3>地盤Agent<br><span class="small">Geotechnical Engineering Agent</span></h3><p>土質、支持力、沈下、土圧、地盤改良、掘削、斜面など。</p></div>
+<div class="card"><h3>構造Agent<br><span class="small">Structural Engineering Agent</span></h3><p>RC、擁壁、橋脚、基礎、仮設構造、荷重確認など。</p></div>
+<div class="card"><h3>施工計画Agent<br><span class="small">Construction Planning Agent</span></h3><p>施工方法、工程、ヤード、重機、施工性、4D計画など。</p></div>
+<div class="card"><h3>BIM/CIM・CAD・GIS Agent<br><span class="small">BIM/CIM, CAD & GIS Agent</span></h3><p>DXF、DWG、IFC、図面検査、座標、GIS、点群など。</p></div>
+<div class="card"><h3>環境Agent<br><span class="small">Environmental Engineering Agent</span></h3><p>濁り、廃棄物、環境負荷、CO2/GX、環境モニタリングなど。</p></div>
+<div class="card"><h3>維持管理Agent<br><span class="small">Maintenance Engineering Agent</span></h3><p>点検、劣化、補修、写真判定、維持管理計画など。</p></div>
+<div class="card"><h3>数量・コストAgent<br><span class="small">Quantity & Cost Agent</span></h3><p>数量算出、概算、比較、VE候補、変更影響など。</p></div>
+<div class="card"><h3>土木総合レビューAgent<br><span class="small">Civil Engineering Review Agent</span></h3><p>複数専門Agentの結果を横断確認し、矛盾・リスク・未確認事項を整理。</p></div>
+</div>
+<div class="note">専門Agentは組織をまたいで共用します。例えば営業・施工・技術・支店が同じ「港湾Agent」を利用できます。</div>
+</section>
+
+<section id="skill"><div class="st"><div class="num">05</div><h2>Skillsは「使い回せる能力」として管理</h2></div>
+<div class="lead">Agentを増やしすぎず、細かな仕事はSkillsとして共通化します。</div>
+<table><thead><tr><th>分野</th><th>Skill例（日本語 / English）</th><th>主に使うAgent</th></tr></thead><tbody>
+<tr><td>営業</td><td>入札資料解析 / Tender Analysis、提案書作成 / Proposal Drafting、類似案件検索 / Similar Project Search</td><td>営業Agent、支店Agent</td></tr>
+<tr><td>施工</td><td>施工方法検討 / Construction Method Planning、工程分析 / Schedule Analysis、施工性レビュー / Constructability Review</td><td>施工Agent、港湾Agent</td></tr>
+<tr><td>構造</td><td>擁壁レビュー / Retaining Wall Review、杭基礎チェック / Pile Foundation Check、荷重確認 / Load Check</td><td>構造Agent</td></tr>
+<tr><td>地盤</td><td>土圧計算 / Earth Pressure、支持力 / Bearing Capacity、沈下 / Settlement、地盤改良比較 / Ground Improvement Review</td><td>地盤Agent</td></tr>
+<tr><td>CAD/BIM/CIM</td><td>DXF解析 / DXF Analysis、IFC検証 / IFC Validation、図面比較 / Drawing Comparison</td><td>CAD/BIM/CIM Agent</td></tr>
+<tr><td>安全品質環境</td><td>危険源抽出 / Hazard Identification、不適合分析 / NCR Analysis、環境影響確認 / Environmental Review</td><td>安全・品質・環境Agent</td></tr>
+<tr><td>研究</td><td>文献調査 / Literature Review、技術比較 / Technology Comparison、特許調査 / Patent Search</td><td>技術・R&D Agent</td></tr>
+<tr><td>経営企画</td><td>ROI分析 / ROI Analysis、KPIレビュー / KPI Review、案件ポートフォリオ評価 / Portfolio Review</td><td>経営企画Agent、経営Agent</td></tr>
+</tbody></table>
+<div class="warn"><strong>同じSkillを組織ごとに複製しません。</strong> 例：「数量算出Skill」は営業用・施工用・技術用に分けず、1つを複数Agentで共用します。</div>
+</section>
+
+<section id="flow"><div class="st"><div class="num">06</div><h2>実際にはどう動くのか</h2></div>
+<div class="arch"><pre>
+例：「港湾の岸壁改良案件について、営業提案から施工方法まで検討したい」
+
+利用者
+ ↓
+営業案件形成Agent / Sales Opportunity Agent
+ ↓
+土木タスク振分 / Civil Task Routing
+ ├─ 港湾・海上Agent / Port & Marine
+ ├─ 構造Agent / Structural
+ ├─ 地盤Agent / Geotechnical
+ └─ 数量・コストAgent / Quantity & Cost
+ ↓
+技術提案候補
+ ↓
+施工管理Agent / Construction Management
+ ├─ 施工計画Skill
+ ├─ 船舶運用Agent
+ └─ 調達Skill
+ ↓
+安全・品質・環境Agent
+ ↓
+土木総合レビューAgent
+ ↓
+担当技術者・責任者による確認
+ ↓
+承認
+</pre></div>
+<div class="ok">1つのAgentの答えをそのまま正解にせず、複数専門分野から確認して人へ渡すのがMirai-AgentOSの特徴です。</div>
+</section>
+
+<section id="review"><div class="st"><div class="num">07</div><h2>AIに任せる範囲と、人が確認する範囲</h2></div>
+<table><thead><tr><th>技術リスク</th><th>AIの利用例</th><th>人の確認</th></tr></thead><tbody>
+<tr><td><strong>T0</strong></td><td>情報検索 / Information Search</td><td>通常確認</td></tr>
+<tr><td><strong>T1</strong></td><td>要約・整理 / Summarization</td><td>内容確認</td></tr>
+<tr><td><strong>T2</strong></td><td>設計候補・施工案 / Draft Proposal</td><td>担当者レビュー</td></tr>
+<tr><td><strong>T3</strong></td><td>計算・技術レビュー / Engineering Review</td><td>専門技術者レビュー</td></tr>
+<tr><td><strong>T4</strong></td><td>重要な設計判断候補 / Important Engineering Decision</td><td><strong>専門技術者必須</strong></td></tr>
+<tr><td><strong>T5</strong></td><td>安全・構造に関わる重大判断 / Safety-Critical Decision</td><td><strong>AI単独承認禁止</strong></td></tr>
+<tr><td><strong>T6</strong></td><td>最終設計・最終施工判断 / Final Design & Construction Decision</td><td><strong>人間が最終決定</strong></td></tr>
+</tbody></table>
+</section>
+
+<section id="rules"><div class="st"><div class="num">08</div><h2>AgentとSkillを増やすときのルール</h2></div>
+<div class="grid cols2">
+<div class="card"><h3>Agentにする条件</h3><ul><li>独立した責任がある</li><li>複数Skillsを組み合わせる</li><li>独自の判断基準がある</li><li>他Agentとの責任境界がある</li><li>独立した評価が必要</li></ul></div>
+<div class="card"><h3>Skillにする条件</h3><ul><li>1つの具体的な処理</li><li>複数Agentから再利用できる</li><li>入力と出力を明確にできる</li><li>テスト可能</li><li>人の確認条件を定義できる</li></ul></div>
+</div>
+<table style="margin-top:16px"><thead><tr><th>対象</th><th>Agent / Skill</th></tr></thead><tbody>
+<tr><td>営業案件形成</td><td><strong>Agent</strong></td></tr>
+<tr><td>入札公告解析</td><td>Skill</td></tr>
+<tr><td>施工管理</td><td><strong>Agent</strong></td></tr>
+<tr><td>工程遅延分析</td><td>Skill</td></tr>
+<tr><td>地盤工学</td><td><strong>Agent</strong></td></tr>
+<tr><td>支持力計算</td><td>Skill</td></tr>
+<tr><td>船舶運用</td><td><strong>Agent</strong></td></tr>
+<tr><td>船舶割当</td><td>Skill</td></tr>
+</tbody></table>
+</section>
+
+<section><div class="st"><div class="num">09</div><h2>最終イメージ</h2></div>
+<div class="quote">組織Agent = 「誰の仕事か」<br>土木専門Agent = 「何の専門家か」<br>Skill = 「何ができるか」</div>
+<div class="lead" style="margin-top:18px"><strong>Mirai-AgentOSの狙い：</strong> 各部門の仕事をAIに置き換えるのではなく、人が持つ責任・専門性・判断を尊重したうえで、AIが情報整理・専門支援・横断連携・知識再利用を担うことです。</div>
+</section>
+
+<div class="footer">Mirai-AgentOS — Agent（エージェント）と Skills（スキル） 全社員向け説明資料 / Standalone HTML</div>
+</main></body></html>

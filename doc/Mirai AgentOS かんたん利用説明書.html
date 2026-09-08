@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Mirai AgentOS かんたん利用説明書</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #141C29; display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    #__bundler_loading { position: fixed; bottom: 20px; right: 20px; font: 13px/1.4 -apple-system, BlinkMacSystemFont, sans-serif; color: #666; background: #fff; padding: 8px 14px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.12); z-index: 10000; }
+    #__bundler_thumbnail { position: fixed; inset: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #141C29; z-index: 9999; }
+    #__bundler_thumbnail svg { width: 100%; height: 100%; object-fit: contain; }
+    #__bundler_placeholder { color: #999; font-size: 14px; }
+  </style>
+  <noscript>
+    <style>#__bundler_loading { display: none; }</style>
+    <div style="position:fixed;bottom:12px;left:12px;font:13px/1.4 -apple-system,BlinkMacSystemFont,sans-serif;color:#999;background:rgba(255,255,255,0.9);padding:6px 12px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.08);z-index:10000;">
+      This page requires JavaScript to display.
+    </div>
+  </noscript>
+</head>
+<body>
+  <div id="__bundler_thumbnail">
+  <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg"><rect width="400" height="400" fill="#141C29"></rect><rect x="120" y="120" width="160" height="160" rx="28" fill="#E08A2B"></rect><path d="M150 250V170l50-25v105M250 250v-60l-40-25" fill="none" stroke="#141C29" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</div>
+  <div id="__bundler_loading">Unpacking...</div>
+
+  <script>
+    
+document.addEventListener('DOMContentLoaded', async function() {
+  const loading = document.getElementById('__bundler_loading');
+  function setStatus(msg) { if (loading) loading.textContent = msg; }
+
+  const FONT_MIME = /^(font[/]|application[/](x-)?font-|application[/]vnd\.ms-fontobject)/i;
+  const MIME_TOKEN = /^[\w.+-]+[/][\w.+-]+$/;
+  function toBase64(bytes) {
+    let bin = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) {
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    }
+    return btoa(bin);
+  }
+
+  // Error sink persists across replaceWith since it's on window, not the DOM.
+  window.addEventListener('error', function(e) {
+    // Failed resource loads (CSP-blocked links, scripts, images) fire plain
+    // events at the element — warn only; real JS errors carry message/error.
+    if (!e.message && !e.error && e.target && e.target !== window) {
+      console.warn('[bundle] resource failed to load:',
+        e.target.tagName, String(e.target.src || e.target.href || ''));
+      return;
+    }
+    var p = document.body || document.documentElement;
+    var d = document.getElementById('__bundler_err') || p.appendChild(document.createElement('div'));
+    d.id = '__bundler_err';
+    d.style.cssText = 'position:fixed;bottom:12px;left:12px;right:12px;font:12px/1.4 ui-monospace,monospace;background:#2a1215;color:#ff8a80;padding:10px 14px;border-radius:8px;border:1px solid #5c2b2e;z-index:99999;white-space:pre-wrap;max-height:40vh;overflow:auto';
+    d.textContent = (d.textContent ? d.textContent + String.fromCharCode(10) : '') +
+      '[bundle] ' + (e.message || e.type) +
+      (e.filename ? ' (' + e.filename.slice(0, 60) + ':' + e.lineno + ')' : '');
+  }, true);
+
+  try {
+    const manifestEl = document.querySelector('script[type="__bundler/manifest"]');
+    const templateEl = document.querySelector('script[type="__bundler/template"]');
+    if (!manifestEl || !templateEl) {
+      setStatus('Error: missing bundle data');
+      console.error('[bundler] Missing script tags — manifestEl:', !!manifestEl, 'templateEl:', !!templateEl);
+      return;
+    }
+
+    const manifest = JSON.parse(manifestEl.textContent);
+    let template = JSON.parse(templateEl.textContent);
+
+    // Nested page bundles (iframe targets). Each ships ONCE, in the ROOT
+    // document's manifest; frame srcs carry an about:blank#<uuid> marker
+    // instead of a substitutable uuid. Every document mints the blobs for
+    // its OWN frames — from local text at the root, or text obtained from
+    // its DIRECT parent over the relay protocol below — so each frame
+    // navigation stays same-origin with its initiator and a deduped page
+    // loads at any depth on any host, including a file:// download's
+    // opaque origins (where a blob minted by one document cannot be
+    // navigated to by another).
+    const pageOrderEl = document.querySelector('script[type="__bundler/page_order"]');
+    const pageOrder = pageOrderEl ? JSON.parse(pageOrderEl.textContent) : [];
+    const pageSet = new Set(pageOrder);
+    const pageTexts = {};
+
+    // ── Nested-page text protocol (parent-chain relay) ──
+    // Page bundles ship once, in the ROOT document's manifest. Every
+    // document mints the blobs for its OWN frames, obtaining page text
+    // through a strict parent-chain relay: a document only ever SENDS to
+    // its direct parent (which, for every document the publisher's own
+    // runtime minted, is another publisher document) and only ACCEPTS
+    // text from that direct parent; requests from below are honored only
+    // for the document's own child frames, and the ROOT never sends
+    // upward at all. That last rule is load-bearing: the artifact host's
+    // frame-ancestors allows claude.ai (and friends) to frame an
+    // artifact, so window.top can be a FOREIGN document — a top-addressed
+    // protocol would hand page uuids to that ancestor and accept forged
+    // "page text" from it, minting attacker HTML as an artifact-origin
+    // blob document. The chain never touches the ancestor: requests stop
+    // at the root, replies are origin-addressed per hop (never '*' when
+    // an origin exists), and both directions are origin-gated (on https
+    // a foreign sender's origin can never equal this document's; in
+    // opaque contexts — file:// — everything serializes as 'null', where
+    // an embedded EXTERNAL frame still fails the gate by carrying its
+    // own real origin, and a sandboxed child of such a frame is excluded
+    // by the own-child-frames check plus uuid unguessability). Shape is
+    // deny-by-default: one request form, one reply form, no error
+    // replies.
+    // window.origin is the SERIALIZED SECURITY origin ('null' in opaque
+    // contexts such as a sandboxed preview iframe) — location.origin is
+    // computed from the URL and stays 'https://…' even when the document
+    // is sandboxed, which would misgate every opaque chain.
+    const OWN_TARGET = /^https?:[/][/]/.test(window.origin || '')
+      ? window.origin
+      : '*';
+    function trustedOrigin(e) {
+      if (e.origin === window.origin) return true; // https chains; opaque==opaque
+      // file:// trees: Chrome serializes the file document's origin as
+      // 'file://' while the blob: documents it mints serialize as 'null',
+      // so the two legitimate shapes can never string-match — accept the
+      // pair in both directions. https origins never serialize as either,
+      // and sender identity (own child frame / direct parent) is checked
+      // separately.
+      return (
+        (e.origin === 'null' &&
+          (window.origin === 'file://' ||
+            window.location.protocol === 'file:')) ||
+        (/^file:/.test(e.origin) && window.origin === 'null')
+      );
+    }
+    // Non-empty only in the root document (nested bundles ship an empty
+    // island), so it doubles as the root marker: the root answers from
+    // local text and treats a miss as authoritative — never relaying to
+    // its (possibly foreign) parent.
+    const isPageRoot = pageOrder.length > 0;
+    const blobUrls = {};
+    const resourceBlobs = {};
+    const UUID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+    const pendingFrames = {}; // uuid -> [{el, frag}] awaiting text for own frames
+    const pendingRelays = {}; // uuid -> [childWindow] awaiting text to pass down
+    function mountPage(el, frag, text) {
+      const pageBlob = new Blob([text], { type: 'text/html' });
+      const u = URL.createObjectURL(pageBlob);
+      resourceBlobs[u] = pageBlob;
+      el.src = u + frag;
+    }
+    function deliverPage(uuid, text) {
+      const frames = pendingFrames[uuid];
+      delete pendingFrames[uuid];
+      if (frames) for (const f of frames) mountPage(f.el, f.frag, text);
+      const relays = pendingRelays[uuid];
+      delete pendingRelays[uuid];
+      if (relays) {
+        for (const cw of relays) {
+          try { cw.postMessage({ __bundler_page: uuid, __bundler_text: text }, OWN_TARGET); } catch (err) { /* gone */ }
+        }
+      }
+    }
+    function ownFrameWindows() {
+      const out = [];
+      for (const f of Array.from(document.querySelectorAll('iframe'))) {
+        try { if (f.contentWindow) out.push(f.contentWindow); } catch (err) { /* detached */ }
+      }
+      return out;
+    }
+    window.addEventListener('message', function (e) {
+      const d = e.data;
+      if (!d || typeof d !== 'object' || !e.source) return;
+      // Origin gate first; the structural checks below (own-child-frames
+      // for requests, direct-parent + solicited-uuid for replies, the
+      // root's never-relay rule) are what hold in fully opaque chains
+      // where origin strings can't discriminate — a sandboxed root's
+      // FOREIGN wrapper still fails all three even though both serialize
+      // as real-vs-'null' rather than matching.
+      if (!trustedOrigin(e)) return;
+      if (typeof d.__bundler_need === 'string' && UUID_SHAPE.test(d.__bundler_need)) {
+        // Requests are honored only for this document's own child frames.
+        if (ownFrameWindows().indexOf(e.source) < 0) return;
+        const uuid = d.__bundler_need;
+        const text = pageTexts[uuid];
+        if (typeof text === 'string') {
+          try { e.source.postMessage({ __bundler_page: uuid, __bundler_text: text }, OWN_TARGET); } catch (err) { /* gone */ }
+          return;
+        }
+        if (isPageRoot || window.parent === window) return; // authoritative miss
+        const waiting = pendingRelays[uuid];
+        if (waiting) {
+          if (waiting.indexOf(e.source) < 0) waiting.push(e.source);
+          return;
+        }
+        // Never-answered uuids would otherwise accumulate forever under a
+        // request spray; past the cap (far above any real page count) new
+        // relays are dropped rather than remembered.
+        if (Object.keys(pendingRelays).length >= 128) return;
+        pendingRelays[uuid] = [e.source];
+        window.parent.postMessage({ __bundler_need: uuid }, OWN_TARGET);
+      } else if (
+        typeof d.__bundler_page === 'string' &&
+        UUID_SHAPE.test(d.__bundler_page) &&
+        typeof d.__bundler_text === 'string'
+      ) {
+        // The shape test is load-bearing beyond tidiness: the solicited
+        // check below uses the in operator, which matches prototype keys
+        // ('__proto__', 'constructor') — an unshaped key would reach
+        // deliverPage and throw, painting the error banner.
+        // Text is accepted only from the direct parent — the document
+        // that minted this one.
+        if (e.source !== window.parent || window.parent === window) return;
+        if (!(d.__bundler_page in pendingFrames) && !(d.__bundler_page in pendingRelays)) return;
+        deliverPage(d.__bundler_page, d.__bundler_text);
+      }
+    });
+
+    const uuids = Object.keys(manifest);
+    setStatus('Unpacking ' + uuids.length + ' assets...');
+
+    await Promise.all(uuids.map(async (uuid) => {
+      const entry = manifest[uuid];
+      try {
+        const binaryStr = atob(entry.data);
+        const bytes = new Uint8Array(binaryStr.length);
+        for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+
+        let finalBytes = bytes;
+        if (entry.compressed) {
+          if (typeof DecompressionStream !== 'undefined') {
+            const ds = new DecompressionStream('gzip');
+            const writer = ds.writable.getWriter();
+            const reader = ds.readable.getReader();
+            writer.write(bytes);
+            writer.close();
+            const chunks = [];
+            let totalLen = 0;
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              chunks.push(value);
+              totalLen += value.length;
+            }
+            finalBytes = new Uint8Array(totalLen);
+            let offset = 0;
+            for (const chunk of chunks) { finalBytes.set(chunk, offset); offset += chunk.length; }
+          } else {
+            console.warn('DecompressionStream not available, asset ' + uuid + ' may not render');
+          }
+        }
+
+        if (pageSet.has(uuid)) {
+          pageTexts[uuid] = new TextDecoder().decode(finalBytes);
+          return;
+        }
+        if (FONT_MIME.test(entry.mime) && MIME_TOKEN.test(entry.mime)) {
+          // Strict artifact hosts allow font-src data: but not blob:.
+          blobUrls[uuid] = 'data:' + entry.mime + ';base64,' +
+            (entry.compressed ? toBase64(finalBytes) : entry.data);
+        } else {
+          const blob = new Blob([finalBytes], { type: entry.mime });
+          blobUrls[uuid] = URL.createObjectURL(blob);
+          resourceBlobs[blobUrls[uuid]] = blob;
+        }
+      } catch (err) {
+        console.error('Failed to decode asset ' + uuid + ':', err);
+        const blob = new Blob([], { type: entry.mime });
+        blobUrls[uuid] = URL.createObjectURL(blob);
+        resourceBlobs[blobUrls[uuid]] = blob;
+      }
+    }));
+
+    const extResEl = document.querySelector('script[type="__bundler/ext_resources"]');
+    const extResources = extResEl ? JSON.parse(extResEl.textContent) : [];
+    const resourceMap = {};
+    for (const entry of extResources) {
+      if (blobUrls[entry.uuid]) resourceMap[entry.id] = blobUrls[entry.uuid];
+    }
+
+    // Artifact-host CSP (connect-src 'self') refuses fetch() of blob: URLs —
+    // consumers read these Blobs directly. Survives the swap like the error sink.
+    window.__resourceBlobs = resourceBlobs;
+
+    setStatus('Rendering...');
+    // Page uuids have no blob here — they ride inside about:blank#<uuid>
+    // frame markers the pass below resolves after the swap.
+    for (const uuid of uuids) {
+      if (pageSet.has(uuid)) continue;
+      template = template.split(uuid).join(blobUrls[uuid]);
+    }
+
+    // Strip integrity + crossorigin — blob URLs from a file:// document inherit
+    // a null origin, so crossorigin forces a CORS fetch that SRI then rejects.
+    // The manifest bytes are ours; SRI protects against CDN compromise, not this.
+    template = template.replace(/\s+integrity="[^"]*"/gi, '').replace(/\s+crossorigin="[^"]*"/gi, '');
+
+    const resourceScript = '<script>window.__resources = ' +
+      JSON.stringify(resourceMap).replace(/<\//g, '<\\/') +
+      ';</' + 'script>';
+    // Inject after <head> so the DOCTYPE stays first; prepending the script
+    // would push the parser into quirks mode. DOMParser always emits a <head>
+    // (synthesizing one if the source HTML omitted it) but may carry
+    // attributes through, so match the full opening tag. slice() rather than
+    // replace() keeps us clear of $-pattern substitution in resourceScript.
+    const headOpen = template.match(/<head[^>]*>/i);
+    if (headOpen) {
+      const i = headOpen.index + headOpen[0].length;
+      template = template.slice(0, i) + resourceScript + template.slice(i);
+    }
+
+    // Parse the template and swap the root element. Scripts inserted via
+    // DOMParser/replaceWith are inert per spec — re-create each with
+    // createElement so they execute, awaiting onload for src scripts to
+    // preserve ordering (React before ReactDOM before Babel before text/babel).
+    const doc = new DOMParser().parseFromString(template, 'text/html');
+    document.documentElement.replaceWith(doc.documentElement);
+
+    // Resolve page-frame markers: mint this document's own blob for each
+    // framed page — from local text when this is the root, otherwise by
+    // asking the direct parent over the relay protocol above. An
+    // unanswered request leaves the frame on about:blank, the same
+    // degraded state as a refused embed.
+    {
+      const MARKER = /^about:blank#([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(#.*)?$/;
+      const needed = [];
+      for (const el of Array.from(document.querySelectorAll('iframe'))) {
+        const m = MARKER.exec(el.getAttribute('src') || '');
+        if (!m) continue;
+        const text = pageTexts[m[1]];
+        if (typeof text === 'string') {
+          mountPage(el, m[2] || '', text);
+        } else if (window.parent !== window && !isPageRoot) {
+          const had = pendingFrames[m[1]];
+          (pendingFrames[m[1]] = had || []).push({ el: el, frag: m[2] || '' });
+          if (!had) needed.push(m[1]);
+        }
+      }
+      for (const uuid of needed) {
+        window.parent.postMessage({ __bundler_need: uuid }, OWN_TARGET);
+      }
+    }
+
+    const dead = Array.from(document.scripts);
+    for (const old of dead) {
+      const s = document.createElement('script');
+      for (const a of old.attributes) s.setAttribute(a.name, a.value);
+      s.textContent = old.textContent;
+      // text/babel scripts with a src: read and inline. transformScriptTags
+      // does XHR against the src, but blob:null/ from a file:// origin is
+      // silently dropped. Inlining makes it a plain inline babel script,
+      // which transformScriptTags handles unconditionally.
+      if ((s.type === 'text/babel' || s.type === 'text/jsx') && s.src) {
+        const pre = resourceBlobs[s.src.split('#')[0]];
+        s.textContent = pre ? await pre.text() : await (await fetch(s.src)).text();
+        s.removeAttribute('src');
+      }
+      const p = s.src ? new Promise(function(r) { s.onload = s.onerror = r; }) : null;
+      old.replaceWith(s);
+      if (p) await p;
+    }
+    // Babel standalone auto-transforms type=text/babel on DOMContentLoaded,
+    // which fired before we swapped the document. Trigger manually if present.
+    if (window.Babel && typeof window.Babel.transformScriptTags === 'function') {
+      window.Babel.transformScriptTags();
+    }
+  } catch (err) {
+    setStatus('Error unpacking: ' + err.message);
+    console.error('Bundle unpack error:', err);
+  }
+});
+
+  </script>
+
+  <script type="__bundler/manifest">
+{}
+  </script>
+
+  <script type="__bundler/ext_resources">
+[]
+  </script>
+
+  <script type="__bundler/page_order">
+[]
+  </script>
+
+  <script type="__bundler/template">
+"<!DOCTYPE html>\n<html lang=\"ja\" data-theme=\"light\"><head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>Mirai AgentOS かんたん利用説明書<\u002Ftitle>\n\n<style>\n:root{--accent:#E08A2B;--accent-d:#C9781F;--side:#141C29;--bg:#EEF1F5;--surface:#fff;--subtle:#F2F4F8;--line:#E3E8EF;--ink:#1A2433;--ink-2:#5A6678;--muted:#8A97A8;--blue:#2E5AAC;--blue-bg:#E9F0FB;--green:#1F8255;--green-bg:#E4F3EC;--amber:#B5701A;--amber-bg:#FDEFE0;--red:#C5392F;--red-bg:#FCE9E7;--purple:#6B45B0;--purple-bg:#EDE7F6;color-scheme:light}\n[data-theme=\"dark\"]{--bg:#0F1520;--surface:#161E2B;--subtle:#1E2836;--line:#283344;--ink:#E8EDF4;--ink-2:#B5BFCD;--muted:#8A97A9;--blue:#8FB1EC;--blue-bg:#1B2A45;--green:#66C695;--green-bg:#16312A;--amber:#E8A757;--amber-bg:#3B2B15;--red:#F2857B;--red-bg:#3F2220;--purple:#B9A2EA;--purple-bg:#2D2446;color-scheme:dark}\n*{box-sizing:border-box}\nbody{margin:0;font-family:\"IBM Plex Sans JP\",system-ui,-apple-system,\"Hiragino Kaku Gothic ProN\",Meiryo,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.8;-webkit-font-smoothing:antialiased}\na{color:var(--blue)}\nheader{background:var(--side);color:#fff;padding:36px 24px 30px}\n.wrap{max-width:860px;margin:0 auto;padding:0 24px}\n.brand{display:flex;align-items:center;gap:12px;margin-bottom:18px}\n.logo{width:38px;height:38px;border-radius:9px;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#141C29}\nh1{font-size:26px;margin:0 0 8px;font-weight:600;line-height:1.35}\n.lead{color:#B8C2D0;margin:0;font-size:15px}\n.toggle{position:absolute;right:24px;top:24px;background:transparent;border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:8px;padding:7px 12px;font:inherit;font-size:12.5px;cursor:pointer}\nnav.toc{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 22px;margin:-22px auto 28px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:6px 18px;font-size:13.5px;max-width:860px}\nnav.toc a{text-decoration:none;color:var(--ink-2)}nav.toc a:hover{color:var(--accent)}\nsection{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:26px 28px;margin-bottom:20px}\nh2{font-size:19px;margin:0 0 6px;font-weight:600;display:flex;align-items:center;gap:10px}\nh2 .n{width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-size:13px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-family:ui-monospace,monospace}\nh3{font-size:15px;margin:22px 0 6px;font-weight:600}\np{margin:8px 0}\n.eli5{background:var(--amber-bg);color:var(--ink);border-radius:9px;padding:12px 16px;margin:12px 0;font-size:14.5px}\n.eli5 b{color:var(--amber)}\nol,ul{margin:8px 0;padding-left:22px}li{margin:4px 0}\n.steps li{margin:8px 0}\n.tag{display:inline-block;padding:1px 8px;border-radius:6px;font-size:12px;font-weight:600;vertical-align:middle;white-space:nowrap}\n.t-green{background:var(--green-bg);color:var(--green)}.t-red{background:var(--red-bg);color:var(--red)}.t-amber{background:var(--amber-bg);color:var(--amber)}.t-blue{background:var(--blue-bg);color:var(--blue)}.t-purple{background:var(--purple-bg);color:var(--purple)}.t-muted{background:var(--subtle);color:var(--ink-2)}\n.ui{display:inline-block;border:1px solid var(--line);background:var(--subtle);border-radius:6px;padding:0 7px;font-size:13px;font-weight:600}\n.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:10px}\n.card{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--bg)}\n.card b{display:block;margin-bottom:4px}\n.card small{color:var(--muted);font-size:12px}\n.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0;font-size:13.5px}\n.flow span{background:var(--subtle);border:1px solid var(--line);border-radius:8px;padding:6px 12px}\n.flow i{color:var(--muted);font-style:normal}\ntable{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:8px}\nth,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}\nth{color:var(--muted);font-size:12px;font-weight:600}\n.note{border-left:3px solid var(--blue);background:var(--blue-bg);padding:10px 14px;border-radius:0 8px 8px 0;margin:12px 0;font-size:14px}\n.warn{border-left:3px solid var(--red);background:var(--red-bg);padding:10px 14px;border-radius:0 8px 8px 0;margin:12px 0;font-size:14px}\nfooter{text-align:center;color:var(--muted);font-size:12.5px;padding:20px 0 40px}\ndetails{border:1px solid var(--line);border-radius:9px;padding:10px 14px;margin:8px 0;background:var(--bg)}\nsummary{cursor:pointer;font-weight:600}\n<\u002Fstyle>\n<\u002Fhead>\n<body>\n<header style=\"position:relative\">\n  <div class=\"wrap\">\n    <div class=\"brand\"><span class=\"logo\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 21h18\"><\u002Fpath><path d=\"M5 21V7l8-4v18\"><\u002Fpath><path d=\"M19 21V11l-6-4\"><\u002Fpath><\u002Fsvg><\u002Fspan><span style=\"font-weight:600\">Mirai AgentOS · みらい建設工業<\u002Fspan><\u002Fdiv>\n    <h1>かんたん利用説明書<br><span style=\"font-size:16px;font-weight:400;color:#B8C2D0\">〜 はじめての人にもわかる AgentOS の使い方 〜<\u002Fspan><\u002Fh1>\n    <p class=\"lead\">むずかしい言葉はできるだけ使いません。「困ったことを、ふだんの言葉で話すだけ」で AI が手伝ってくれる仕組みです。<\u002Fp>\n  <\u002Fdiv>\n  <button class=\"toggle\" onclick=\"var h=document.documentElement;h.dataset.theme=h.dataset.theme==='dark'?'light':'dark';this.textContent=h.dataset.theme==='dark'?'☀ ライトモード':'☾ ダークモード'\">☾ ダークモード<\u002Fbutton>\n<\u002Fheader>\n\n<nav class=\"toc\">\n  <a href=\"#s1\">1. AgentOS ってなに？<\u002Fa><a href=\"#s2\">2. 画面の見かた<\u002Fa><a href=\"#s3\">3. まずやってみよう（AI相談）<\u002Fa><a href=\"#s4\">4. 案件を見る・進める<\u002Fa><a href=\"#s5\">5. 承認のしかた<\u002Fa><a href=\"#s6\">6. AIの仕事を見る<\u002Fa><a href=\"#s7\">7. ナレッジを育てる<\u002Fa><a href=\"#s8\">8. 監査・連携・監視<\u002Fa><a href=\"#s9\">9. あなたの役割（ロール）<\u002Fa><a href=\"#s10\">10. 色とバッジの意味<\u002Fa><a href=\"#s11\">11. 困ったときは<\u002Fa>\n<\u002Fnav>\n\n<div class=\"wrap\">\n\n<section id=\"s1\">\n  <h2><span class=\"n\">1<\u002Fspan>AgentOS ってなに？<\u002Fh2>\n  <div class=\"eli5\"><b>5歳の子に説明するなら：<\u002Fb>「困ったことを話すと、賢いロボットのチームが調べて、作って、覚えてくれる会社の道具」です。ただし<b>大事なことを決めるのは、いつも人間<\u002Fb>です。<\u002Fdiv>\n  <p>Mirai AgentOS は、みらい建設工業のみんなが「こんな作業、もっとラクにならないかな」と思ったことを、AI に相談し、実際の仕組み（ツールやプログラム）に変えて、その学びを会社の知識として残すための基盤です。<\u002Fp>\n  <div class=\"grid\">\n    <div class=\"card\"><b>あなたがやること<\u002Fb>困っていることを、ふだんの言葉で正しく説明する。大事な場面で「いいよ」「ダメ」を判断する。<\u002Fdiv>\n    <div class=\"card\"><b>AI がやること<\u002Fb>質問して整理する。調べる。作る。テストする。学んだことをまとめる。<\u002Fdiv>\n    <div class=\"card\"><b>AI がやらないこと<\u002Fb>本番への反映や大きな変更など、リスクの高いことを<u>勝手に<\u002Fu>実行する。必ず人の承認を待ちます。<\u002Fdiv>\n  <\u002Fdiv>\n  <div class=\"note\">GitHub、PostgreSQL、AIモデルの種類…といった専門用語を知らなくても使えます。知らなくてよい部分は、この説明書でも省いています。<\u002Fdiv>\n<\u002Fsection>\n\n<section id=\"s2\">\n  <h2><span class=\"n\">2<\u002Fspan>画面の見かた<\u002Fh2>\n  <p>画面は大きく3つの部分に分かれています。<\u002Fp>\n  <div class=\"grid\">\n    <div class=\"card\"><b>① 左のメニュー（濃い色の帯）<\u002Fb>行きたい画面を選びます。見出し（概要 / 案件管理 / ナレッジ・監査 / プラットフォーム）をクリックすると、その中の項目を折りたたんだり開いたりできます。<small>赤い数字は「あなたの承認を待っている件数」です。<\u002Fsmall><\u002Fdiv>\n    <div class=\"card\"><b>② 上のバー<\u002Fb>検索窓、ロール（役割）の切替、🔔 承認待ち、☀/☾ ライト・ダーク切替があります。<\u002Fdiv>\n    <div class=\"card\"><b>③ 真ん中の大きな場所<\u002Fb>選んだ画面の中身が表示されます。一覧をクリックすると右側に詳しい内容が出ます。<\u002Fdiv>\n  <\u002Fdiv>\n  <h3>ライトモード / ダークモード<\u002Fh3>\n  <p>上のバーの <span class=\"ui\">☀ Light<\u002Fspan> / <span class=\"ui\">☾ Dark<\u002Fspan> ボタンを押すと、画面全体の色が切り替わります。目が疲れるときは暗い方がおすすめです。設定は次に開いたときも覚えています。<\u002Fp>\n  <h3>メニュー一覧（日本語（英語））<\u002Fh3>\n  <table>\n    <tbody><tr><th>メニュー<\u002Fth><th>なにをする場所？<\u002Fth><\u002Ftr>\n    <tr><td>ダッシュボード（Dashboard）<\u002Ftd><td>会社全体の「いま」をひとめで見る<\u002Ftd><\u002Ftr>\n    <tr><td>AI相談（AI Consultation）<\u002Ftd><td>困りごとを AI に話す。ここから全部はじまります<\u002Ftd><\u002Ftr>\n    <tr><td>案件（Project）<\u002Ftd><td>相談が「正式な取り組み」になったものの一覧と進み具合<\u002Ftd><\u002Ftr>\n    <tr><td>タスク・実行（Task / Agent Run）<\u002Ftd><td>AI が実際に何をしたか、いくらかかったかを見る<\u002Ftd><\u002Ftr>\n    <tr><td>承認（Approval）<\u002Ftd><td>「進めていい？」に人間が答える場所<\u002Ftd><\u002Ftr>\n    <tr><td>ナレッジ候補（Knowledge）<\u002Ftd><td>AI が見つけた学びを「会社の知識」にしていいか決める<\u002Ftd><\u002Ftr>\n    <tr><td>監査ログ（Audit Log）<\u002Ftd><td>誰が・いつ・何をしたかの記録（消せません）<\u002Ftd><\u002Ftr>\n    <tr><td>外部連携（Integrations）<\u002Ftd><td>Notion / Slack / Gmail / GitHub とのつながり具合<\u002Ftd><\u002Ftr>\n    <tr><td>監視（Observability）<\u002Ftd><td>AI の稼働状況・費用・待ち行列<\u002Ftd><\u002Ftr>\n    <tr><td>エージェント設定（Agent / Router）<\u002Ftd><td>どの AI にどの仕事を任せるかの設定（管理者・開発者向け）<\u002Ftd><\u002Ftr>\n    <tr><td>ユーザー・ロール（Users）<\u002Ftd><td>誰がどの役割かの管理（管理者のみ表示）<\u002Ftd><\u002Ftr>\n  <\u002Ftbody><\u002Ftable>\n<\u002Fsection>\n\n<section id=\"s3\">\n  <h2><span class=\"n\">3<\u002Fspan>まずやってみよう：AI相談<\u002Fh2>\n  <div class=\"eli5\"><b>たとえ話：<\u002Fb>先生に「これ困ってるんだけど…」と話すと、先生が「いつ？どのくらい？」と聞いてくれて、最後に「じゃあこうしよう」と紙にまとめてくれる。それが AI相談です。<\u002Fdiv>\n  <ol class=\"steps\">\n    <li>左メニューの <span class=\"ui\">AI相談（AI Consultation）<\u002Fspan> を開きます。<\u002Fli>\n    <li>下の入力欄に困っていることを書きます。例：<em>「現場写真の整理に毎週3時間かかっている」<\u002Fem>。入力欄の上にある例文ボタンを押してもOKです。<\u002Fli>\n    <li><span class=\"ui\">送信<\u002Fspan> を押すか Enter キー。AI が <b>確認の質問<\u002Fb> を返してきます（枚数は？保存先は？など）。<\u002Fli>\n    <li>質問にざっくり答えて、もう一度送信します。正確でなくて大丈夫です。<\u002Fli>\n    <li>AI が <span class=\"tag t-amber\">IDEA 構造化<\u002Fspan> というカードを出します。「対象業務・現状・期待効果・必要データ・リスク・似た過去事例」が整理されています。<\u002Fli>\n    <li>内容が良ければ <span class=\"ui\">正式案件化（Project ID発番）<\u002Fspan> を押します。<b>DX-2026-00xx<\u002Fb> という番号がつき、案件一覧に登録されます。<\u002Fli>\n  <\u002Fol>\n  <div class=\"flow\"><span>相談を入力<\u002Fspan><i>→<\u002Fi><span>AIが追加質問<\u002Fspan><i>→<\u002Fi><span>Idea構造化<\u002Fspan><i>→<\u002Fi><span>正式案件化（番号発番）<\u002Fspan><i>→<\u002Fi><span>企画審査で承認<\u002Fspan><\u002Fdiv>\n  <p>右側の「相談の流れ」に、いまどこまで進んだかが表示されます。<span class=\"ui\">新しい相談<\u002Fspan> で最初からやり直せます。<\u002Fp>\n  <div class=\"note\">案件化しても、まだ何も作られません。次の「企画審査 Gate」で承認者（Approver）が「進めていいよ」と言ってから動き出します。<\u002Fdiv>\n<\u002Fsection>\n\n<section id=\"s4\">\n  <h2><span class=\"n\">4<\u002Fspan>案件を見る・進める<\u002Fh2>\n  <div class=\"eli5\"><b>たとえ話：<\u002Fb>案件は「すごろく」。マスを順番に進み、大事なマス（<span class=\"tag t-amber\">GATE<\u002Fspan>）では、止まって大人に「進んでいい？」と聞きます。<\u002Fdiv>\n  <h3>一覧の見かた<\u002Fh3>\n  <ul>\n    <li>上のボタン（すべて / Idea・審査 / 進行中 / 本番 / 保留・完了）で絞り込めます。<\u002Fli>\n    <li>行をクリックすると右側に詳細が開きます。<\u002Fli>\n    <li>上のバーの検索窓に番号や名前を入れて Enter でも探せます。<\u002Fli>\n  <\u002Ful>\n  <h3>詳細パネルの読みかた<\u002Fh3>\n  <table>\n    <tbody><tr><th>項目<\u002Fth><th>意味<\u002Fth><\u002Ftr>\n    <tr><td>Phase / Gate<\u002Ftd><td>7つのマス。緑＝終わった、オレンジ＝いまここ、グレー＝まだ。<span class=\"tag t-amber\">GATE<\u002Fspan> のマスは承認が必要です<\u002Ftd><\u002Ftr>\n    <tr><td>KPI<\u002Ftd><td>「どのくらい良くなったか」の目標と今の数字。棒が右まで伸びれば達成<\u002Ftd><\u002Ftr>\n    <tr><td>Task / Agent Run<\u002Ftd><td>この案件で AI が動いた記録。クリックすると詳細へ<\u002Ftd><\u002Ftr>\n    <tr><td>Owner / GitHub / Notion / Slack<\u002Ftd><td>担当者と、関連する資料・会話の場所<\u002Ftd><\u002Ftr>\n  <\u002Ftbody><\u002Ftable>\n  <h3>次のマスに進める（State Transition）<\u002Fh3>\n  <p>詳細パネルの一番下に「次に進むボタン」があります（例：<span class=\"ui\">審査へ提出 R1<\u002Fspan>、<span class=\"ui\">本番リリース R4<\u002Fspan>）。<\u002Fp>\n  <ul>\n    <li>白いボタン：そのまま進みます。<\u002Fli>\n    <li>オレンジ色のボタン：<b>承認が必要<\u002Fb>。押すと自動で「承認依頼」が作られ、承認画面に移動します。<\u002Fli>\n  <\u002Ful>\n  <h3>案件を直接登録する<\u002Fh3>\n  <p>一覧右上の <span class=\"ui\">＋ 案件を登録<\u002Fspan> から、案件名・概要・担当・リスク候補を入れて登録できます（AI相談を通さない方法）。<\u002Fp>\n<\u002Fsection>\n\n<section id=\"s5\">\n  <h2><span class=\"n\">5<\u002Fspan>承認のしかた（Approver・Reviewer向け）<\u002Fh2>\n  <div class=\"eli5\"><b>たとえ話：<\u002Fb>ロボットが「外に遊びに行っていい？」と聞いてきます。危ないほど（R が大きいほど）、ちゃんと確認してから答えます。答えた理由は<b>ノートに残って、消せません<\u002Fb>。<\u002Fdiv>\n  <ol class=\"steps\">\n    <li>左メニュー <span class=\"ui\">承認（Approval）<\u002Fspan>、または上の 🔔 を押します。<\u002Fli>\n    <li>一覧から1件クリック。右側に「何を・なぜ・証拠（Evidence）・誰が承認済みか」が出ます。<\u002Fli>\n    <li><b>Evidence<\u002Fb> を読みます。テストの結果、セキュリティ検査、元に戻す手順（Rollback）などです。<\u002Fli>\n    <li>下の <b>判断理由<\u002Fb> の欄に、ひとことでも理由を書きます（<u>必須<\u002Fu>）。<\u002Fli>\n    <li>ボタンを押します：<span class=\"tag t-green\">承認<\u002Fspan>（進めていい）/ <span class=\"tag t-amber\">差戻し<\u002Fspan>（直してもう一度）/ <span class=\"tag t-red\">却下<\u002Fspan>（やめる）。<\u002Fli>\n  <\u002Fol>\n  <h3>Approval Steps（承認の順番）<\u002Fh3>\n  <p>承認は順番に進みます。たとえば「Reviewer → Approver」。自分の番でないときや、自分のロールに権限がないときは、押しても <span class=\"tag t-red\">Policy: DENY<\u002Fspan> と表示されて実行されません（これも記録に残ります）。<\u002Fp>\n  <h3>承認すると何が起きる？<\u002Fh3>\n  <ul>\n    <li>企画審査 Gate を承認 → 案件が「承認済」になり、開発を始められます。<\u002Fli>\n    <li>本番リリースを承認 → 案件が「本番稼働」になり、止まっていた AI のタスク（Blocked）が動けるようになります。<\u002Fli>\n  <\u002Ful>\n<\u002Fsection>\n\n<section id=\"s6\">\n  <h2><span class=\"n\">6<\u002Fspan>AI の仕事を見る：タスク・実行（Task / Agent Run）<\u002Fh2>\n  <div class=\"eli5\"><b>たとえ話：<\u002Fb>ロボットの「日記」です。「どのロボットが、何を、どの頭脳（AIモデル）で、いくらかけて、何秒でやったか」が全部書いてあります。<\u002Fdiv>\n  <table>\n    <tbody><tr><th>見るところ<\u002Fth><th>意味<\u002Fth><\u002Ftr>\n    <tr><td>Agent<\u002Ftd><td>担当ロボットの名前。調べる係（Research）、作る係（Developer）、チェックする係（Reviewer）など<\u002Ftd><\u002Ftr>\n    <tr><td>Provider / Model<\u002Ftd><td>使った AI の頭脳。作る係とチェックする係は<b>わざと別の頭脳<\u002Fb>にしています（自分で自分を採点させないため）<\u002Ftd><\u002Ftr>\n    <tr><td>Tokens / Cost / Latency<\u002Ftd><td>読んだ量・書いた量 / かかったお金 / かかった時間<\u002Ftd><\u002Ftr>\n    <tr><td>Tool Call · Policy Decision<\u002Ftd><td>ロボットが使おうとした道具と、その可否。<span class=\"tag t-green\">PERMIT<\u002Fspan>＝OK、<span class=\"tag t-amber\">APPROVAL_REQUIRED<\u002Fspan>＝人の承認待ち、<span class=\"tag t-red\">DENY<\u002Fspan>＝禁止<\u002Ftd><\u002Ftr>\n    <tr><td>Trace<\u002Ftd><td>「相談 → 計画 → タスク → 実行 → 成果物 → 承認」のつながり。どこから来た仕事かたどれます<\u002Ftd><\u002Ftr>\n  <\u002Ftbody><\u002Ftable>\n  <h3>ボタン<\u002Fh3>\n  <ul>\n    <li><span class=\"ui\">Retry / Resume<\u002Fspan>：失敗したり止まった仕事をもう一度。ただし「入力データの形式が違う」系の失敗は、やり直しても直らないので押せません（理由が表示されます）。<\u002Fli>\n    <li><span class=\"ui\">Cancel<\u002Fspan>：仕事を取り消します。終わったものは取り消せません。<\u002Fli>\n    <li>黄色い「Approval Pending」の帯：承認待ちで止まっています。クリックすると承認画面へ飛びます。<\u002Fli>\n  <\u002Ful>\n<\u002Fsection>\n\n<section id=\"s7\">\n  <h2><span class=\"n\">7<\u002Fspan>ナレッジを育てる：ナレッジ候補（Knowledge）<\u002Fh2>\n  <div class=\"eli5\"><b>たとえ話：<\u002Fb>ロボットが仕事のあとに「今日わかったこと」をメモしてきます。先生（Knowledge Curator）が読んで、「これはみんなの教科書に載せよう」か「これはボツ」を決めます。<\u002Fdiv>\n  <ul>\n    <li>カードには <b>種類<\u002Fb>（Lesson＝教訓 / ADR＝設計の決めごと / Playbook＝手順書 / Standard＝基準）と <b>品質スコア<\u002Fb>（80以上は緑、60未満は赤）が出ます。<\u002Fli>\n    <li><b>重複判定<\u002Fb>：すでに似た知識があれば「統合を推奨」と教えてくれます。<\u002Fli>\n    <li><span class=\"ui\">Notionへ昇格<\u002Fspan> を押すと、会社の知識ベース（Notion）に載ります。<span class=\"ui\">却下<\u002Fspan> はボツです。<\u002Fli>\n  <\u002Ful>\n  <div class=\"warn\">Slack のおしゃべりの生ログは、そのままでは知識になりません（ルールで禁止）。整理された「学び」だけが昇格の対象です。<\u002Fdiv>\n<\u002Fsection>\n\n<section id=\"s8\">\n  <h2><span class=\"n\">8<\u002Fspan>監査・連携・監視（見るだけでOK）<\u002Fh2>\n  <h3>監査ログ（Audit Log）<\u002Fh3>\n  <div class=\"eli5\"><b>たとえ話：<\u002Fb>ページを破ったり書き換えたりできない「学級日誌」。前のページとつながる「合言葉（Hash）」があるので、こっそり書き換えるとすぐバレます。<\u002Fdiv>\n  <p>種類やキーワードで絞り込めます。あなたの承認、AI の道具使用、ログイン、拒否された操作…全部ここにあります。管理者でも消せません。<\u002Fp>\n  <h3>外部連携（Integrations）<\u002Fh3>\n  <p>Notion（知識）、Slack（会話）、Gmail（メール）、GitHub（プログラム置き場）とのつながり具合。<span class=\"tag t-green\">Connected<\u002Fspan> なら正常、<span class=\"tag t-amber\">要確認<\u002Fspan> なら人のチェック待ちがあります。<span class=\"ui\">今すぐ同期<\u002Fspan> で最新にできます（開発者・管理者）。<\u002Fp>\n  <div class=\"note\">Gmail は「契約・金額・機密・承認に関わるメール」には自動返信しません。必ず人が見ます。<\u002Fdiv>\n  <h3>監視（Observability）<\u002Fh3>\n  <p>AI が何回動いたか、いくら使ったか、どのくらい待っているか。上の <span class=\"ui\">24時間 / 7日 / 30日<\u002Fspan> で期間を変えられます。費用が気になる人はここを見ましょう。<\u002Fp>\n  <h3>エージェント設定（Agent / Router）<\u002Fh3>\n  <p>どのロボットに、どの頭脳（AIモデル）を使わせるかの設定です。<b>「作る係」と「チェックする係」が同じ系列の頭脳になると赤い警告<\u002Fb>が出ます。管理者・開発者以外は見るだけです。<\u002Fp>\n<\u002Fsection>\n\n<section id=\"s9\">\n  <h2><span class=\"n\">9<\u002Fspan>あなたの役割（ロール）<\u002Fh2>\n  <div class=\"eli5\"><b>たとえ話：<\u002Fb>学校の「係」です。給食係は給食のことだけできます。係にない仕事をしようとすると「それは君の係じゃないよ」と止められます（それも日誌に書かれます）。<\u002Fdiv>\n  <p>上のバーの選択肢でロールを切り替えると、できること・見えるメニューが変わります。<\u002Fp>\n  <table>\n    <tbody><tr><th>ロール<\u002Fth><th>だれ向け<\u002Fth><th>できること<\u002Fth><\u002Ftr>\n    <tr><td>Viewer<\u002Ftd><td>全社員の基本<\u002Ftd><td>見る、AI相談する<\u002Ftd><\u002Ftr>\n    <tr><td>Developer<\u002Ftd><td>作る人<\u002Ftd><td>案件を作る・進める、AIタスクの再実行、連携の同期、エージェント設定<\u002Ftd><\u002Ftr>\n    <tr><td>Reviewer<\u002Ftd><td>チェックする人<\u002Ftd><td>承認の「Reviewer」段階を担当、差戻し・却下<\u002Ftd><\u002Ftr>\n    <tr><td>Approver<\u002Ftd><td>決める人（部長など）<\u002Ftd><td>Gate の最終承認、案件の状態を進める<\u002Ftd><\u002Ftr>\n    <tr><td>Knowledge Curator<\u002Ftd><td>知識を管理する人<\u002Ftd><td>ナレッジ候補の昇格・却下<\u002Ftd><\u002Ftr>\n    <tr><td>Administrator<\u002Ftd><td>情シス<\u002Ftd><td>全部。ユーザー・ロール管理も。ただし監査ログは消せない<\u002Ftd><\u002Ftr>\n  <\u002Ftbody><\u002Ftable>\n<\u002Fsection>\n\n<section id=\"s10\">\n  <h2><span class=\"n\">10<\u002Fspan>色とバッジの意味<\u002Fh2>\n  <h3>リスク（R0〜R5）<\u002Fh3>\n  <p><span class=\"tag t-muted\">R0 / R1<\u002Fspan> 読むだけ・小さな変更　<span class=\"tag t-blue\">R2<\u002Fspan> 中くらい　<span class=\"tag t-amber\">R3<\u002Fspan> 人の承認が必要　<span class=\"tag t-red\">R4 / R5<\u002Fspan> 本番や外部に影響。慎重に<\u002Fp>\n  <h3>案件の状態<\u002Fh3>\n  <p><span class=\"tag t-muted\">Idea<\u002Fspan> → <span class=\"tag t-blue\">審査中<\u002Fspan> → <span class=\"tag t-blue\">承認済<\u002Fspan> → <span class=\"tag t-purple\">開発中<\u002Fspan> → <span class=\"tag t-amber\">Staging / UAT<\u002Fspan> → <span class=\"tag t-green\">本番稼働<\u002Fspan> → <span class=\"tag t-green\">完了<\u002Fspan>　（横道：<span class=\"tag t-amber\">保留<\u002Fspan> / <span class=\"tag t-muted\">アーカイブ<\u002Fspan>）<\u002Fp>\n  <h3>AIタスクの状態<\u002Fh3>\n  <p><span class=\"tag t-purple\">実行中<\u002Fspan> 動いている　<span class=\"tag t-blue\">レビュー<\u002Fspan> チェック待ち　<span class=\"tag t-amber\">ブロック<\u002Fspan> 承認待ちで止まっている　<span class=\"tag t-green\">完了<\u002Fspan>　<span class=\"tag t-red\">失敗<\u002Fspan>　<span class=\"tag t-muted\">取消<\u002Fspan><\u002Fp>\n  <h3>通知（右下に出る黒い箱）<\u002Fh3>\n  <p>操作の結果を数秒だけ表示します。オレンジ＝お知らせ、緑＝成功、黄＝注意、赤＝できませんでした。×で閉じられます。<\u002Fp>\n<\u002Fsection>\n\n<section id=\"s11\">\n  <h2><span class=\"n\">11<\u002Fspan>困ったときは<\u002Fh2>\n  <details><summary>ボタンを押したら「Policy: DENY」と出た<\u002Fsummary><p>あなたのロールにその操作の権限がありません。上のバーでロールを確認するか、Administrator に相談してください。試したこと自体は監査ログに残りますが、悪いことではありません。<\u002Fp><\u002Fdetails>\n  <details><summary>承認ボタンが押せない / 反応しない<\u002Fsummary><p>「判断理由」が空だと承認できません。ひとことでも書いてください。<\u002Fp><\u002Fdetails>\n  <details><summary>Retry を押しても動かない<\u002Fsummary><p>承認待ち（Blocked）か、やり直しても直らない種類の失敗です。画面の黄色または赤の帯に理由が書いてあります。<\u002Fp><\u002Fdetails>\n  <details><summary>「ユーザー・ロール」メニューが見えない<\u002Fsummary><p>Administrator だけに表示されます。<\u002Fp><\u002Fdetails>\n  <details><summary>操作をやり直したい / 最初の状態に戻したい<\u002Fsummary><p>操作内容はブラウザに保存されています。Administrator で「ユーザー・ロール」→ <span class=\"ui\">デモデータを初期化<\u002Fspan> を押すと最初の状態に戻ります。<\u002Fp><\u002Fdetails>\n  <details><summary>AI相談で何を書けばいい？<\u002Fsummary><p>「誰が・どのくらいの頻度で・何に困っていて・どうなったら嬉しいか」。この4つが入っていれば十分です。文章が下手でも AI が質問して補います。<\u002Fp><\u002Fdetails>\n  <div class=\"eli5\" style=\"margin-top:18px\"><b>最後にいちばん大事なこと：<\u002Fb>AI は手伝う係。決めるのはあなた。わからないときは、進めずに聞いてください。<\u002Fdiv>\n<\u002Fsection>\n\n<\u002Fdiv>\n<footer>Mirai AgentOS かんたん利用説明書 · みらい建設工業 全社員向け · 2026-09<\u002Ffooter>\n\n\n<\u002Fbody><\u002Fhtml>"
+  </script>
+</body>
+</html>

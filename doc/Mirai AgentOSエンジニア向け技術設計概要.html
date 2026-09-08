@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mirai AgentOS 技術設計概要｜エンジニア向け</title>
+<style>
+:root{
+  --bg:#f5f7fb; --panel:#fff; --ink:#142033; --muted:#5d6a7a; --line:#dce3ec;
+  --navy:#16365d; --blue:#2563eb; --cyan:#0891b2; --green:#15803d; --amber:#b45309;
+  --purple:#7c3aed; --red:#b91c1c; --dark:#0f172a; --softblue:#edf5ff; --softgreen:#eefbf3;
+  --softamber:#fff8eb; --shadow:0 10px 30px rgba(20,40,70,.08); --radius:18px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP","Yu Gothic",Meiryo,sans-serif;
+  line-height:1.72
+}
+a{color:inherit}
+.hero{
+  background:
+    radial-gradient(circle at 85% 12%,rgba(37,99,235,.24),transparent 28%),
+    linear-gradient(135deg,#0e2443,#17365d 58%,#164e63);
+  color:#fff;padding:58px 22px 44px
+}
+.wrap{max-width:1240px;margin:auto}
+.eyebrow{display:inline-block;padding:6px 12px;border:1px solid rgba(255,255,255,.22);
+  background:rgba(255,255,255,.08);border-radius:999px;font-size:12px;font-weight:800;letter-spacing:.06em}
+h1{font-size:clamp(31px,4.2vw,54px);line-height:1.18;margin:18px 0 12px}
+.hero p{max-width:980px;color:#dbeafe;font-size:18px;margin:0}
+.tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:20px}
+.tag{padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);font-size:12px}
+.nav{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.nav .wrap{display:flex;gap:8px;overflow:auto;padding:10px 16px}
+.nav a{white-space:nowrap;text-decoration:none;padding:8px 11px;border-radius:9px;font-size:13px;font-weight:800;color:#42516a}
+.nav a:hover{background:#edf4ff;color:var(--blue)}
+main{max-width:1240px;margin:auto;padding:32px 18px 78px}
+section{margin:0 0 46px}
+.section-title{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.num{width:40px;height:40px;display:grid;place-items:center;border-radius:12px;background:var(--navy);color:#fff;font-weight:900}
+h2{font-size:28px;line-height:1.3;margin:0}
+h3{margin:0 0 8px;font-size:19px}
+h4{margin:18px 0 8px}
+p{margin:0 0 12px}
+.small{font-size:13px;color:var(--muted)}
+.lead,.note,.warning,.decision{border-radius:14px;padding:16px 18px;margin:14px 0}
+.lead{background:var(--softblue);border:1px solid #d7e7ff;border-left:5px solid var(--blue)}
+.note{background:#ecfeff;border-left:4px solid var(--cyan);color:#164e63}
+.warning{background:var(--softamber);border-left:4px solid var(--amber);color:#7c2d12}
+.decision{background:var(--softgreen);border-left:4px solid var(--green);color:#14532d}
+.grid{display:grid;gap:16px}
+.cols2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.cols3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.cols4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:19px;box-shadow:var(--shadow)}
+.card p{color:var(--muted)}
+.badge{display:inline-block;padding:4px 9px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:12px;font-weight:900;margin-bottom:8px}
+.kicker{font-size:12px;font-weight:900;color:var(--blue);letter-spacing:.05em;text-transform:uppercase}
+.arch{background:var(--dark);color:#e5eefc;border-radius:20px;padding:22px;overflow:auto;box-shadow:var(--shadow)}
+.arch pre{margin:0;font-family:Consolas,"SFMono-Regular",monospace;font-size:13.5px;line-height:1.55}
+code{background:#edf1f6;padding:2px 6px;border-radius:6px;font-family:Consolas,"SFMono-Regular",monospace;font-size:.92em}
+pre code{background:transparent;padding:0}
+table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden}
+th,td{padding:12px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:#f1f5f9;text-align:left;font-size:13px;color:#334155}
+tr:last-child td{border-bottom:0}
+.timeline{display:grid;gap:10px}
+.trow{display:grid;grid-template-columns:76px 1fr;gap:12px;align-items:start}
+.tno{background:var(--navy);color:#fff;border-radius:11px;text-align:center;padding:8px 6px;font-weight:900}
+.tbody{background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px 15px}
+.tbody strong{color:var(--navy)}
+.flow{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+.step{border-radius:14px;padding:14px 8px;color:white;text-align:center;font-weight:900;display:grid;place-items:center;min-height:84px}
+.s1{background:#0ea5e9}.s2{background:#0284c7}.s3{background:#2563eb}.s4{background:#4f46e5}.s5{background:#7c3aed}.s6{background:#9333ea}.s7{background:#6d28d9}
+.quote{padding:22px;border:1px solid #dbeafe;border-radius:18px;background:linear-gradient(135deg,#eff6ff,#f5f3ff);text-align:center;font-size:21px;font-weight:900;color:#1e3a8a}
+.footer{margin-top:48px;padding-top:22px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);text-align:center}
+@media(max-width:980px){
+  .cols3,.cols4{grid-template-columns:1fr 1fr}
+  .flow{grid-template-columns:1fr 1fr}
+}
+@media(max-width:660px){
+  .cols2,.cols3,.cols4,.flow{grid-template-columns:1fr}
+  .trow{grid-template-columns:58px 1fr}
+}
+@media print{
+  .nav{display:none}
+  body{background:#fff}
+  .card,.arch,.tbody{box-shadow:none}
+  section,.card,.tbody{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+
+<header class="hero">
+<div class="wrap">
+  <span class="eyebrow">MIRAI AGENTOS / ENGINEERING DESIGN OVERVIEW</span>
+  <h1>Mirai AgentOS<br>エンジニア向け技術設計概要</h1>
+  <p>
+    会社保有ITシステムから完全独立し、自前Notion・Slack・Gmail・GitHub・ローカルPostgreSQL・AIサービスを統合する
+    Agentic Operating System。案件・承認・AI実行状態・監査をAgentOS自身で保持し、KnowledgeはNotion、
+    Engineering履歴はGitHub、Process状態はPostgreSQLに分離する。
+  </p>
+  <div class="tags">
+    <span class="tag">Local PostgreSQL</span><span class="tag">Docker</span><span class="tag">Notion</span>
+    <span class="tag">Slack</span><span class="tag">Gmail</span><span class="tag">GitHub</span>
+    <span class="tag">Claude / Codex / DeepSeek</span><span class="tag">Human-in-the-Loop</span>
+  </div>
+</div>
+</header>
+
+<nav class="nav">
+<div class="wrap">
+  <a href="#principles">設計原則</a>
+  <a href="#architecture">全体構成</a>
+  <a href="#kernel">Kernel</a>
+  <a href="#data">Data/SoR</a>
+  <a href="#approval">Approval</a>
+  <a href="#ai">AI Runtime</a>
+  <a href="#integrations">Integrations</a>
+  <a href="#observability">Observability</a>
+  <a href="#repo">Repo構成</a>
+  <a href="#process">20フェーズ</a>
+  <a href="#mvp">MVP</a>
+</div>
+</nav>
+
+<main>
+
+<section id="principles">
+  <div class="section-title"><div class="num">01</div><h2>設計原則</h2></div>
+
+  <div class="grid cols3">
+    <div class="card"><span class="badge">Boundary</span><h3>会社ITと完全分離</h3><p>desknet's NEO、AppSuite、Workflow、M365、AD、SharePoint等には依存しない。</p></div>
+    <div class="card"><span class="badge">System of Record</span><h3>正本を分離</h3><p>Knowledge / Process / Engineering / Observabilityを別々のSoRへ分離する。</p></div>
+    <div class="card"><span class="badge">Control Plane</span><h3>AgentOSがProcess Master</h3><p>案件、Phase、Gate、Task、Approval、Audit、Agent Runtime ControlをAgentOS自身で管理。</p></div>
+    <div class="card"><span class="badge">Human-in-the-Loop</span><h3>高リスク操作は人間承認</h3><p>Production、IAM、Secret、破壊的操作はPolicy EngineとApproval Gateを通す。</p></div>
+    <div class="card"><span class="badge">Knowledge</span><h3>Slack ≠ Knowledge</h3><p>会話をそのままNotionへ保存せず、AI整理・人間レビュー後に確定知識化。</p></div>
+    <div class="card"><span class="badge">Runtime</span><h3>AIモデルとAgentを分離</h3><p>Agentは責務、LLMは思考エンジン。Model Routerで実行時に選択する。</p></div>
+  </div>
+
+  <div class="quote" style="margin-top:18px">
+    Notion = 何を知っているか ／ PostgreSQL = 今何をしているか ／ GitHub = 何を作ったか
+  </div>
+</section>
+
+<section id="architecture">
+  <div class="section-title"><div class="num">02</div><h2>推奨全体アーキテクチャ</h2></div>
+
+  <div class="arch"><pre>
+Users / Operators
+   │
+   ├──────────────┐
+   ▼              ▼
+AgentOS WebUI     Slack
+   │              │
+   └──────┬───────┘
+          ▼
+┌────────────────────────────────────────────────────────┐
+│                    Mirai AgentOS                       │
+│                                                        │
+│  Intent Router ─ Planner ─ Agent Orchestrator          │
+│       │             │             │                    │
+│       │             ├─ Workflow Engine                 │
+│       │             ├─ Task Scheduler                  │
+│       │             ├─ Policy Engine                   │
+│       │             ├─ Approval Gate                   │
+│       │             ├─ Model Router                    │
+│       │             ├─ Skill Registry                  │
+│       │             └─ Knowledge Curator               │
+└───────┬─────────────┬─────────────┬────────────────────┘
+        │             │             │
+        ▼             ▼             ▼
+     Notion       PostgreSQL      GitHub
+ Knowledge SoR   Process SoR   Engineering SoR
+        │             │             │
+        └─────────────┼─────────────┘
+                      ▼
+          Claude / Codex / DeepSeek
+                      │
+                      ▼
+          Docker / Linux / Browser Runner
+                      │
+                      ▼
+        Prometheus / Loki / Grafana / Alloy
+
+Gmail ── Mail Gateway / External Notification
+authentik ── Identity / RBAC
+Tailscale ── Private Access
+  </pre></div>
+
+  <div class="decision">
+    <strong>重要：</strong>AppSuite相当のProcess Masterとdesknet's NEO Workflow相当のApproval Engineを別製品で置き換えず、
+    <strong>AgentOS + PostgreSQL</strong> に内包する。
+  </div>
+</section>
+
+<section id="kernel">
+  <div class="section-title"><div class="num">03</div><h2>AgentOS Kernelの責務</h2></div>
+
+  <table>
+    <thead><tr><th>Component</th><th>責務</th><th>主な入出力</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Intent Router</strong></td><td>ユーザー依頼を分類し、対象Project・Request Type・Risk候補を特定</td><td>Request → Intent Context</td></tr>
+      <tr><td><strong>Planner</strong></td><td>GoalをTask/SubTaskへ分解し、依存関係・成果物・完了条件を定義</td><td>Goal → Execution Plan</td></tr>
+      <tr><td><strong>Agent Orchestrator</strong></td><td>Agent選択、Task割当、結果統合、再試行、委譲</td><td>Plan → Agent Runs</td></tr>
+      <tr><td><strong>Workflow Engine</strong></td><td>Phase/Gate/State Transitionを管理</td><td>Project State → Next State</td></tr>
+      <tr><td><strong>Task Scheduler</strong></td><td>非同期Task、定期Task、待機中Taskを実行</td><td>Task Queue → Worker</td></tr>
+      <tr><td><strong>Policy Engine</strong></td><td>権限、Risk、実行可否、Approval要否を判定</td><td>Action Context → Permit/Deny/Approve</td></tr>
+      <tr><td><strong>Approval Gate</strong></td><td>人間承認・差戻し・却下、Evidenceの記録</td><td>Approval Request → Decision</td></tr>
+      <tr><td><strong>Model Router</strong></td><td>Task特性に応じてClaude/Codex/DeepSeekを選択</td><td>Task Profile → Model</td></tr>
+      <tr><td><strong>Skill Registry</strong></td><td>Skillの発見、Version、権限、適用条件を管理</td><td>Agent Context → Skills</td></tr>
+      <tr><td><strong>Knowledge Curator</strong></td><td>実行結果からKnowledge候補を抽出しNotionへ昇格</td><td>Run Result → Knowledge Candidate</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="data">
+  <div class="section-title"><div class="num">04</div><h2>Data Plane / System of Record</h2></div>
+
+  <div class="grid cols4">
+    <div class="card"><span class="badge">Knowledge SoR</span><h3>Notion</h3><p>Idea、ADR、Research、Requirements、Architecture、Playbook、Lessons Learned。</p></div>
+    <div class="card"><span class="badge">Process SoR</span><h3>PostgreSQL Local</h3><p>Project、Phase、Gate、Task、Approval、Agent Run、Audit、Integration State。</p></div>
+    <div class="card"><span class="badge">Engineering SoR</span><h3>GitHub</h3><p>Repository、Issue、PR、Code、Test、Release、CI/CD。</p></div>
+    <div class="card"><span class="badge">Telemetry</span><h3>Prometheus / Loki</h3><p>MetricsとLogs。Grafanaは可視化、SoRそのものではない。</p></div>
+  </div>
+
+  <h4>PostgreSQL 推奨論理ドメイン</h4>
+  <div class="arch"><pre>
+agentos
+├─ projects
+│  ├─ projects
+│  ├─ project_phases
+│  ├─ gates
+│  └─ kpis
+├─ workflow
+│  ├─ workflows
+│  ├─ workflow_instances
+│  └─ state_transitions
+├─ tasks
+│  ├─ tasks
+│  └─ task_dependencies
+├─ approval
+│  ├─ approval_requests
+│  ├─ approval_steps
+│  ├─ approval_actions
+│  ├─ approval_evidence
+│  └─ approval_policies
+├─ agents
+│  ├─ agents
+│  ├─ agent_runs
+│  └─ model_runs
+├─ skills
+│  ├─ skills
+│  └─ skill_versions
+├─ artifacts
+│  └─ artifacts
+├─ audit
+│  └─ audit_events
+└─ integrations
+   ├─ integration_accounts
+   ├─ webhook_events
+   └─ sync_states
+  </pre></div>
+
+  <div class="note">
+    大容量Artifact（PDF、DXF、Screenshot、Test Artifact、生成レポート、大型ログ）はDB Blob化せず、
+    ローカルファイルまたはS3互換Object Storageへ置き、PostgreSQLにはID・Path・Hash・MIME・Metadataのみ保存する。
+  </div>
+
+  <div class="warning">
+    ローカルPostgreSQL運用では、<strong>pg_dump + WAL Archive + 別物理ディスク + Restore Test</strong>を最低運用要件とする。
+  </div>
+</section>
+
+<section id="approval">
+  <div class="section-title"><div class="num">05</div><h2>Workflow / Approval / Audit</h2></div>
+
+  <div class="grid cols2">
+    <div class="card">
+      <h3>Approval Data Model</h3>
+      <p><code>approval_requests</code> を起点に、<code>approval_steps</code>、<code>approval_actions</code>、
+      <code>approval_evidence</code>、<code>approval_policies</code> を分離する。</p>
+    </div>
+    <div class="card">
+      <h3>Append-only Audit</h3>
+      <p>承認履歴は上書き更新せず、Requested / Approved / Rejected / Returned等を追記型イベントとして保存する。</p>
+    </div>
+  </div>
+
+  <div class="arch"><pre>
+REQ-000042
+type: ProductionRelease
+target: DX-2026-0042 v1.4.0
+requested_by: DeveloperAgent
+risk: R4
+
+Required Steps
+  1. Technical Review   -> Approved
+  2. Security Review    -> Approved
+  3. Owner Approval     -> Pending
+
+Audit Events
+  19:10 Requested
+  19:14 Technical Approved
+  19:27 Security Approved
+  19:31 Owner Approved
+  </pre></div>
+
+  <table style="margin-top:16px">
+    <thead><tr><th>Risk</th><th>例</th><th>推奨制御</th></tr></thead>
+    <tbody>
+      <tr><td>R0</td><td>Read-only / Public Research</td><td>自動</td></tr>
+      <tr><td>R1</td><td>Knowledge候補作成</td><td>自動＋Audit</td></tr>
+      <tr><td>R2</td><td>Branch / PR作成</td><td>自動＋Review</td></tr>
+      <tr><td>R3</td><td>Merge</td><td>条件付きApproval</td></tr>
+      <tr><td>R4</td><td>Production Deploy</td><td>Human Approval必須</td></tr>
+      <tr><td>R5</td><td>Secret / IAM / Privilege</td><td>Human Approval必須</td></tr>
+      <tr><td>R6</td><td>Delete / Destructive Operation</td><td>強いApproval + Rollback確認</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="ai">
+  <div class="section-title"><div class="num">06</div><h2>AI / Agent Runtime</h2></div>
+
+  <div class="arch"><pre>
+                     AgentOS
+                        │
+                  Model Router
+                        │
+           ┌────────────┼────────────┐
+           ▼            ▼            ▼
+     DeepSeek API     Claude       OpenAI
+           │        Claude Code     Codex
+           ▼
+   DeepSeek Harness
+
+Agent != Model
+
+Agent:
+  Research / Architect / Developer / Reviewer / Operations / Knowledge Curator
+
+Model:
+  DeepSeek / Claude / Codex
+  </pre></div>
+
+  <table style="margin-top:16px">
+    <thead><tr><th>Service</th><th>主用途</th><th>位置づけ</th></tr></thead>
+    <tbody>
+      <tr><td><strong>DeepSeek</strong></td><td>大量処理、分類、調査、反復</td><td>General / Cost-efficient Model</td></tr>
+      <tr><td><strong>DeepSeek Harness</strong></td><td>Agent Runtime / Execution Loop</td><td>Runtime</td></tr>
+      <tr><td><strong>Claude</strong></td><td>高度分析、設計、文書化</td><td>Expert Reasoning</td></tr>
+      <tr><td><strong>Claude Code</strong></td><td>Repository単位の開発</td><td>Coding Runtime</td></tr>
+      <tr><td><strong>Codex</strong></td><td>開発、検証、独立レビュー</td><td>Coding / Review</td></tr>
+    </tbody>
+  </table>
+
+  <div class="decision">
+    <strong>モデル分離原則：</strong>実装モデルと最終レビュー/検証モデルを分離し、
+    同一モデルが「実装 → 自己評価 → 承認」まで自己完結しないようにする。
+  </div>
+</section>
+
+<section id="integrations">
+  <div class="section-title"><div class="num">07</div><h2>Integrations</h2></div>
+
+  <div class="grid cols3">
+    <div class="card"><span class="badge">Slack</span><h3>Collaboration Gateway</h3><p>相談、レビュー、通知、Agent呼び出し。Raw ConversationはKnowledgeに直接昇格しない。</p></div>
+    <div class="card"><span class="badge">Gmail</span><h3>Mail Gateway</h3><p>外部メール受付・自動返信。契約・金額・Security・承認・機密はHuman Reviewへ。</p></div>
+    <div class="card"><span class="badge">GitHub</span><h3>Engineering Adapter</h3><p>Repo、Issue、PR、Actions、Release。self-hosted runnerとの連携を前提にできる。</p></div>
+    <div class="card"><span class="badge">Notion</span><h3>Knowledge Adapter</h3><p>AI-CTO Knowledge BaseをLong-term Memoryとして参照・更新。</p></div>
+    <div class="card"><span class="badge">authentik</span><h3>Identity / RBAC</h3><p>会社AD/Entra IDを使わず、AgentOSの独立Identity Providerとする。</p></div>
+    <div class="card"><span class="badge">Tailscale</span><h3>Private Network</h3><p>Admin UI、PostgreSQL、Grafana、RunnerをInternetへ直接公開しない。</p></div>
+  </div>
+
+  <div class="note">
+    n8nは任意。Gmail/Slack/Webhook等のIntegration Automationに限定し、
+    AgentOS内部のPlan / Task / Approval / Execution / Retry / RollbackはAgentOS自身で保持する。
+  </div>
+</section>
+
+<section id="observability">
+  <div class="section-title"><div class="num">08</div><h2>Observability / Operations</h2></div>
+
+  <div class="arch"><pre>
+AgentOS / API / Worker / Runner
+        │
+        ├──────── Metrics ────────> Prometheus
+        │
+        ├──────── Logs ───────────> Loki
+        │
+        └──────── Telemetry ──────> Alloy
+                                      │
+                                      ▼
+                                   Grafana
+  </pre></div>
+
+  <div class="grid cols4" style="margin-top:16px">
+    <div class="card"><h3>Platform</h3><p>CPU / Memory / Disk / DB Connections / Queue Depth</p></div>
+    <div class="card"><h3>Agent</h3><p>Runs / Success Rate / Failure / Retry / Duration</p></div>
+    <div class="card"><h3>AI</h3><p>Model Usage / Token / Cost / Latency / Error</p></div>
+    <div class="card"><h3>Security</h3><p>Denied Actions / Approval Events / Auth Failures / Suspicious Operations</p></div>
+  </div>
+</section>
+
+<section id="repo">
+  <div class="section-title"><div class="num">09</div><h2>推奨Repository構成</h2></div>
+
+  <div class="arch"><pre>
+Mirai-AgentOS/
+├─ apps/
+│  ├─ web/
+│  └─ api/
+├─ kernel/
+│  ├─ intent-router/
+│  ├─ planner/
+│  ├─ orchestrator/
+│  ├─ workflow-engine/
+│  ├─ scheduler/
+│  ├─ model-router/
+│  └─ state/
+├─ agents/
+│  ├─ cto/
+│  ├─ research/
+│  ├─ architect/
+│  ├─ developer/
+│  ├─ reviewer/
+│  ├─ operations/
+│  └─ knowledge-curator/
+├─ skills/
+├─ tools/
+├─ integrations/
+│  ├─ notion/
+│  ├─ slack/
+│  ├─ gmail/
+│  └─ github/
+├─ policy/
+├─ approvals/
+├─ workflows/
+├─ database/
+│  ├─ migrations/
+│  ├─ seeds/
+│  └─ backup/
+├─ runtime/
+│  ├─ deepseek/
+│  ├─ claude/
+│  └─ codex/
+├─ observability/
+├─ docker/
+├─ tests/
+├─ docs/
+├─ CLAUDE.md
+├─ CODEX.md
+├─ docker-compose.yml
+└─ README.md
+  </pre></div>
+
+  <div class="lead">
+    <strong>Repository Boundary:</strong>
+    <code>AI-CTO-Knowledge-Base</code> はKnowledge側として独立維持し、
+    AgentOS Kernel / Runtime / Workflow / PostgreSQL / Integrationsは新規 <code>Mirai-AgentOS</code> 側へ配置する。
+  </div>
+</section>
+
+<section id="process">
+  <div class="section-title"><div class="num">10</div><h2>開発・運用プロセス（20 Phase）</h2></div>
+
+  <div class="flow">
+    <div class="step s1">相談</div><div class="step s2">Idea</div><div class="step s3">案件化</div>
+    <div class="step s4">Approval</div><div class="step s5">Design</div><div class="step s6">Build/Test</div><div class="step s7">Operate/Learn</div>
+  </div>
+
+  <div class="timeline" style="margin-top:18px">
+    <div class="trow"><div class="tno">01</div><div class="tbody"><strong>AI相談受付</strong> — AgentOS / Slack</div></div>
+    <div class="trow"><div class="tno">02</div><div class="tbody"><strong>課題明確化</strong> — AgentOS + Notion</div></div>
+    <div class="trow"><div class="tno">03</div><div class="tbody"><strong>Idea構造化</strong> — AgentOS → Notion</div></div>
+    <div class="trow"><div class="tno">04</div><div class="tbody"><strong>企画候補登録</strong> — AgentOS</div></div>
+    <div class="trow"><div class="tno">05</div><div class="tbody"><strong>案件ID発番</strong> — PostgreSQL</div></div>
+    <div class="trow"><div class="tno">06</div><div class="tbody"><strong>企画検討</strong> — Slack + AI + Notion</div></div>
+    <div class="trow"><div class="tno">07</div><div class="tbody"><strong>企画審査</strong> — AgentOS Approval</div></div>
+    <div class="trow"><div class="tno">08</div><div class="tbody"><strong>要件定義</strong> — Claude + Notion</div></div>
+    <div class="trow"><div class="tno">09</div><div class="tbody"><strong>要件承認</strong> — AgentOS Approval</div></div>
+    <div class="trow"><div class="tno">10</div><div class="tbody"><strong>開発案件化</strong> — GitHub + PostgreSQL</div></div>
+    <div class="trow"><div class="tno">11</div><div class="tbody"><strong>MVP開発</strong> — Claude Code / Codex / DeepSeek</div></div>
+    <div class="trow"><div class="tno">12</div><div class="tbody"><strong>Test</strong> — GitHub + Test Agents</div></div>
+    <div class="trow"><div class="tno">13</div><div class="tbody"><strong>MVP評価</strong> — AgentOS + Slack</div></div>
+    <div class="trow"><div class="tno">14</div><div class="tbody"><strong>Staging</strong> — Docker / GitHub</div></div>
+    <div class="trow"><div class="tno">15</div><div class="tbody"><strong>UAT</strong> — AgentOS</div></div>
+    <div class="trow"><div class="tno">16</div><div class="tbody"><strong>Production承認</strong> — AgentOS Approval</div></div>
+    <div class="trow"><div class="tno">17</div><div class="tbody"><strong>Production</strong> — GitHub / self-hosted runner</div></div>
+    <div class="trow"><div class="tno">18</div><div class="tbody"><strong>DevOps</strong> — Grafana / Prometheus / Loki</div></div>
+    <div class="trow"><div class="tno">19</div><div class="tbody"><strong>KPI / 効果測定</strong> — PostgreSQL + Grafana</div></div>
+    <div class="trow"><div class="tno">20</div><div class="tbody"><strong>Knowledge化</strong> — Knowledge Curator → Human Review → Notion</div></div>
+  </div>
+</section>
+
+<section id="mvp">
+  <div class="section-title"><div class="num">11</div><h2>MVP推奨構成と実装順序</h2></div>
+
+  <h4>最小サービス構成</h4>
+  <div class="grid cols3">
+    <div class="card"><h3>Core</h3><p>Mirai AgentOS / PostgreSQL Local / Docker</p></div>
+    <div class="card"><h3>Knowledge & Collaboration</h3><p>Notion / Slack / Gmail</p></div>
+    <div class="card"><h3>Engineering</h3><p>GitHub / self-hosted runner</p></div>
+    <div class="card"><h3>Identity / Network</h3><p>authentik / Tailscale</p></div>
+    <div class="card"><h3>Observability</h3><p>Grafana / Prometheus / Loki / Alloy</p></div>
+    <div class="card"><h3>AI</h3><p>DeepSeek Harness/API / Claude Code / Codex</p></div>
+  </div>
+
+  <h4>実装優先順位</h4>
+  <table>
+    <thead><tr><th>Priority</th><th>実装対象</th><th>完了条件</th></tr></thead>
+    <tbody>
+      <tr><td>P0</td><td>Repo / Docker / PostgreSQL / Migration基盤</td><td>ローカルで一括起動・停止可能</td></tr>
+      <tr><td>P1</td><td>Project / Phase / Gate / Task Model</td><td>案件状態がPostgreSQLだけで管理可能</td></tr>
+      <tr><td>P2</td><td>Approval / Policy / Audit</td><td>高リスクActionが承認なしに実行されない</td></tr>
+      <tr><td>P3</td><td>Notion / GitHub Adapter</td><td>KnowledgeとEngineering SoR連携が成立</td></tr>
+      <tr><td>P4</td><td>Agent Orchestrator / Model Router</td><td>1 Goalを複数Agent/Modelで処理可能</td></tr>
+      <tr><td>P5</td><td>Slack / Gmail Gateway</td><td>外部入口からAgentOS Requestを生成可能</td></tr>
+      <tr><td>P6</td><td>Observability</td><td>Agent Run / Error / Latency / Costを可視化</td></tr>
+      <tr><td>P7</td><td>Knowledge Curator</td><td>Execution ResultからNotion Knowledge候補を作成可能</td></tr>
+    </tbody>
+  </table>
+
+  <div class="decision">
+    <strong>MVPの成功条件：</strong>
+    「1つのIdea → Project化 → Approval → GitHub実装 → Test → Production相当 → KPI記録 → Knowledge化」
+    を、会社ITを一切使わず一周できること。
+  </div>
+</section>
+
+<div class="footer">
+  Mirai AgentOS 技術設計概要 — Standalone HTML<br>
+  Source basis: AgentOS independent architecture / Local PostgreSQL / Notion / Slack / Gmail / GitHub / Claude / Codex / DeepSeek
+</div>
+
+</main>
+</body>
+</html>

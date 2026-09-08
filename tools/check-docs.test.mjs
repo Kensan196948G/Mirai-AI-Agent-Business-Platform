@@ -87,6 +87,14 @@ test('scanSecrets: トークン・接続文字列・平文資格情報を検出�
   }
 });
 
+test('scanSecrets: doc003-allow マーカーのある行は意図的な非秘密値としてスキップする', () => {
+  const token = 'gh' + 'p_' + 'C'.repeat(36);
+  const withoutMarker = `const T = '${token}';`;
+  const withMarker = `const T = '${token}'; // doc003-allow: CI専用のダミー値`;
+  assert.equal(scanSecrets('doc.md', withoutMarker).length, 1);
+  assert.equal(scanSecrets('doc.md', withMarker).length, 0);
+});
+
 test('scanSecrets: 検出値そのものをメッセージに出力しない', () => {
   const token = 'gh' + 'p_' + 'B'.repeat(36);
   const [f] = scanSecrets('doc.md', token);

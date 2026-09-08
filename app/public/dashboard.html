@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>Mirai AgentOS — ダッシュボード</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2em auto; padding: 0 1em; }
+  section { margin-bottom: 2em; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 0.4em; border-bottom: 1px solid #ddd; font-size: 0.9em; }
+  form.inline { display: flex; gap: 0.5em; margin-bottom: 1em; flex-wrap: wrap; }
+  input, textarea { padding: 0.4em; }
+  button { padding: 0.4em 0.8em; cursor: pointer; }
+  #who { float: right; font-size: 0.85em; color: #555; }
+  .msg { min-height: 1.2em; font-size: 0.85em; }
+  .msg.error { color: #b00020; }
+  .msg.ok { color: #2e7d32; }
+</style>
+</head>
+<body>
+<div id="who"></div>
+<h1>Mirai AgentOS</h1>
+
+<section>
+  <h2>案件依頼（Request）</h2>
+  <form class="inline" id="request-form">
+    <input id="title" placeholder="タイトル" required>
+    <input id="description" placeholder="内容" required size="30">
+    <button type="submit">登録</button>
+  </form>
+  <div class="msg" id="request-msg"></div>
+  <table id="request-table"><thead><tr><th>コード</th><th>タイトル</th><th>状態</th><th>依頼者</th><th></th></tr></thead><tbody></tbody></table>
+</section>
+
+<section>
+  <h2>Project 一覧</h2>
+  <table id="project-table"><thead><tr><th>コード</th><th>タイトル</th><th>状態</th></tr></thead><tbody></tbody></table>
+</section>
+
+<section>
+  <h2>承認待ち（Gate 1）</h2>
+  <table id="approval-table"><thead><tr><th>Project</th><th>タイトル</th><th></th></tr></thead><tbody></tbody></table>
+  <div class="msg" id="approval-msg"></div>
+</section>
+
+<script type="module">
+import { api, escapeHtml } from './app.js';
+
+async function requireLogin() {
+  try {
+    const { user } = await api('/api/auth/me');
+    document.getElementById('who').innerHTML =
+      `${escapeHtml(user.name)}（${escapeHtml(user.role)}） <a href="#" id="logout">ログアウト</a>`;
+    document.getElementById('logout').addEventListener('click', async (e) => {
+      e.preventDefault();
+      try {
+        await api('/api/auth/logout', { method: 'POST' });
+      } finally {
+        location.href = './index.html';
+      }
+    });
+    return user;
+  } catch {
+    location.href = './index.html';
+    throw new Error('redirect');
+  }
+}
+
+async function loadRequests() {
+  const { requests } = await api('/api/requests');
+  const tbody = document.querySelector('#request-table tbody');
+  tbody.innerHTML = requests.map((r) => `
+    <tr>
+      <td>${escapeHtml(r.request_code)}</td>
+      <td>${escapeHtml(r.title)}</td>
+      <td>${escapeHtml(r.status)}</td>
+      <td>${escapeHtml(r.requester_name)}</td>
+      <td>${r.status === 'submitted' ? `<button data-promote="${r.id}">Project昇格</button>` : ''}</td>
+    </tr>`).join('');
+  tbody.querySelectorAll('[data-promote]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      try {
+        await api(`/api/requests/${btn.dataset.promote}/promote`, { method: 'POST' });
+        await refreshAll();
+      } catch (err) {
+        document.getElementById('request-msg').textContent = err.message;
+        document.getElementById('request-msg').className = 'msg error';
+      }
+    });
+  });
+}
+
+async function loadProjects() {
+  const { projects } = await api('/api/projects');
+  document.querySelector('#project-table tbody').innerHTML = projects.map((p) => `
+    <tr><td>${escapeHtml(p.project_code)}</td><td>${escapeHtml(p.title)}</td><td>${escapeHtml(p.status)}</td></tr>
+  `).join('');
+}
+
+async function loadApprovals() {
+  const { approvals } = await api('/api/approvals');
+  const tbody = document.querySelector('#approval-table tbody');
+  tbody.innerHTML = approvals.map((a) => `
+    <tr>
+      <td>${escapeHtml(a.project_code)}</td>
+      <td>${escapeHtml(a.title)}</td>
+      <td>
+        <button data-decide="${a.id}" data-decision="approved">承認</button>
+        <button data-decide="${a.id}" data-decision="rejected">却下</button>
+      </td>
+    </tr>`).join('');
+  tbody.querySelectorAll('[data-decide]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      try {
+        await api(`/api/approvals/${btn.dataset.decide}/decide`, {
+          method: 'POST',
+          body: { decision: btn.dataset.decision },
+        });
+        await refreshAll();
+      } catch (err) {
+        document.getElementById('approval-msg').textContent = err.message;
+        document.getElementById('approval-msg').className = 'msg error';
+      }
+    });
+  });
+}
+
+async function refreshAll() {
+  await Promise.all([loadRequests(), loadProjects(), loadApprovals()]);
+}
+
+document.getElementById('request-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const title = document.getElementById('title').value;
+  const description = document.getElementById('description').value;
+  const msg = document.getElementById('request-msg');
+  try {
+    await api('/api/requests', { method: 'POST', body: { title, description } });
+    e.target.reset();
+    msg.textContent = '登録しました';
+    msg.className = 'msg ok';
+    await refreshAll();
+  } catch (err) {
+    msg.textContent = err.message;
+    msg.className = 'msg error';
+  }
+});
+
+requireLogin().then(refreshAll);
+</script>
+</body>
+</html>
