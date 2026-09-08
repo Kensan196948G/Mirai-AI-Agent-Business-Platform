@@ -405,3 +405,42 @@ test('Registry同期: 内容ハッシュが変わらない再同期は承認状�
   const after = await pool.query(`SELECT status FROM agent_versions WHERE agent_id = 'technology-selection'`);
   assert.equal(after.rows[0].status, 'approved', '同一ハッシュの draft 再同期で承認が失われないこと');
 });
+
+test('副作用の冪等性: artifact.write-draft は同一Run・同一kindで重複作成せず、レビュー済みは上書きしない', async () => {
+  const { callTool } = await import('../src/agent-runtime/tool-gateway.js');
+  const created = await call('/api/agent-runs', {
+    method: 'POST', cookie: adminCookie, body: { agentId: 'technology-selection', input: { query: '冪等性テスト' } },
+  });
+  const runId = created.data.run.id;
+  const { rows: sv } = await pool.query(`SELECT * FROM skill_versions WHERE skill_id = 'evidence-backed-draft' LIMIT 1`);
+  const run = { id: runId, run_code: created.data.run.run_code, project_id: null };
+  const args = { kind: 'evidence_backed_draft', title: 't', content: { findings: ['a'], sources: [], unknowns: [], assumptions: [], requires_human_review: true } };
+
+  const first = await withTransaction((client) => callTool(client, { run, skillVersion: sv[0], toolName: 'artifact.write-draft', args }));
+  const second = await withTransaction((client) => callTool(client, { run, skillVersion: sv[0], toolName: 'artifact.write-draft', args: { ...args, title: 't2' } }));
+  assert.equal(first.artifact.reused, false);
+  assert.equal(second.artifact.reused, true);
+  assert.equal(second.artifact.id, first.artifact.id, '再試行で同じ artifact が再利用されること');
+  const { rows: count } = await pool.query(`SELECT count(*)::int AS n FROM artifacts WHERE run_id = $1`, [runId]);
+  assert.equal(count[0].n, 1, '同一Run・同一kindの草案は1件のみ');
+  const { rows: titled } = await pool.query(`SELECT title FROM artifacts WHERE id = $1`, [first.artifact.id]);
+  assert.equal(titled[0].title, 't2', '内容は最新の試行で更新される');
+
+  // レビュー済みの草案は上書きされない
+  await call(`/api/artifacts/${first.artifact.id}/review`, { method: 'POST', cookie: adminCookie, body: { note: 'ok' } });
+  await assert.rejects(
+    withTransaction((client) => callTool(client, { run, skillVersion: sv[0], toolName: 'artifact.write-draft', args: { ...args, title: 't3' } })),
+    /レビュー済み/,
+  );
+});
+
+test('月次上限: AI相談と業務Agent Runの利用額が合算される', async () => {
+  const { currentMonthSpend } = await import('../src/lib/llm.js');
+  const before = await withTransaction((client) => currentMonthSpend(client));
+  const created = await call('/api/agent-runs', {
+    method: 'POST', cookie: adminCookie, body: { agentId: 'technology-selection', input: { query: '合算テスト' } },
+  });
+  await pool.query(`UPDATE budget_reservations SET spent_usd = spent_usd + 0.25 WHERE run_id = $1`, [created.data.run.id]);
+  const after = await withTransaction((client) => currentMonthSpend(client));
+  assert.ok(Math.abs(after - before - 0.25) < 1e-6, `Run の利用額 0.25 が合算されること（before=${before}, after=${after}）`);
+});

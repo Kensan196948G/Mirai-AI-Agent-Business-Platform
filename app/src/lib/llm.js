@@ -36,14 +36,22 @@ export function estimateCost(tokensIn, tokensOut) {
   return (tokensIn / 1e6) * PRICE_INPUT_PER_1M + (tokensOut / 1e6) * PRICE_OUTPUT_PER_1M;
 }
 
-/** 当月（UTC基準ではなくDBサーバのタイムゾーンに準拠）のLLM利用コスト合計。 */
+/**
+ * 当月（DBサーバのタイムゾーンに準拠）のLLM利用コスト合計。
+ * AI相談（chat_messages.cost）と業務Agent Run（budget_reservations.spent_usd）の両方を合算する。
+ * 月次ソフトキャップは両者に共通で適用される（Chat はルールベースへフォールバック、
+ * Run は予算超過として Step を保留する）。
+ */
 export async function currentMonthSpend(client) {
   const { rows } = await client.query(
-    `SELECT COALESCE(SUM(cost), 0)::float AS spent
-     FROM chat_messages
-     WHERE provider IS NOT NULL AND created_at >= date_trunc('month', now())`,
+    `SELECT
+       (SELECT COALESCE(SUM(cost), 0) FROM chat_messages
+         WHERE provider IS NOT NULL AND created_at >= date_trunc('month', now()))
+     + (SELECT COALESCE(SUM(spent_usd), 0) FROM budget_reservations
+         WHERE created_at >= date_trunc('month', now()))
+     AS spent`,
   );
-  return rows[0].spent;
+  return Number(rows[0].spent);
 }
 
 export async function withinMonthlyBudget(client) {
