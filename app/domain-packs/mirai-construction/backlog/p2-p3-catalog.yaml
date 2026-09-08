@@ -1,0 +1,205 @@
+schema_version: "mirai.agent-backlog-catalog/v1"
+pack_id: "mirai-construction"
+# =============================================================================
+# P2 / P3 の Agent 候補カタログ（実行不能）
+#
+# ここに列挙した候補は「将来の拡張候補」であり、実行可能な Agent 定義ではない。
+# - agents/ ディレクトリには置かない（skill-loader の loadAgentDefinition は agents/ 配下しか読まないため、
+#   sync-agent-registry.mjs で誤って承認済み版として登録されることはない）
+# - 存在しない Tool・API・専門システム接続を「成功する Stub」で埋めない
+# - 各候補を有効化するには、責任者ロールの評価・受入れ、必要資料の利用許諾、
+#   評価条件の確定、外部接続の仕様・権限確認を経て、agents/ 配下へ正式定義を追加する必要がある
+#
+# 出典: docs/Mirai-Agent-Skill-Architecture.md §6（Agent カタログ）・§9（P2/P3 Backlog）
+# =============================================================================
+stage_definitions:
+  P2: "港湾・地盤・維持管理・安全品質環境・研究等の文書支援。各専門Ownerの評価・受入れと必要なデータ利用承認が完了判断"
+  P3: "仕様・権限を確認した専門システムの読み取り連携。契約試験・照合・障害時停止が検証済みであることが完了判断"
+
+candidates:
+  - id: A03
+    agent_id: port-marine-construction-planning
+    title: "港湾・海上施工計画支援"
+    stage: P2
+    enabled: false
+    owner_role: "施工・港湾技術"
+    skill_candidates:
+      - "浚渫・埋立・護岸等の計画論点整理"
+      - "工程制約抽出"
+      - "承認済み気海象情報の鮮度確認"
+    main_deliverable: "計画レビュー用チェック表"
+    required_materials:
+      - "承認済みの港湾施工計画資料（社内レビュー済み）"
+      - "気海象情報の取得元・更新頻度・利用条件"
+    evaluation_conditions:
+      - "港湾技術 Owner が計画論点の抜け漏れを実測で評価すること"
+      - "気海象情報の鮮度判定が誤って「最新」と表示しないこと"
+    forbidden:
+      - "施工可否・工程の最終決定"
+      - "船舶・設備への制御指示"
+      - "気海象情報の自動取得・外部送信"
+    unconfirmed_external_connections:
+      - "気海象情報提供元の API 仕様・契約・認証"
+
+  - id: A04
+    agent_id: ground-improvement-support
+    title: "地盤改良支援"
+    stage: P2
+    enabled: false
+    owner_role: "地盤技術"
+    skill_candidates:
+      - "地盤条件の欠落確認"
+      - "CPG 等の候補比較"
+      - "品質記録チェック"
+    main_deliverable: "工法候補比較・照査事項"
+    required_materials:
+      - "技術者承認済みの CPG 適用資料（公開概要ではなく社内基準）"
+      - "地盤調査記録のフォーマットと分類"
+    evaluation_conditions:
+      - "地盤技術 Owner が候補比較の妥当性を評価すること"
+      - "公開紹介だけを根拠に工法確定へ誘導しないこと"
+    forbidden:
+      - "工法採用・施工設計の確定"
+      - "公開ページのみを根拠にした適用判断"
+    unconfirmed_external_connections: []
+
+  - id: A05
+    agent_id: land-civil-disaster-recovery
+    title: "陸上土木・防災復旧支援"
+    stage: P2
+    enabled: false
+    owner_role: "土木施工"
+    skill_candidates:
+      - "造成・道路・橋梁・復旧工事の条件整理"
+      - "仮設・施工順序の確認"
+    main_deliverable: "計画草案・制約一覧"
+    required_materials:
+      - "承認済みの復旧工事事例（個人情報・位置情報を除外済み）"
+    evaluation_conditions:
+      - "土木施工 Owner が制約一覧の網羅性を評価すること"
+    forbidden:
+      - "施工順序の最終決定"
+      - "災害現場の位置情報を入力・外部送信すること"
+    unconfirmed_external_connections: []
+
+  - id: A06
+    agent_id: maintenance-repair-support
+    title: "維持管理・補修支援"
+    stage: P2
+    enabled: false
+    owner_role: "維持管理技術"
+    skill_candidates:
+      - "点検記録整理"
+      - "補修工法比較"
+      - "再点検事項抽出"
+    main_deliverable: "補修検討・点検計画草案"
+    required_materials:
+      - "点検記録のフォーマットと分類（個人情報除外）"
+    evaluation_conditions:
+      - "維持管理 Owner が再点検事項の妥当性を評価すること"
+    forbidden:
+      - "補修要否・工法の最終決定"
+    unconfirmed_external_connections: []
+
+  - id: A07
+    agent_id: energy-facility-construction
+    title: "エネルギー施設建設支援"
+    stage: P2
+    enabled: false
+    owner_role: "対象事業の責任者"
+    skill_candidates:
+      - "風力等の建設実績比較"
+      - "施工インターフェース・搬入条件の整理"
+    main_deliverable: "建設計画・技術提案の草案"
+    required_materials:
+      - "承認済みのエネルギー施設建設実績"
+    evaluation_conditions:
+      - "事業責任者が提案草案の妥当性を評価すること"
+    forbidden:
+      - "発電制御・電力取引への拡張（設備の建設支援のみが対象）"
+      - "施工可否の最終決定"
+    unconfirmed_external_connections: []
+
+  - id: A08
+    agent_id: safety-quality-environment-review
+    title: "安全・品質・環境レビュー支援"
+    stage: P2
+    enabled: false
+    owner_role: "安全品質環境"
+    skill_candidates:
+      - "承認済み基準との照合"
+      - "点検漏れ検出"
+      - "KY 草案"
+      - "不適合の整理"
+    main_deliverable: "指摘一覧と根拠・確認依頼"
+    required_materials:
+      - "社内の安全・品質・環境基準（承認済み版）"
+    evaluation_conditions:
+      - "安全品質環境担当が指摘の適合性・誤検出率を評価すること"
+    forbidden:
+      - "安全判断・品質合否の最終決定"
+      - "警報・停止基準の変更"
+    unconfirmed_external_connections: []
+
+  - id: A09
+    agent_id: sustainability-support
+    title: "サステナビリティ支援"
+    stage: P2
+    enabled: false
+    owner_role: "環境・経営企画"
+    skill_candidates:
+      - "活動データの単位検証"
+      - "排出量集計補助"
+      - "証跡チェック"
+      - "報告草案"
+    main_deliverable: "根拠付き活動集計・報告案"
+    required_materials:
+      - "活動データの定義・単位・集計ルール"
+    evaluation_conditions:
+      - "環境・経営企画 Owner が集計値と根拠を照合すること"
+    forbidden:
+      - "対外報告の確定・送信"
+      - "実測前の削減率の作成"
+    unconfirmed_external_connections: []
+
+  - id: A10
+    agent_id: vessel-machinery-operation
+    title: "船舶・機械運用支援"
+    stage: P3
+    enabled: false
+    owner_role: "船舶・機電"
+    skill_candidates:
+      - "保守記録整理"
+      - "匿名化・集約済み警報記録の要約"
+      - "点検予定案"
+    main_deliverable: "保守・改善案"
+    required_materials:
+      - "匿名化・集約済みの保守・警報記録"
+    evaluation_conditions:
+      - "船舶・機電 Owner が要約の正確性を評価すること"
+    forbidden:
+      - "設備・船舶の制御"
+      - "警報の抑制・代替・解除"
+      - "MC-Float Navi / MC-Caisson / MC-Wake への書き込み"
+    unconfirmed_external_connections:
+      - "MC 系システムの API・CSV 出力・認証・接続契約（読み取り専用 Adapter から開始する前提）"
+
+  - id: A11
+    agent_id: research-technology-succession
+    title: "研究・技術継承支援"
+    stage: P2
+    enabled: false
+    owner_role: "技術・研究・教育"
+    skill_candidates:
+      - "技術比較"
+      - "調査課題整理"
+      - "承認済み事例教材化"
+      - "評価観点作成"
+    main_deliverable: "研究検討メモ・教材候補"
+    required_materials:
+      - "教材化を許可された承認済み事例"
+    evaluation_conditions:
+      - "技術・研究・教育 Owner が教材候補の正確性を評価すること"
+    forbidden:
+      - "未承認事例の教材化"
+    unconfirmed_external_connections: []
