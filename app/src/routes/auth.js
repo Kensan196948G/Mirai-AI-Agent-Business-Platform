@@ -16,11 +16,12 @@ router.post('/login', async (req, res) => {
   if (!email || !password) return res.status(400).json({ error: 'email, password は必須' });
 
   const { rows } = await getPool().query(
-    'SELECT id, password_hash, token_version FROM users WHERE email = $1',
+    'SELECT id, password_hash, token_version, active FROM users WHERE email = $1',
     [email],
   );
-  // 存在有無で応答を変えない（ユーザー列挙対策）
-  const ok = rows.length > 0 && (await verifyPassword(password, rows[0].password_hash));
+  // 存在有無・無効化状態で応答を変えない（ユーザー列挙・タイミング対策のため常に verifyPassword を実行する）
+  const passwordOk = rows.length > 0 && (await verifyPassword(password, rows[0].password_hash));
+  const ok = passwordOk && rows[0].active;
   if (!ok) return res.status(401).json({ error: 'メールアドレスまたはパスワードが違います' });
 
   await getPool().query('UPDATE users SET last_login_at = now() WHERE id = $1', [rows[0].id]);
