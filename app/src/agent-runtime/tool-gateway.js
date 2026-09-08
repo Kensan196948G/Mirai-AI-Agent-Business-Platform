@@ -65,14 +65,35 @@ async function nextArtifactCode(client) {
   return `ART-${1000 + rows[0].n + 1}`;
 }
 
+/**
+ * 草案の保存。同一 Run・同一 kind の草案が既にあれば新規作成せず内容を更新する（冪等）。
+ * Step の再試行（出力検証失敗・Worker再起動等）で同じ草案が重複作成されるのを防ぐ。
+ * レビュー済み（review_state='reviewed'）の草案は上書きしない。
+ */
 async function toolArtifactWriteDraft(client, { run, kind, title, content }) {
-  const artifactCode = await nextArtifactCode(client);
-  const { rows } = await client.query(
-    `INSERT INTO artifacts (artifact_code, run_id, kind, title, content, review_state)
-     VALUES ($1,$2,$3,$4,$5,'draft') RETURNING id, artifact_code, kind, title, review_state`,
-    [artifactCode, run.id, kind, title, JSON.stringify(content)],
+  const { rows: existing } = await client.query(
+    `SELECT id, artifact_code, kind, title, review_state FROM artifacts
+     WHERE run_id = $1 AND kind = $2 ORDER BY id LIMIT 1 FOR UPDATE`,
+    [run.id, kind],
   );
-  const artifact = rows[0];
+  let artifact;
+  if (existing.length > 0) {
+    artifact = existing[0];
+    if (artifact.review_state !== 'draft') {
+      throw new PolicyDeniedError(`成果物 ${artifact.artifact_code} はレビュー済みのため上書きできません`);
+    }
+    await client.query(`UPDATE artifacts SET title = $1, content = $2 WHERE id = $3`, [title, JSON.stringify(content), artifact.id]);
+    await client.query(`DELETE FROM artifact_citations WHERE artifact_id = $1`, [artifact.id]);
+    artifact = { ...artifact, title, reused: true };
+  } else {
+    const artifactCode = await nextArtifactCode(client);
+    const { rows } = await client.query(
+      `INSERT INTO artifacts (artifact_code, run_id, kind, title, content, review_state)
+       VALUES ($1,$2,$3,$4,$5,'draft') RETURNING id, artifact_code, kind, title, review_state`,
+      [artifactCode, run.id, kind, title, JSON.stringify(content)],
+    );
+    artifact = { ...rows[0], reused: false };
+  }
   for (const s of content.sources || []) {
     if (!s.source_record_id) continue;
     await client.query(
@@ -93,19 +114,19 @@ const TOOL_HANDLERS = {
 /**
  * Tool呼び出しの唯一の入口。policy-engineでの許可判定 → run_eventsへの記録 → 実行 → 結果記録、の順で行う。
  */
-export async function callTool(client, { run, skillVersion, toolName, args, seq }) {
+export async function callTool(client, { run, skillVersion, toolName, args }) {
   try {
     authorizeToolCall({ skillVersion, toolName });
   } catch (err) {
     await appendEvent(client, run.id, {
-      seq, type: 'tool_call', skillId: skillVersion.skill_id, skillVersion: skillVersion.version,
+      type: 'tool_call', skillId: skillVersion.skill_id, skillVersion: skillVersion.version,
       toolName, status: 'deny', detail: { error: err.message },
     });
     throw err;
   }
 
   await appendEvent(client, run.id, {
-    seq, type: 'tool_call', skillId: skillVersion.skill_id, skillVersion: skillVersion.version,
+    type: 'tool_call', skillId: skillVersion.skill_id, skillVersion: skillVersion.version,
     toolName, status: 'permit', detail: { args: redactArgs(args) },
   });
 
@@ -116,7 +137,7 @@ export async function callTool(client, { run, skillVersion, toolName, args, seq 
     return result;
   } catch (err) {
     await appendEvent(client, run.id, {
-      seq: seq + 0.5, type: 'tool_call', skillId: skillVersion.skill_id, skillVersion: skillVersion.version,
+      type: 'tool_call', skillId: skillVersion.skill_id, skillVersion: skillVersion.version,
       toolName, status: 'error', detail: { error: err.message },
     });
     throw err;

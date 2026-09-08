@@ -1,23 +1,60 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
-  "required": ["findings", "sources", "unknowns", "assumptions", "requires_human_review"],
+  "required": [
+    "findings",
+    "sources",
+    "unknowns",
+    "assumptions",
+    "requires_human_review"
+  ],
   "additionalProperties": false,
   "properties": {
-    "findings": { "type": "array", "items": { "type": "string" } },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "sources": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["source_record_id"],
+        "required": [
+          "source_record_id"
+        ],
         "properties": {
-          "source_record_id": { "type": "integer" },
-          "locator": { "type": "string" }
+          "source_record_id": {
+            "type": "integer"
+          },
+          "locator": {
+            "type": "string"
+          }
         }
       }
     },
-    "unknowns": { "type": "array", "items": { "type": "string" } },
-    "assumptions": { "type": "array", "items": { "type": "string" } },
-    "requires_human_review": { "type": "boolean", "const": true }
+    "unknowns": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "assumptions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "requires_human_review": {
+      "type": "boolean",
+      "const": true
+    },
+    "artifact_id": {
+      "type": "integer",
+      "description": "artifact.write-draft で保存した成果物のID（Runtimeが付与）"
+    },
+    "artifact_code": {
+      "type": "string"
+    }
   }
 }

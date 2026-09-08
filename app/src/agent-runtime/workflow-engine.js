@@ -9,6 +9,7 @@ import * as registry from './registry.js';
 import { loadSkillDefinition } from './skill-loader.js';
 import { callTool } from './tool-gateway.js';
 import { structuredComplete, ProviderNotConfiguredError } from './provider-adapter.js';
+import { withinMonthlyBudget, monthlyCapUsd } from '../lib/llm.js';
 import { validateCitations } from './evidence-validator.js';
 import { authorizeBudget, PolicyDeniedError } from './policy-engine.js';
 import { SKILL_HANDLERS } from './skills/index.js';
@@ -63,14 +64,21 @@ export async function executeNextStep(runId, { workerId }) {
       type: 'step_started', skillId: skillDef.skillId, skillVersion: freshSkillVersion.version, status: 'ok', detail: {},
     });
 
-    let toolSeq = 0;
+    const stepUsage = { tokensIn: 0, tokensOut: 0, cost: 0 };
     const ctx = {
       client, run, agentVersion, skillDef, skillVersion: freshSkillVersion, input, allSkillVersions: skillVersions,
-      callTool: async (toolName, args) => callTool(client, { run, skillVersion: freshSkillVersion, toolName, args, seq: toolSeq++ }),
+      callTool: async (toolName, args) => callTool(client, { run, skillVersion: freshSkillVersion, toolName, args }),
       validateCitations: (sources) => validateCitations(client, { run, sources }),
       structuredComplete: async (opts) => {
+        // 月次ソフトキャップ（AI相談と共通）を超えている場合は LLM を呼ばず保留する（偽の成功にしない）。
+        if (!(await withinMonthlyBudget(client))) {
+          throw new PolicyDeniedError(`月次のLLM利用上限（$${monthlyCapUsd()}）に達しているため実行を保留します`);
+        }
         const reservation = await jobStore.getActiveReservation(client, run.id);
         const result = await structuredComplete(opts);
+        stepUsage.tokensIn += result.tokensIn || 0;
+        stepUsage.tokensOut += result.tokensOut || 0;
+        stepUsage.cost += result.cost || 0;
         if (reservation && result.cost > 0) {
           authorizeBudget({ reservation, additionalCost: result.cost });
           await jobStore.spendBudget(client, reservation.id, result.cost);
@@ -111,6 +119,7 @@ export async function executeNextStep(runId, { workerId }) {
 
     await jobStore.appendEvent(client, run.id, {
       type: 'step_completed', skillId: skillDef.skillId, skillVersion: freshSkillVersion.version, status: 'ok', detail: output,
+      tokensIn: stepUsage.tokensIn || null, tokensOut: stepUsage.tokensOut || null, cost: stepUsage.cost || null,
     });
     await client.query(
       `UPDATE agent_runs SET no_progress_count = 0 WHERE id = $1`,

@@ -132,7 +132,7 @@ LLM_PRICE_OUTPUT_PER_1M=1.10
 ```
 
 - 😊 **かんたんに言うと**：AIとの雑談部分だけ本物のAIに任せられるが、「相談内容をどう分類するか（Idea構造化・Risk判定）」は引き続きルールベースのまま。だから実LLMが止まっても「案件化」ボタンは壊れない。
-- 💰 コストは `chat_messages.cost` に記録され、Observability画面の「AI相談 LLM月次予算」バーで確認できる。上限に達すると自動でルールベース応答にフォールバックする。
+- 💰 コストは `chat_messages.cost`（AI相談）と `budget_reservations.spent_usd`／`run_events.cost`（業務Agent Run）に記録され、**両方を合算した当月利用額**が Observability画面の「AI相談 LLM月次予算」バーに表示される。上限に達すると AI相談はルールベース応答へフォールバックし、業務Agent Run は LLM を呼ばずに保留（failed・理由を明示）する。
 - ⚠️ **DeepSeek APIキーは production secret に該当する。** production環境の `.env`/`.env.mvp` へ実際に設定する作業は、組織ポリシー上、コードのマージとは別に明示的な承認（Y/N）を経てから行うこと。
 
 ## 👥 ユーザー管理（作成・編集・無効化）
