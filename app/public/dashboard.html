@@ -348,6 +348,41 @@ input::placeholder,textarea::placeholder{color:var(--muted)}
         </div>
       </sc-if>
 
+      <sc-if value="{{ isAgentRuns }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px;margin-bottom:16px"><sc-for list="{{ arAgents }}" as="a" hint-placeholder-count="3"><div style="background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:8px"><span style="flex:1;font-size:13.5px;font-weight:600">{{ a.title }}</span><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:{{ a.fg }};background:{{ a.bg }}">{{ a.st }}</span></div><div style="font-size:11px;color:var(--muted);font-family:var(--mono)">{{ a.id }}@{{ a.version }} · {{ a.level }} · Owner: {{ a.owner }}</div><div style="font-size:12px;color:var(--ink-2);line-height:1.55">{{ a.purpose }}</div><div style="font-size:11.5px;color:var(--red);line-height:1.5">できないこと: {{ a.doesNot }}</div><div style="font-size:11px;color:var(--muted);font-family:var(--mono)">Skills: {{ a.skills }}</div></div></sc-for></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:16px;align-items:start">
+          <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden">
+            <div style="padding:15px 18px;border-bottom:1px solid var(--line-2)"><div style="font-size:14px;font-weight:600">Agent Run を開始</div><div style="font-size:11.5px;color:var(--muted)">検索・比較・草案作成まで自動。採用・昇格の判断は必ず人がレビューします</div></div>
+            <div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;flex-direction:column;gap:5px"><label style="font-size:12px;font-weight:600;color:var(--ink-2)">Agent</label><select value="{{ arForm.agentId }}" onChange="{{ arSetAgent }}"><sc-for list="{{ arAgentOptions }}" as="o" hint-placeholder-count="3"><option value="{{ o.id }}">{{ o.label }}</option></sc-for></select></div>
+              <sc-if value="{{ arIsKnowledge }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:5px"><label style="font-size:12px;font-weight:600;color:var(--ink-2)">対象のKnowledge候補（pending）</label><select value="{{ arForm.knowledgeId }}" onChange="{{ arSetKnowledge }}"><option value="">選択してください</option><sc-for list="{{ arKnowledgeOptions }}" as="k" hint-placeholder-count="3"><option value="{{ k.id }}">{{ k.label }}</option></sc-for></select></div></sc-if>
+              <sc-if value="{{ arIsQuery }}" hint-placeholder-val="{{ true }}"><div style="display:flex;flex-direction:column;gap:5px"><label style="font-size:12px;font-weight:600;color:var(--ink-2)">相談内容（個人情報・位置情報・社外秘は入力しない）</label><textarea value="{{ arForm.query }}" onChange="{{ arSetQuery }}" rows="3" placeholder="例：汚濁防止膜と作業船の管理に関係する保有技術を整理したい" style="resize:vertical"></textarea></div></sc-if>
+              <div style="display:flex;gap:8px;align-items:center"><span style="flex:1;font-size:11.5px;color:var(--muted)">{{ arLlmNote }}</span><button onClick="{{ arStart }}" style="background:var(--accent);color:#fff;border:1px solid var(--accent);padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--accent-d)">Run を開始</button></div>
+            </div>
+            <table style="width:100%;border-collapse:collapse;font-size:12.5px;border-top:1px solid var(--line-2)"><thead><tr><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Run</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Agent</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Step</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Status</th></tr></thead>
+            <tbody><sc-for list="{{ arRunRows }}" as="r" hint-placeholder-count="5"><tr onClick="{{ r.open }}" style="cursor:pointer;background:{{ r.rowBg }}" style-hover="background:var(--hover)"><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2)"><div style="font-family:var(--mono);font-size:11px;color:var(--muted)">{{ r.code }}</div><div style="font-size:11.5px;color:var(--ink-2)">{{ r.by }} · {{ r.at }}</div></td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);color:var(--ink-2)">{{ r.agent }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);font-family:var(--mono)">{{ r.step }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2)"><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:{{ r.fg }};background:{{ r.bg }};white-space:nowrap">{{ r.st }}</span></td></tr></sc-for></tbody></table>
+            <sc-if value="{{ arNoRuns }}" hint-placeholder-val="{{ false }}"><div style="padding:16px 18px;font-size:12.5px;color:var(--muted)">まだ Run はありません</div></sc-if>
+          </section>
+          <sc-if value="{{ arHasRun }}" hint-placeholder-val="{{ true }}">
+            <aside style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden">
+              <div style="padding:16px 18px;border-bottom:1px solid var(--line-2)"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="font-family:var(--mono);font-size:11.5px;color:var(--muted)">{{ arRun.code }}</span><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:{{ arRun.fg }};background:{{ arRun.bg }}">{{ arRun.st }}</span><span style="flex:1"></span><button onClick="{{ arRun.refresh }}" style="border:1px solid var(--line);background:var(--surface);color:var(--ink-2);padding:4px 9px;border-radius:7px;font-size:11.5px;font-weight:600;cursor:pointer" style-hover="background:var(--subtle)">更新</button></div><div style="font-size:15px;font-weight:600;line-height:1.35">{{ arRun.agent }}</div><div style="font-size:12px;color:var(--muted);margin-top:4px">Step {{ arRun.step }} · {{ arRun.by }} · {{ arRun.at }}</div></div>
+              <div style="padding:16px 18px;display:flex;flex-direction:column;gap:16px">
+                <sc-if value="{{ arRun.hasErr }}" hint-placeholder-val="{{ false }}"><div style="padding:10px 12px;border-radius:8px;background:var(--red-bg);color:var(--red);font-size:12.5px">{{ arRun.err }}</div></sc-if>
+                <div><div style="font-size:11.5px;font-weight:600;color:var(--ink-2);margin-bottom:8px">入力</div><div style="font-size:12.5px;background:var(--subtle);border-radius:7px;padding:8px 10px;white-space:pre-wrap">{{ arRun.input }}</div></div>
+                <div><div style="font-size:11.5px;font-weight:600;color:var(--ink-2);margin-bottom:8px">実行イベント（Step / Tool / Policy）</div><div style="display:flex;flex-direction:column;gap:6px"><sc-for list="{{ arRun.events }}" as="e" hint-placeholder-count="3"><div style="display:flex;align-items:flex-start;gap:8px;font-size:12px;background:var(--subtle);border-radius:7px;padding:7px 10px"><span style="font-family:var(--mono);font-size:11px;color:var(--muted);flex-shrink:0">#{{ e.seq }}</span><span style="font-family:var(--mono);font-size:11px;padding:1px 7px;border-radius:5px;font-weight:600;color:{{ e.fg }};background:{{ e.bg }};flex-shrink:0">{{ e.type }}</span><span style="flex:1;min-width:0;word-break:break-word">{{ e.text }}</span></div></sc-for></div></div>
+                <div><div style="font-size:11.5px;font-weight:600;color:var(--ink-2);margin-bottom:8px">成果物（草案）</div><div style="display:flex;flex-direction:column;gap:6px"><sc-for list="{{ arRun.artifacts }}" as="ar" hint-placeholder-count="1"><div style="border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:8px"><span style="font-family:var(--mono);font-size:11px;color:var(--muted)">{{ ar.code }}</span><span style="flex:1;font-size:12.5px;font-weight:600">{{ ar.title }}</span><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:{{ ar.fg }};background:{{ ar.bg }}">{{ ar.st }}</span></div><div style="font-size:12px;white-space:pre-wrap;line-height:1.55">{{ ar.body }}</div><sc-if value="{{ ar.canReview }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:8px;align-items:center"><input value="{{ ar.note }}" onChange="{{ ar.setNote }}" placeholder="レビューコメント（Auditに記録）" style="flex:1;font-size:12px"><button onClick="{{ ar.review }}" style="background:var(--green);color:#fff;border:1px solid var(--green);padding:6px 11px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">レビュー済みにする</button></div></sc-if></div></sc-for><sc-if value="{{ arRun.noArtifacts }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px;color:var(--muted)">成果物はまだありません（最終Stepの完了後に作成されます）</div></sc-if></div></div>
+              </div>
+              <sc-if value="{{ arRun.canCancel }}" hint-placeholder-val="{{ false }}"><div style="padding:13px 18px;border-top:1px solid var(--line-2);display:flex;gap:8px"><button onClick="{{ arRun.cancel }}" style="border:1px solid var(--line);background:var(--surface);color:var(--red);padding:7px 12px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--red-bg)">Cancel（中断要求）</button></div></sc-if>
+            </aside>
+          </sc-if>
+          <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:auto;grid-column:1 / -1">
+            <div style="padding:15px 18px;border-bottom:1px solid var(--line-2);display:flex;align-items:center;gap:8px"><div style="flex:1"><div style="font-size:14px;font-weight:600">Agent / Skill 版の承認（Registry）</div><div style="font-size:11.5px;color:var(--muted)">draft の版は実行されません。内容ハッシュが変わった版は自動で draft に戻ります。正式なGate承認（desknet's NEO）とは別の、Runtime内の版承認です</div></div><span style="font-size:12px;color:var(--muted)">{{ arVersionNote }}</span></div>
+            <table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">種別</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">名前 @ 版</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">内容ハッシュ</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">状態</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">承認者</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">操作</th></tr></thead>
+            <tbody><sc-for list="{{ arVersionRows }}" as="v" hint-placeholder-count="6"><tr style-hover="background:var(--hover)"><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);color:var(--ink-2)">{{ v.kind }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);font-family:var(--mono);font-weight:600">{{ v.name }}@{{ v.version }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);font-family:var(--mono);font-size:11px;color:var(--muted)">{{ v.hash }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2)"><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:{{ v.fg }};background:{{ v.bg }}">{{ v.st }}</span></td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);color:var(--ink-2);font-size:12px">{{ v.approver }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2)"><div style="display:flex;gap:6px"><sc-if value="{{ v.canApprove }}" hint-placeholder-val="{{ false }}"><button onClick="{{ v.approve }}" style="background:var(--green);color:#fff;border:1px solid var(--green);padding:4px 9px;border-radius:7px;font-size:11.5px;font-weight:600;cursor:pointer">承認</button></sc-if><sc-if value="{{ v.canDeprecate }}" hint-placeholder-val="{{ false }}"><button onClick="{{ v.deprecate }}" style="border:1px solid var(--line);background:var(--surface);color:var(--red);padding:4px 9px;border-radius:7px;font-size:11.5px;font-weight:600;cursor:pointer" style-hover="background:var(--red-bg)">承認取消</button></sc-if></div></td></tr></sc-for></tbody></table>
+          </section>
+        </div>
+      </sc-if>
+
       <sc-if value="{{ isUsers }}" hint-placeholder-val="{{ false }}">
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:16px"><sc-for list="{{ roleCards }}" as="r" hint-placeholder-count="6"><div style="background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;box-shadow:var(--shadow)"><div style="font-size:11.5px;color:var(--muted);font-weight:500">{{ r.role }}</div><div style="font-size:22px;font-weight:600;margin:6px 0 4px;font-variant-numeric:tabular-nums">{{ r.n }}</div><div style="font-size:11px;color:var(--ink-2)">{{ r.desc }}</div></div></sc-for></div>
         <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden">
@@ -415,6 +450,7 @@ class Component extends DCLogic {
       np: { title: '', owner: '', risk: 'R2', summary: '' },
       nu: { name: '', email: '', dept: '', role: 'Viewer' },
       credentialResult: null,
+      ar: { form: { agentId: 'technology-selection', query: '', knowledgeId: '' }, selRun: null, detail: null, notes: {} },
       reason: '',
       chatInput: '',
       q: '',
@@ -467,6 +503,7 @@ class Component extends DCLogic {
     const [
       users, projects, tasks, approvals, knowledge, audit,
       integrations, agents, skills, router, usage, chat,
+      arCatalog, arRuns, arVersions,
     ] = await Promise.all([
       this.api('/api/users'),
       this.api('/api/projects'),
@@ -480,6 +517,9 @@ class Component extends DCLogic {
       this.api('/api/router'),
       this.api('/api/usage'),
       this.api('/api/chat/conversations/me'),
+      this.api('/api/agent-catalog').catch(() => ({ agents: [] })),
+      this.api('/api/agent-runs').catch(() => ({ runs: [] })),
+      this.api('/api/agent-catalog/versions').catch(() => ({ skills: [], agents: [] })),
     ]);
     this.setState({
       users: users.users.map(mapUser),
@@ -494,6 +534,9 @@ class Component extends DCLogic {
       router: router.router.map(mapRouterRow),
       usage: usage.usage.map(mapUsage),
       llm: usage.llm || { configured: false, monthlySpent: 0, monthlyCap: 0 },
+      arCatalog: arCatalog.agents || [],
+      arRuns: arRuns.runs || [],
+      arVersions: { skills: arVersions.skills || [], agents: arVersions.agents || [] },
       chat: { messages: mapChatMessages(chat.messages), topic: -1, step: Math.max(0, chat.messages.length - 1) },
       openGroups: this.state.openGroups || { g1: true, g2: true, g3: true, g4: true },
       screen: this.state.screen || 'dashboard',
@@ -724,6 +767,66 @@ class Component extends DCLogic {
           }],
         }),
       }));
+    });
+  }
+
+  // --- 業務Agent Runtime（Agent Runs） --------------------------------------
+  arPatch(patch) {
+    this.setState((s) => ({ ar: Object.assign({}, s.ar, patch) }));
+  }
+  arSetForm(patch) {
+    this.setState((s) => ({ ar: Object.assign({}, s.ar, { form: Object.assign({}, s.ar.form, patch) }) }));
+  }
+  arStart() {
+    const f = this.state.ar.form;
+    if (!this.can('create')) return this.deny('create', 'Agent Run開始');
+    let input;
+    if (f.agentId === 'knowledge-quality') {
+      const k = this.state.knowledge.find((x) => String(x._id) === String(f.knowledgeId));
+      if (!k) return this.toast('対象のKnowledge候補を選択してください', 'red');
+      input = { knowledge_candidate_id: Number(k._id), title: k.title, summary: k.summary || '', source: k.source || '' };
+    } else {
+      if (!f.query.trim()) return this.toast('相談内容を入力してください', 'red');
+      input = { query: f.query.trim() };
+    }
+    this.guarded('agent-run-start', async () => {
+      const { run } = await this.api('/api/agent-runs', { method: 'POST', body: { agentId: f.agentId, input } });
+      await this.refreshAll();
+      this.arSetForm({ query: '', knowledgeId: '' });
+      this.toast(`${run.run_code} を開始しました（Workerが順次実行します）`, 'green');
+      this.arOpenRun(run.id);
+    });
+  }
+  arOpenRun(id) {
+    this.arPatch({ selRun: id, detail: null });
+    this.guarded('agent-run-detail', async () => {
+      const [d, ev] = await Promise.all([this.api(`/api/agent-runs/${id}`), this.api(`/api/agent-runs/${id}/events`)]);
+      const artifacts = await Promise.all((d.artifacts || []).map((a) => this.api(`/api/artifacts/${a.id}`).then((r) => r.artifact)));
+      this.arPatch({ selRun: id, detail: { run: d.run, events: ev.events || [], artifacts } });
+    });
+  }
+  arCancel(id) {
+    this.guarded('agent-run-cancel', async () => {
+      await this.api(`/api/agent-runs/${id}/cancel`, { method: 'POST' });
+      await this.refreshAll();
+      this.arOpenRun(id);
+      this.toast('中断を要求しました（実行中のStep完了後に停止します）', 'amber');
+    });
+  }
+  arReview(artifactId, runId) {
+    const note = (this.state.ar.notes || {})[artifactId] || '';
+    this.guarded('artifact-review', async () => {
+      await this.api(`/api/artifacts/${artifactId}/review`, { method: 'POST', body: { note } });
+      this.toast('レビュー済みにしました（Audit記録済）', 'green');
+      this.arOpenRun(runId);
+    });
+  }
+  arVersionAction(kind, id, action) {
+    if (!this.can('users')) return this.deny('users', '版の承認');
+    this.guarded('version-' + action, async () => {
+      await this.api(`/api/agent-catalog/versions/${kind}/${id}/${action}`, { method: 'POST' });
+      await this.refreshAll();
+      this.toast(action === 'approve' ? '版を承認しました' : '承認を取り消しました', action === 'approve' ? 'green' : 'amber');
     });
   }
 
@@ -1066,6 +1169,77 @@ class Component extends DCLogic {
     }));
     const activeUserRows = userRows.filter((u) => u.active);
 
+    // 業務Agent Runtime（Agent Runs）
+    const ar = s.ar || { form: { agentId: 'technology-selection', query: '', knowledgeId: '' }, selRun: null, detail: null, notes: {} };
+    const RUN_ST = {
+      queued: ['待機中', 'muted'], running: ['実行中', 'blue'], waiting_approval: ['承認待ち', 'amber'], paused: ['一時停止', 'amber'],
+      completed: ['完了', 'green'], failed: ['失敗', 'red'], cancelled: ['中断', 'muted'],
+    };
+    const VER_ST = { draft: ['draft（未承認）', 'amber'], approved: ['approved', 'green'], deprecated: ['deprecated', 'muted'] };
+    const runSt = (k) => Object.assign({ st: (RUN_ST[k] || [k, 'muted'])[0] }, this.tone((RUN_ST[k] || [k, 'muted'])[1]));
+    const verSt = (k) => Object.assign({ st: (VER_ST[k] || [k, 'muted'])[0] }, this.tone((VER_ST[k] || [k, 'muted'])[1]));
+    const arAgents = (s.arCatalog || []).map((a) => Object.assign({
+      id: a.agent_id, version: a.version, title: a.title, purpose: a.purpose, doesNot: a.does_not,
+      level: a.max_autonomy_level || '—', owner: a.owner_role, skills: (a.skills || []).map((x) => `${x.skill_id}@${x.version}`).join(', '),
+    }, a.runnable ? { st: '実行可能', fg: 'var(--green)', bg: 'var(--green-bg)' } : { st: '未承認（実行不可）', fg: 'var(--amber)', bg: 'var(--amber-bg)' }));
+    const arAgentOptions = arAgents.map((a) => ({ id: a.id, label: `${a.title}（${a.id}）${a.st === '実行可能' ? '' : ' — 未承認'}` }));
+    const arIsKnowledge = ar.form.agentId === 'knowledge-quality';
+    const arKnowledgeOptions = s.knowledge.filter((k) => k.status === 'pending').map((k) => ({ id: String(k._id), label: `${k.id} ${k.title}` }));
+    const arRunRows = (s.arRuns || []).map((r) => Object.assign({
+      id: r.id, code: r.run_code, agent: r.agent_id, step: `${r.current_step}/${r.max_steps}`, by: r.requested_by_name || '',
+      at: r.created_at ? fmtDate(r.created_at) : '', open: () => this.arOpenRun(r.id), rowBg: ar.selRun === r.id ? 'var(--subtle)' : 'transparent',
+    }, runSt(r.status)));
+    const d = ar.detail;
+    const EV_TONE = { step_started: 'blue', step_completed: 'green', tool_call: 'purple', error: 'red', cancelled: 'muted', waiting_approval: 'amber' };
+    const evText = (e) => {
+      const det = e.detail || {};
+      if (e.type === 'tool_call') return `${e.tool_name} → ${e.status}${det.error ? '：' + det.error : ''}`;
+      if (e.type === 'error') return det.error || '';
+      if (e.type === 'step_completed') return `${e.skill_id}@${e.skill_version} 完了${det.unknowns && det.unknowns.length ? `（不明点 ${det.unknowns.length}件）` : ''}`;
+      if (e.type === 'step_started') return `${e.skill_id}@${e.skill_version} 開始${e.status === 'error' ? '：' + (det.error || '') : ''}`;
+      return JSON.stringify(det).slice(0, 160);
+    };
+    const artifactBody = (a) => {
+      const c = a.content || {};
+      const lines = [];
+      if (c.findings && c.findings.length) lines.push('【確認できた事実】\n' + c.findings.map((x) => '・' + x).join('\n'));
+      if (c.unknowns && c.unknowns.length) lines.push('【不明点・要確認】\n' + c.unknowns.map((x) => '・' + x).join('\n'));
+      if (c.assumptions && c.assumptions.length) lines.push('【仮定】\n' + c.assumptions.map((x) => '・' + x).join('\n'));
+      if (c.flags && c.flags.length) lines.push('【要注意（機密等）】\n' + c.flags.map((x) => '・' + x).join('\n'));
+      if (c.sources && c.sources.length) lines.push('【根拠】source_record ' + c.sources.map((x) => '#' + x.source_record_id).join(', '));
+      if (a.citations && a.citations.length) lines.push(a.citations.map((x) => `  - ${x.title}（${x.evidence_type}）${x.canonical_url ? ' ' + x.canonical_url : ''}`).join('\n'));
+      return lines.join('\n\n') || '（内容なし）';
+    };
+    const arRun = d ? Object.assign({
+      id: d.run.id, code: d.run.run_code, agent: d.run.agent_id, step: `${d.run.current_step}/${d.run.max_steps}`,
+      by: d.run.requested_by_name || '', at: d.run.created_at ? fmtDate(d.run.created_at) : '',
+      hasErr: !!d.run.error_message, err: d.run.error_message || '',
+      input: JSON.stringify(d.run.input_json || {}, null, 1).replace(/[{}"]/g, '').trim(),
+      events: (d.events || []).map((e) => Object.assign({ seq: e.seq, type: e.type, text: evText(e) }, this.tone(EV_TONE[e.type] || 'muted'))),
+      artifacts: (d.artifacts || []).map((a) => Object.assign({
+        id: a.id, code: a.artifact_code, title: a.title, body: artifactBody(a),
+        canReview: a.review_state === 'draft' && this.can('review'),
+        note: (ar.notes || {})[a.id] || '',
+        setNote: (e) => this.arPatch({ notes: Object.assign({}, ar.notes, { [a.id]: e.target.value }) }),
+        review: () => this.arReview(a.id, d.run.id),
+      }, a.review_state === 'reviewed' ? { st: 'レビュー済', fg: 'var(--green)', bg: 'var(--green-bg)' } : { st: '草案', fg: 'var(--amber)', bg: 'var(--amber-bg)' })),
+      noArtifacts: (d.artifacts || []).length === 0,
+      canCancel: ['queued', 'running', 'waiting_approval', 'paused'].includes(d.run.status),
+      cancel: () => this.arCancel(d.run.id), refresh: () => this.arOpenRun(d.run.id),
+    }, runSt(d.run.status)) : {};
+    const canApproveVer = this.can('users');
+    const verRow = (kind, v) => Object.assign({
+      kind: kind === 'skill' ? 'Skill' : 'Agent', name: v.name, version: v.version, hash: (v.content_hash || '').slice(0, 12),
+      approver: v.approved_by_name || '—',
+      canApprove: canApproveVer && v.status === 'draft', canDeprecate: canApproveVer && v.status === 'approved',
+      approve: () => this.arVersionAction(kind, v.id, 'approve'), deprecate: () => this.arVersionAction(kind, v.id, 'deprecate'),
+    }, verSt(v.status));
+    const arVersionRows = [
+      ...((s.arVersions && s.arVersions.agents) || []).map((v) => verRow('agent', v)),
+      ...((s.arVersions && s.arVersions.skills) || []).map((v) => verRow('skill', v)),
+    ];
+    const arDraftCount = arVersionRows.filter((v) => v.canApprove).length;
+
     // chat
     const messages = s.chat.messages.map((m) => {
       const ai = m.role === 'ai';
@@ -1099,7 +1273,7 @@ class Component extends DCLogic {
       isDashboard: s.screen === 'dashboard', isChat: s.screen === 'chat', isProjects: s.screen === 'projects',
       isTasks: s.screen === 'tasks', isApprovals: s.screen === 'approvals', isKnowledge: s.screen === 'knowledge',
       isAudit: s.screen === 'audit', isIntegrations: s.screen === 'integrations', isObs: s.screen === 'observability',
-      isAgents: s.screen === 'agents', isUsers: s.screen === 'users',
+      isAgents: s.screen === 'agents', isUsers: s.screen === 'users', isAgentRuns: s.screen === 'agentruns',
       kpis, pipeline, projectCount: s.projects.length,
       recentProjects: s.projects.slice(0, 5).map(projRow),
       recentTasks: s.tasks.slice(0, 4).map(taskRow),
@@ -1132,6 +1306,15 @@ class Component extends DCLogic {
       routerWarn: same ? '警告: 実装モデルと Review モデルが同系列です。Independence 評価により分離を推奨（FR-205）' : 'OK: 実装モデルと Review モデルは分離されています（FR-205）',
       routerWarnColor: same ? 'var(--red)' : 'var(--green)',
       roleCards, userRows, activeUserRows,
+      arAgents, arAgentOptions, arIsKnowledge, arIsQuery: !arIsKnowledge, arKnowledgeOptions,
+      arForm: ar.form,
+      arSetAgent: (e) => this.arSetForm({ agentId: e.target.value }),
+      arSetQuery: (e) => this.arSetForm({ query: e.target.value }),
+      arSetKnowledge: (e) => this.arSetForm({ knowledgeId: e.target.value }),
+      arStart: () => this.arStart(),
+      arLlmNote: (s.llm && s.llm.configured) ? 'DeepSeek 接続中：構造化Stepで実際にAPI課金が発生します' : 'LLM未設定：構造化Stepは「LLM未設定」で明示的に失敗します（偽の成功にはなりません）',
+      arRunRows, arNoRuns: arRunRows.length === 0, arHasRun: !!d, arRun,
+      arVersionRows, arVersionNote: arDraftCount > 0 ? `未承認 ${arDraftCount} 件` : '未承認の版はありません',
       resetAll: () => this.refreshAllWithToast(),
       modalNew: s.modal === 'new', closeModal: () => this.setState({ modal: null }), stop: (e) => e.stopPropagation(),
       np: s.np,

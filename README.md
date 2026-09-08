@@ -394,7 +394,7 @@ flowchart LR
 | Cloudflare（`mirai-agent-os` / `mirai-agent-os-mvp` サブドメイン公開） | ✅ 実施済み（Tunnel・DNS・Cloudflare Access で管理者アカウントのみに制限） |
 | WebUI（ログイン後の11画面） | ✅ Claude Design 正本を移植し**全画面を実 PostgreSQL データへ接続**（Tasks/Knowledge/Approvals多段階/監査Hash Chain含む） |
 | Notion / Slack / Gmail / GitHub 連携、Model Router実行 | ⏳ 未実装（Integrations/Routerは設定管理のみ。`doc/` 参照） |
-| 業務Agent Runtime（技術選定支援等、P0/P1） | 🟡 API限定で実装（検索・比較・草案作成まで。WebUI未実装）。詳細は [`app/README.md`](app/README.md) と [`docs/decisions/ADR-001-agent-skill-runtime.md`](docs/decisions/ADR-001-agent-skill-runtime.md) |
+| 業務Agent Runtime（技術選定支援等、P0/P1） | 🟡 実装済み（検索・比較・草案作成まで。WebUI「業務Agent」画面・版承認あり。構造化StepはDeepSeek設定時のみ動作）。詳細は [`app/README.md`](app/README.md) と [`docs/decisions/ADR-001-agent-skill-runtime.md`](docs/decisions/ADR-001-agent-skill-runtime.md) |
 
 セットアップ・API・既知の制約は **[`app/README.md`](app/README.md)** を参照。
 
