@@ -101,7 +101,8 @@ async function toolArtifactWriteDraft(client, { run, kind, title, content }) {
       [artifact.id, s.source_record_id, s.locator || null],
     );
   }
-  return { artifact };
+  // pg は BIGINT を文字列で返すため、Skill出力の JSON Schema（type: integer）に合わせて Number() へ正規化する。
+  return { artifact: { ...artifact, id: Number(artifact.id) } };
 }
 
 const TOOL_HANDLERS = {

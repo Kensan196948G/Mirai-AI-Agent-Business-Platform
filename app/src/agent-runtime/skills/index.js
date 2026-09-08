@@ -114,7 +114,7 @@ async function evidenceBackedDraft(ctx) {
     },
   });
 
-  return { ...finalOutput, artifact_id: artifactResult.artifact.id, artifact_code: artifactResult.artifact.artifact_code };
+  return { ...finalOutput, artifact_id: Number(artifactResult.artifact.id), artifact_code: artifactResult.artifact.artifact_code };
 }
 
 function collectSources(input) {
@@ -170,7 +170,7 @@ async function knowledgeReviewPacket(ctx) {
     title: `Knowledge候補 ${ctx.input.knowledge_candidate_id} レビューパケット`,
     content: { ...packet, sources: [] },
   });
-  return { ...packet, artifact_id: artifactResult.artifact.id, artifact_code: artifactResult.artifact.artifact_code };
+  return { ...packet, artifact_id: Number(artifactResult.artifact.id), artifact_code: artifactResult.artifact.artifact_code };
 }
 
 async function outcomeMeasurement(ctx) {

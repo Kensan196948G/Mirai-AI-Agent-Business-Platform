@@ -46,7 +46,8 @@ function makeCtx(def, input, { degraded = false } = {}) {
       calls.push(toolName);
       if (toolName === 'knowledge.search-approved') return { candidates: [{ source_record_id: 1, title: 'MC-Wake', summary: 's', evidence_type: 'marketing_overview' }] };
       if (toolName === 'knowledge.search-promoted') return { candidates: [{ knowledge_id: 7, title: 't', summary: 's' }] };
-      if (toolName === 'artifact.write-draft') return { artifact: { id: 42, artifact_code: 'ART-TEST', reused: false } };
+      // pg は BIGINT を文字列で返す。本番（RUN-1003）で artifact_id が string のまま返り schema 違反になった事象を再現するため文字列にする
+      if (toolName === 'artifact.write-draft') return { artifact: { id: '42', artifact_code: 'ART-TEST', reused: false } };
       throw new Error('unexpected tool ' + toolName);
     },
     structuredComplete: async ({ schema, fallbackData }) => ({ data: degraded ? fallbackData : sample(schema), tokensIn: 1, tokensOut: 1, cost: 0, degraded }),
@@ -101,5 +102,6 @@ test('evidence-backed-draft は requires_human_review=true を必ず返し、art
   const out = await SKILL_HANDLERS['evidence-backed-draft'](ctx);
   assert.equal(out.requires_human_review, true);
   assert.equal(out.artifact_id, 42);
+  assert.equal(typeof out.artifact_id, 'number');
   assert.deepEqual(ctx.calls, ['artifact.write-draft']);
 });
