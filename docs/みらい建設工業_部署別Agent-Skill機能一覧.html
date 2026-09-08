@@ -15,17 +15,19 @@
   button{border:1px solid var(--line);background:var(--surface);color:var(--ink2);padding:7px 12px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer}
   button:hover{background:var(--line2)} button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
   .stat{font-size:12.5px;color:var(--ink2);margin-left:auto}
-  main{padding:20px 24px;max-width:1400px;margin:0 auto}
+  main{padding:20px 24px;max-width:1440px;margin:0 auto}
   .legend{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px;font-size:12px;color:var(--ink2)}
   .chip{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap}
-  .p1{color:var(--green);background:var(--green-bg)} .p2{color:var(--amber);background:var(--amber-bg)} .p3{color:var(--purple);background:var(--purple-bg)} .base{color:var(--blue);background:var(--blue-bg)}
+  .p1{color:var(--green);background:var(--green-bg)} .p2{color:var(--amber);background:var(--amber-bg)} .p3{color:var(--purple);background:var(--purple-bg)} .base{color:var(--blue);background:var(--blue-bg)} .none{color:var(--muted);background:var(--line2)}
   .lv{font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .toc{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 16px;margin-bottom:16px;font-size:12.5px;display:flex;flex-wrap:wrap;gap:6px 14px}
+  .toc a{color:var(--blue);text-decoration:none} .toc a:hover{text-decoration:underline}
   section.dept{background:var(--surface);border:1px solid var(--line);border-radius:10px;margin-bottom:16px;overflow:hidden;box-shadow:0 1px 2px rgba(16,24,40,.04)}
   .dh{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line2);cursor:pointer}
-  .dh h2{margin:0;font-size:15px;flex:1} .dh .cnt{font-size:12px;color:var(--muted)}
+  .dh h2{margin:0;font-size:15px;flex:1} .dh .org{font-size:12px;color:var(--muted);font-weight:400;margin-left:8px} .dh .cnt{font-size:12px;color:var(--muted)}
   .dh .tog{color:var(--muted);transition:transform .15s} section.dept.closed .tog{transform:rotate(-90deg)} section.dept.closed .body{display:none}
   .body{overflow-x:auto}
-  table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:1100px}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:1160px}
   th{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line2);font-size:11px;color:var(--muted);font-weight:600;background:#fafbfc;white-space:nowrap}
   td{padding:9px 12px;border-bottom:1px solid var(--line2);vertical-align:top}
   tr:hover td{background:#fafbfc}
@@ -37,16 +39,16 @@
   textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
   .wish{background:#fffbf3}
   .note{padding:10px 16px;font-size:12px;color:var(--ink2);border-top:1px solid var(--line2);background:#fafbfc}
-  .foot{color:var(--muted);font-size:12px;margin:18px 0 40px}
+  .foot{color:var(--muted);font-size:12px;margin:18px 0 40px;line-height:1.7}
   .toast{position:fixed;right:18px;bottom:18px;background:#141c29;color:#fff;padding:10px 14px;border-radius:9px;font-size:12.5px;opacity:0;transition:opacity .2s;pointer-events:none}
   .toast.show{opacity:1}
-  @media print{header{position:static} button,.bar{display:none} section.dept.closed .body{display:block} textarea{border:none;background:none;min-height:0} body{background:#fff} main{padding:0}}
+  @media print{header{position:static} button,.bar,.toc{display:none} section.dept.closed .body{display:block} textarea{border:none;background:none;min-height:0} body{background:#fff} main{padding:0}}
 </style>
 </head>
 <body>
 <header>
   <h1>みらい建設工業 部署別 Agent／Skill 機能一覧（確認・追加希望シート）</h1>
-  <div class="sub">出典: <code>app/domain-packs/mirai-construction/</code>（実装済み P1）、<code>backlog/p2-p3-catalog.yaml</code>（候補 P2/P3）、<code>docs/Mirai-Agent-Skill-Architecture.md</code>。実行できるのは検索・比較・草案作成（A0〜A1）まで。採用・施工可否・品質合否の最終判断、設備・船舶制御、警報変更、外部への確定書き込みは対象外。</div>
+  <div class="sub">組織区分は公式サイト「組織図（2026.4.1 付）」（取締役会・社長・CSR／エンゲージメント／コンプライアンス委員会・監査役／営業本部・ソリューション営業本部・施工本部・技術本部・安全品質環境本部・管理本部・経営企画室／北海道〜九州の 7 支店／船舶事業部）に基づき 01〜09 に整理。Agent／Skill の出典は <code>app/domain-packs/mirai-construction/</code>（実装済み P1）、<code>backlog/p2-p3-catalog.yaml</code>（候補 P2/P3）。実行できるのは検索・比較・草案作成（A0〜A1）まで。採用・施工可否・品質合否の最終判断、設備・船舶制御、警報変更、外部への確定書き込みは対象外。</div>
   <div class="bar">
     <button class="primary" id="btnSave">保存（このブラウザ）</button>
     <button id="btnExport">JSON 書き出し</button>
@@ -62,115 +64,131 @@
   <div class="legend">
     <span class="chip p1">P1 実装済み</span><span>= 本番の Agent Runtime に登録済み・実行可能</span>
     <span class="chip p2">P2 候補</span><span class="chip p3">P3 候補</span><span>= 実行不能なカタログ。責任者の評価・資料利用許諾・外部接続確認の後に実装</span>
-    <span class="chip base">基盤</span><span>= 全部署共通の共通 Skill</span>
+    <span class="chip base">基盤</span><span>= 全組織共通の共通 Skill・統制機能</span>
+    <span class="chip none">未設定</span><span>= 現時点で専用 Agent なし（追加希望欄で要望を収集）</span>
     <span class="lv">A0=説明・要約 / A1=承認済み検索・草案作成 / A2=正式承認に拘束された外部書き込み（未対応） / A3=設備制御（対象外）</span>
   </div>
+  <nav class="toc" id="toc"></nav>
   <div id="app"></div>
-  <div class="foot">✅「確認」列にチェックし、「追加希望」欄に部署からの要望を記入してください。入力はこのブラウザに自動保存されます（他の端末には同期されません）。共有する場合は「JSON 書き出し」または「印刷 / PDF」をご利用ください。本ファイルは外部通信を行いません。</div>
+  <div class="foot">✅「確認」列にチェックし、「Agent 追加希望」「Skill 追加希望」欄に各組織からの要望を記入してください。入力はこのブラウザに自動保存されます（他の端末には同期されません）。共有する場合は「JSON 書き出し」または「印刷 / PDF」をご利用ください。本ファイルは外部通信を行いません。<br>
+  組織図に対する補足: 「09_DX推進部」は公式サイトの組織図（2026.4.1 版）には掲載されていない区分で、ソリューション営業本部の DX 関連および共通基盤（IT/DX）を対象としています。「Knowledge 品質支援」の担当部署（Knowledge Curator）は組織図上の所属が未確定のため 06 に仮置きしています。</div>
 </main>
 <div class="toast" id="toast"></div>
 <script>
 const DATA = [
-  { dept: "技術部門（技術選定・保有技術）", note: "MC-Float Navi / MC-Caisson / MC-Wake / CPG 工法等は技術カタログの知識レコードとして扱う（技術ごとに Agent は作らない）。",
+  { code: "01", dept: "経営・統治・委員会", org: "取締役会 / 社長 / CSR委員会 / エンゲージメント委員会 / コンプライアンス委員会 / 監査役",
+    note: "AI は承認者になれない（SoD）。正式な Gate 承認の正本は desknet's NEO Workflow。本基盤側は承認拘束（申請者本人の自己承認禁止・監査 Hash Chain）を提供し、判断は人が行う。",
     agents: [
-      { id: "technology-selection", name: "技術選定・比較支援", stage: "P1", level: "A1", owner: "技術",
-        purpose: "保有技術カタログから候補を検索し、案件条件との適用条件・不足情報を整理したうえで、出典付きの比較草案を作成する。",
-        skills: ["technology-catalog-search（技術カタログ検索）", "applicability-gap-check（適用条件・不足情報の整理）", "technology-comparison（比較表作成）", "evidence-backed-draft（根拠付き草案）"],
-        not: "施工設計の確定、工法採用の決定、設備・船舶の制御、警報の抑制・解除、正式な Gate 承認、Notion／Slack への確定書き込み" },
-      { id: "ground-improvement-support", name: "地盤改良支援", stage: "P2", level: "A1", owner: "地盤技術",
-        purpose: "地盤条件の欠落確認、CPG 等の候補比較、品質記録チェック。成果物は工法候補比較・照査事項。",
-        skills: ["地盤条件の欠落確認", "CPG 等の候補比較", "品質記録チェック"],
-        not: "工法採用・施工設計の確定、公開ページのみを根拠にした適用判断" }
+      { id: "g01-governance", name: "専用 Agent なし（統制機能のみ）", stage: "未設定", level: "—", owner: "経営・監査",
+        purpose: "経営判断・委員会審議・監査に AI が直接関与する Agent は設定していない。Runtime の統制機能（承認拘束、SoD、監査ログ、版承認）を通じて、各本部の Agent 成果物が人のレビューを経る枠組みを提供する。",
+        skills: ["（基盤）承認の自己承認禁止・Administrator 代理承認の監査記録", "（基盤）audit_log の軽量 Hash Chain による改ざん検知", "（基盤）Agent／Skill 版の承認・取消（Runtime 内）"],
+        not: "経営判断・委員会決議・監査意見の生成、正式承認の代行" }
     ]},
-  { dept: "営業・施工部門（施工実績・提案）", note: "",
+  { code: "02", dept: "営業・案件形成", org: "営業本部",
+    note: "提案の正式内容・受注可否は営業本部が決定する。顧客固有情報・個人情報は入力対象外。",
     agents: [
       { id: "project-case-research", name: "施工実績・提案支援", stage: "P1", level: "A1", owner: "営業・施工",
-        purpose: "承認済みの施工実績を検索し、類似・相違・不明条件を整理した出典付き比較表と提案草案の下書きを作成する。",
+        purpose: "承認済みの施工実績（海上・陸上・エネルギー関連）を検索し、類似・相違・不明条件を整理した出典付き比較表と提案草案の下書きを作成する。",
         skills: ["project-case-search（施工実績検索）", "case-comparison（類似・相違の比較）", "evidence-backed-draft（根拠付き草案）"],
         not: "提案書の正式発行、受注可否の決定、契約条件の確定、顧客への直接送信" }
     ]},
-  { dept: "港湾・海上施工部門", note: "気海象情報の提供元 API 仕様・契約・認証は未確認。",
+  { code: "03", dept: "施工・調達・作業所", org: "施工本部（作業所・調達を含む）",
+    note: "施工可否・工程・施工順序の最終決定は施工本部が行う。災害現場の位置情報、気海象情報の自動取得・外部送信は対象外。エネルギー分野は「設備の建設支援」に限定。",
     agents: [
       { id: "port-marine-construction-planning", name: "港湾・海上施工計画支援", stage: "P2", level: "A1", owner: "施工・港湾技術",
         purpose: "浚渫・埋立・護岸等の計画論点整理、工程制約抽出、承認済み気海象情報の鮮度確認。成果物は計画レビュー用チェック表。",
         skills: ["計画論点整理", "工程制約抽出", "気海象情報の鮮度確認"],
-        not: "施工可否・工程の最終決定、船舶・設備への制御指示、気海象情報の自動取得・外部送信" }
-    ]},
-  { dept: "陸上土木・防災復旧部門", note: "災害現場の位置情報は入力・外部送信の対象外。",
-    agents: [
+        not: "施工可否・工程の最終決定、船舶・設備への制御指示、気海象情報の自動取得・外部送信" },
       { id: "land-civil-disaster-recovery", name: "陸上土木・防災復旧支援", stage: "P2", level: "A1", owner: "土木施工",
         purpose: "造成・道路・橋梁・復旧工事の条件整理、仮設・施工順序の確認。成果物は計画草案・制約一覧。",
         skills: ["工事条件整理", "仮設・施工順序の確認"],
-        not: "施工順序の最終決定、災害現場の位置情報の入力・外部送信" }
-    ]},
-  { dept: "維持管理・補修部門", note: "",
-    agents: [
+        not: "施工順序の最終決定、災害現場の位置情報の入力・外部送信" },
       { id: "maintenance-repair-support", name: "維持管理・補修支援", stage: "P2", level: "A1", owner: "維持管理技術",
         purpose: "点検記録整理、補修工法比較、再点検事項抽出。成果物は補修検討・点検計画草案。",
         skills: ["点検記録整理", "補修工法比較", "再点検事項抽出"],
-        not: "補修要否・工法の最終決定" }
-    ]},
-  { dept: "エネルギー施設建設部門", note: "「設備の建設支援」に限定。発電制御・電力取引へは拡大しない。",
-    agents: [
+        not: "補修要否・工法の最終決定" },
       { id: "energy-facility-construction", name: "エネルギー施設建設支援", stage: "P2", level: "A1", owner: "対象事業の責任者",
         purpose: "風力等の建設実績比較、施工インターフェース・搬入条件の整理。成果物は建設計画・技術提案の草案。",
         skills: ["建設実績比較", "施工インターフェース・搬入条件の整理"],
         not: "発電制御・電力取引、施工可否の最終決定" }
     ]},
-  { dept: "安全・品質・環境部門", note: "",
+  { code: "04", dept: "技術・研究開発", org: "技術本部",
+    note: "MC-Float Navi / MC-Caisson / MC-Wake / CPG 工法等は技術カタログの知識レコードとして扱う（技術ごとに Agent は作らない）。公開技術紹介は完全な適用条件・設計基準ではない。",
+    agents: [
+      { id: "technology-selection", name: "技術選定・比較支援", stage: "P1", level: "A1", owner: "技術",
+        purpose: "保有技術カタログ（港湾・海上、地盤改良、環境関連、維持・管理 等）から候補を検索し、案件条件との適用条件・不足情報を整理したうえで、出典付きの比較草案を作成する。",
+        skills: ["technology-catalog-search（技術カタログ検索）", "applicability-gap-check（適用条件・不足情報の整理）", "technology-comparison（比較表作成）", "evidence-backed-draft（根拠付き草案）"],
+        not: "施工設計の確定、工法採用の決定、設備・船舶の制御、警報の抑制・解除、正式な Gate 承認、Notion／Slack への確定書き込み" },
+      { id: "ground-improvement-support", name: "地盤改良支援", stage: "P2", level: "A1", owner: "地盤技術",
+        purpose: "地盤条件の欠落確認、CPG 等の候補比較、品質記録チェック。成果物は工法候補比較・照査事項。",
+        skills: ["地盤条件の欠落確認", "CPG 等の候補比較", "品質記録チェック"],
+        not: "工法採用・施工設計の確定、公開ページのみを根拠にした適用判断" },
+      { id: "research-technology-succession", name: "研究・技術継承支援", stage: "P2", level: "A1", owner: "技術・研究・教育",
+        purpose: "技術比較、調査課題整理、承認済み事例の教材化、評価観点作成。成果物は研究検討メモ・教材候補。",
+        skills: ["技術比較", "調査課題整理", "承認済み事例の教材化", "評価観点作成"],
+        not: "未承認事例の教材化" }
+    ]},
+  { code: "05", dept: "安全・品質・環境", org: "安全品質環境本部",
+    note: "安全判断・品質合否の最終決定、警報・停止基準の変更は行わない。承認済みの社内基準（品質方針・環境方針・労働安全衛生基本方針に基づく基準）との照合に限る。",
     agents: [
       { id: "safety-quality-environment-review", name: "安全・品質・環境レビュー支援", stage: "P2", level: "A1", owner: "安全品質環境",
         purpose: "承認済み基準との照合、点検漏れ検出、KY 草案、不適合の整理。成果物は指摘一覧と根拠・確認依頼。",
         skills: ["基準との照合", "点検漏れ検出", "KY 草案", "不適合の整理"],
         not: "安全判断・品質合否の最終決定、警報・停止基準の変更" }
     ]},
-  { dept: "環境・経営企画部門（サステナビリティ）", note: "実測前の削減率は作成しない。",
+  { code: "06", dept: "管理本部・経営企画", org: "管理本部 / 経営企画室",
+    note: "対外報告（CSR 報告書・SBTi 等）の確定・送信は人が行う。実測前の削減率は作成しない。Knowledge 品質支援の担当部署は仮置き（要確認）。",
     agents: [
       { id: "sustainability-support", name: "サステナビリティ支援", stage: "P2", level: "A1", owner: "環境・経営企画",
         purpose: "活動データの単位検証、排出量集計補助、証跡チェック、報告草案。成果物は根拠付き活動集計・報告案。",
         skills: ["活動データの単位検証", "排出量集計補助", "証跡チェック", "報告草案"],
-        not: "対外報告の確定・送信、実測前の削減率の作成" }
+        not: "対外報告の確定・送信、実測前の削減率の作成" },
+      { id: "knowledge-quality", name: "Knowledge 品質支援", stage: "P1", level: "A1", owner: "Knowledge Curator（所属要確認）",
+        purpose: "Knowledge 候補の正確性・根拠・重複・再利用性・機密性・有効期限を検査し、人間レビュー用の候補一覧を作成する。昇格判定は Knowledge Curator が行う。",
+        skills: ["knowledge-quality-review（品質レビュー）", "knowledge-dedup（重複・矛盾の検出）", "knowledge-review-packet（レビュー用パケット作成）"],
+        not: "Knowledge の自己昇格（status=promoted への自動変更）" },
+      { id: "outcome-measurement-kpi", name: "成果測定（KPI 集計）", stage: "基盤", level: "A0", owner: "IT/DX・経営企画",
+        purpose: "Agent Run の実測値（Step 数・Token・費用・人間レビュー率）を集計し、KPI 算出の元データを作る。人手作業時間との比較は実測値が登録されている場合のみ。",
+        skills: ["outcome-measurement（実測に基づく成果測定）"],
+        not: "実測前の効果・削減率の作成" }
     ]},
-  { dept: "船舶・機電部門", note: "MC 系システムへの連携は、仕様・権限を確認した読み取り専用 Adapter からのみ開始（P3）。",
+  { code: "07", dept: "支店・営業支店・営業所", org: "北海道支店 / 東北支店 / 東京支店 / 中部支店 / 大阪支店 / 中国支店 / 九州支店",
+    note: "支店専用の Agent は設定していない。02（施工実績・提案支援）・03（施工計画系）・04（技術選定）の Agent を支店の案件から利用する。支店案件の非公開資料は案件権限（project_scope）で他案件から分離される。",
+    agents: [
+      { id: "g07-branches", name: "支店共通（02／03／04 の Agent を利用）", stage: "未設定", level: "A1", owner: "各支店",
+        purpose: "支店の営業・施工案件で、施工実績・提案支援（P1）、技術選定・比較支援（P1）を利用する。港湾・陸上・維持管理の計画支援（P2）は候補。",
+        skills: ["（02）project-case-search / case-comparison / evidence-backed-draft", "（04）technology-catalog-search / applicability-gap-check / technology-comparison", "（基盤）source-citation-verify（案件権限の検証）"],
+        not: "支店独自の外部システム連携（P3 まで未対応）、顧客への直接送信" }
+    ]},
+  { code: "08", dept: "船舶事業部", org: "船舶事業部",
+    note: "MC 系システム（MC-Float Navi / MC-Caisson / MC-Wake）の API・CSV 出力・認証・接続契約は未確認。連携は仕様・権限を確認した読み取り専用 Adapter からのみ開始（P3）。位置情報は入力・外部送信の対象外。",
     agents: [
       { id: "vessel-machinery-operation", name: "船舶・機械運用支援", stage: "P3", level: "A1", owner: "船舶・機電",
         purpose: "保守記録整理、匿名化・集約済み警報記録の要約、点検予定案。成果物は保守・改善案。",
         skills: ["保守記録整理", "警報記録の要約（匿名化・集約済み）", "点検予定案"],
         not: "設備・船舶の制御、警報の抑制・代替・解除、MC-Float Navi / MC-Caisson / MC-Wake への書き込み" }
     ]},
-  { dept: "研究・技術継承（技術・研究・教育）", note: "",
-    agents: [
-      { id: "research-technology-succession", name: "研究・技術継承支援", stage: "P2", level: "A1", owner: "技術・研究・教育",
-        purpose: "技術比較、調査課題整理、承認済み事例の教材化、評価観点作成。成果物は研究検討メモ・教材候補。",
-        skills: ["技術比較", "調査課題整理", "承認済み事例の教材化", "評価観点作成"],
-        not: "未承認事例の教材化" }
-    ]},
-  { dept: "ナレッジ管理（Knowledge Curator）", note: "昇格判定は既存の Knowledge Curator レビュー（PATCH /api/knowledge/:id）に委ねる。",
-    agents: [
-      { id: "knowledge-quality", name: "Knowledge 品質支援", stage: "P1", level: "A1", owner: "Knowledge Curator",
-        purpose: "Knowledge 候補の正確性・根拠・重複・再利用性・機密性・有効期限を検査し、人間レビュー用の候補一覧を作成する。",
-        skills: ["knowledge-quality-review（品質レビュー）", "knowledge-dedup（重複・矛盾の検出）", "knowledge-review-packet（レビュー用パケット作成）"],
-        not: "Knowledge の自己昇格（status=promoted への自動変更）" }
-    ]},
-  { dept: "IT／DX 部門（共通基盤・データ整備）", note: "全部署共通の共通 Skill。取り込み・検証・測定は Agent Run 外のバッチとして運用者が実行。",
+  { code: "09", dept: "DX推進部", org: "DX推進部（ソリューション営業本部の DX 関連／ IT・DX 共通基盤を含む）※組織図 2026.4.1 版には未掲載",
+    note: "DX推進部が共通基盤（出典整備・引用検証・草案生成・AI 相談）と Agent/Skill 版の承認運用を担う想定。社外への提供・外部送信（A2）は正式承認に拘束された連携仕様が確認できるまで未対応。",
     agents: [
       { id: "common-skills", name: "共通 Skill（Runtime 基盤）", stage: "基盤", level: "A0〜A1", owner: "IT/DX",
-        purpose: "出典の取り込み・正規化、引用検証、成果測定。各部署の Agent が共有して使う。",
-        skills: ["source-normalize（資料の正規化・除外対象の隔離）", "source-citation-verify（引用の実在性・権限の検証）", "evidence-backed-draft（根拠付き草案。技術選定・施工実績の Agent が共用）", "outcome-measurement（実測に基づく成果測定）"],
-        not: "任意の Shell／SQL／URL 取得、設備制御、外部送信、正式承認の判定（Tool Gateway で常時拒否）" }
+        purpose: "出典の取り込み・正規化、引用の実在性・権限の検証、根拠付き草案の生成。各本部の Agent が共有して使う。AI 相談（Chat）は社内の相談窓口として DeepSeek 接続済み（月次上限あり）。",
+        skills: ["source-normalize（資料の正規化・除外対象の隔離）", "source-citation-verify（引用の実在性・権限の検証）", "evidence-backed-draft（根拠付き草案。02／04 の Agent が共用）", "AI 相談（Chat）: 相談内容の Intent 分類・Idea 構造化・案件化"],
+        not: "任意の Shell／SQL／URL 取得、設備制御、社外への送信、正式承認の判定（Tool Gateway で常時拒否）" }
     ]}
 ];
 
-const KEY = "mirai-agent-skill-sheet-v1";
+const KEY = "mirai-agent-skill-sheet-v2";
 const state = load();
 function load(){ try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { return {}; } }
 function save(silent){ try { localStorage.setItem(KEY, JSON.stringify(state)); if(!silent) toast("保存しました"); } catch { toast("保存できませんでした（ブラウザ設定）"); } refreshStat(); }
 function get(id, k){ return (state[id] && state[id][k]) || ""; }
 function set(id, k, v){ state[id] = state[id] || {}; state[id][k] = v; save(true); }
 function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
-function stageChip(s){ const cls = s==="P1"?"p1":s==="P2"?"p2":s==="P3"?"p3":"base"; const label = s==="P1"?"P1 実装済み":s==="基盤"?"基盤":s+" 候補"; return `<span class="chip ${cls}">${label}</span>`; }
+function stageChip(s){ const cls = s==="P1"?"p1":s==="P2"?"p2":s==="P3"?"p3":s==="基盤"?"base":"none"; const label = s==="P1"?"P1 実装済み":s==="P2"||s==="P3"?s+" 候補":s; return `<span class="chip ${cls}">${label}</span>`; }
 
 function render(){
+  document.getElementById("toc").innerHTML = DATA.map(d => `<a href="#sec-${d.code}">${d.code}_${esc(d.dept)}</a>`).join("");
   const app = document.getElementById("app");
   app.innerHTML = DATA.map((d, di) => {
     const rows = d.agents.map(a => `
@@ -179,17 +197,17 @@ function render(){
         <td><div class="agent">${esc(a.name)}</div><div class="id">${esc(a.id)}</div><div style="margin-top:4px">${stageChip(a.stage)} <span class="lv">${esc(a.level)}</span></div><div class="id" style="margin-top:2px">責任者: ${esc(a.owner)}</div></td>
         <td>${esc(a.purpose)}<div class="no" style="margin-top:6px">できないこと: ${esc(a.not)}</div></td>
         <td><ul class="skills">${a.skills.map(s=>`<li>${esc(s)}</li>`).join("")}</ul></td>
-        <td class="wish"><textarea data-k="wishAgent" placeholder="この部署で追加してほしい Agent（目的・成果物・責任者）">${esc(get(a.id,"wishAgent"))}</textarea></td>
+        <td class="wish"><textarea data-k="wishAgent" placeholder="この組織で追加してほしい Agent（目的・成果物・責任者）">${esc(get(a.id,"wishAgent"))}</textarea></td>
         <td class="wish"><textarea data-k="wishSkill" placeholder="追加してほしい Skill（作業・入力・出力・使う資料）">${esc(get(a.id,"wishSkill"))}</textarea></td>
         <td class="wish"><textarea data-k="memo" placeholder="備考・懸念・確認事項">${esc(get(a.id,"memo"))}</textarea></td>
       </tr>`).join("");
     const closed = get("__dept"+di, "closed") ? " closed" : "";
     return `
-      <section class="dept${closed}" data-di="${di}">
-        <div class="dh"><span class="tog">▾</span><h2>${esc(d.dept)}</h2><span class="cnt">Agent ${d.agents.length} 件</span></div>
+      <section class="dept${closed}" id="sec-${d.code}" data-di="${di}">
+        <div class="dh"><span class="tog">▾</span><h2>${d.code}_${esc(d.dept)}<span class="org">対象組織: ${esc(d.org)}</span></h2><span class="cnt">Agent ${d.agents.length} 件</span></div>
         <div class="body">
           <table>
-            <thead><tr><th>確認</th><th style="width:190px">Agent</th><th style="min-width:280px">目的 / できないこと</th><th style="min-width:220px">Skill</th><th style="min-width:200px">Agent 追加希望</th><th style="min-width:200px">Skill 追加希望</th><th style="min-width:160px">備考</th></tr></thead>
+            <thead><tr><th>確認</th><th style="width:200px">Agent</th><th style="min-width:280px">目的 / できないこと</th><th style="min-width:230px">Skill</th><th style="min-width:200px">Agent 追加希望</th><th style="min-width:200px">Skill 追加希望</th><th style="min-width:160px">備考</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>
           ${d.note ? `<div class="note">${esc(d.note)}</div>` : ""}
@@ -215,7 +233,7 @@ function refreshStat(){
 }
 function exportJson(){
   const out = { exported_at: new Date().toISOString(), items: [] };
-  DATA.forEach(d => d.agents.forEach(a => out.items.push({ dept: d.dept, agent_id: a.id, agent: a.name, stage: a.stage,
+  DATA.forEach(d => d.agents.forEach(a => out.items.push({ code: d.code, dept: d.dept, org: d.org, agent_id: a.id, agent: a.name, stage: a.stage,
     checked: !!get(a.id,"checked"), wish_agent: get(a.id,"wishAgent"), wish_skill: get(a.id,"wishSkill"), memo: get(a.id,"memo") })));
   return JSON.stringify(out, null, 2);
 }
