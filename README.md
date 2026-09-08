@@ -427,6 +427,7 @@ Mirai-AI-Agent-Business-Platform/
     ├── 📙 ai-dx-dev-build-guide.html                       ← 🔧 Phase 01〜20 構築内容（Draft版）
     ├── 🌐 AIDX開発基盤インフラ・ネットワーク構成設計書.html   ← 🖧 VLAN/ネットワーク設計（承認版）
     ├── 📊 ワーキング発足に関する企画書.pptx                  ← 🚀 発足企画書
+    ├── 🧾 みらい建設工業_部署別Agent-Skill機能一覧.html      ← 🛠️ 部署別 Agent／Skill 一覧（確認チェック・追加希望欄付き、スタンドアロン）
     └── 📁 ツール利用・設定マニュアル/
         ├── 🗂️ AppSuite.html                                        （ELI5概要版）
         ├── 🗂️ AppSuite 設定手順書 公式マニュアル追記版.html          ⭐ 作業時はこちらが正
