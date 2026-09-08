@@ -1,6 +1,6 @@
 # /etc/systemd/system/mira-agent-os-mvp-api.service
 [Unit]
-Description=Mirai AgentOS MVP API (mira-agent-os-mvp.mirai-dx-platform.com, local Postgres backend)
+Description=Mirai AgentOS MVP API (mirai-agent-os-mvp.mirai-dx-platform.com, local Postgres backend)
 After=network.target postgresql.service
 Requires=postgresql.service
 

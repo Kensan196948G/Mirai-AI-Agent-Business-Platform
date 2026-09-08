@@ -1,0 +1,15 @@
+# /etc/systemd/system/mirai-agent-os-cloudflared.service
+[Unit]
+Description=Mirai AgentOS Cloudflare Tunnel (mirai-agent-os.mirai-dx-platform.com)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=kensan
+ExecStart=/usr/local/bin/cloudflared --config /home/kensan/.cloudflared/mirai-agent-os-config.yml tunnel run mirai-agent-os
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
