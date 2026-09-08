@@ -1,0 +1,32 @@
+# /etc/systemd/system/mira-agent-os-worker.service
+# Mirai AgentOS 業務Agent Runtime Worker（本番）。API（mira-agent-os-api.service）と同じ
+# .env / DB を使い、agent_runs キューをポーリングして Step を実行する。
+# DeepSeek API（構造化LLM Step）への外部通信が必要なため、API と同様にループバック限定は設けない。
+[Unit]
+Description=Mirai AgentOS Agent Runtime Worker (mirai-agent-os.mirai-dx-platform.com)
+After=network-online.target postgresql.service mira-agent-os-api.service
+Wants=network-online.target
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=kensan
+Group=kensan
+WorkingDirectory=/home/kensan/Projects/Mirai-DX-Project/Mirai-AI-Agent-Business-Platform/app
+EnvironmentFile=/home/kensan/Projects/Mirai-DX-Project/Mirai-AI-Agent-Business-Platform/app/.env
+Environment=AGENT_WORKER_POLL_MS=2000
+Environment=AGENT_WORKER_LEASE_SECONDS=60
+ExecStart=/home/kensan/.nvm/versions/node/v22.22.3/bin/node src/agent-runtime/worker.js
+Restart=on-failure
+RestartSec=5
+# SIGTERM でグレースフル停止（実行中の Step 完了を待つ）
+KillSignal=SIGTERM
+TimeoutStopSec=90
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+
+[Install]
+WantedBy=multi-user.target
