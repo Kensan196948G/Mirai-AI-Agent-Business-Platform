@@ -2,34 +2,172 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mirai AgentOS — ログイン</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  body { font-family: system-ui, sans-serif; max-width: 360px; margin: 10vh auto; }
-  input { display: block; width: 100%; margin: 0.5em 0; padding: 0.5em; box-sizing: border-box; }
-  button { padding: 0.5em 1em; }
-  #error { color: #b00020; min-height: 1.2em; }
+  /* 配色・フォントは既存の Mirai AgentOS WebUI デザイン（webui/）のトークンをそのまま踏襲する */
+  :root {
+    color-scheme: light;
+    --bg: #EEF1F5;
+    --surface: #ffffff;
+    --ink: #1A2433;
+    --ink-2: #5A6678;
+    --muted: #8A97A9;
+    --line: #E3E8EF;
+    --accent: #E08A2B;
+    --accent-d: #C9781F;
+    --red: #C5392F;
+    --shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 8px 24px rgba(16, 24, 40, .06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0F1520;
+      --surface: #161E2B;
+      --ink: #E8EDF4;
+      --ink-2: #B5BFCD;
+      --muted: #8A97A8;
+      --line: #283344;
+      --accent: #E8A757;
+      --accent-d: #B5701A;
+      --red: #F2857B;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 8px 24px rgba(0, 0, 0, .3);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0F1520;
+    --surface: #161E2B;
+    --ink: #E8EDF4;
+    --ink-2: #B5BFCD;
+    --muted: #8A97A8;
+    --line: #283344;
+    --accent: #E8A757;
+    --accent-d: #B5701A;
+    --red: #F2857B;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 8px 24px rgba(0, 0, 0, .3);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans JP', system-ui, -apple-system, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 360px;
+    margin: 24px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 36px 32px 32px;
+  }
+
+  h1 {
+    margin: 0 0 28px;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+
+  .field { margin-bottom: 18px; }
+
+  label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--ink-2);
+  }
+
+  input {
+    display: block;
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--ink);
+    outline: none;
+    transition: border-color .15s ease;
+  }
+  input::placeholder { color: var(--muted); }
+  input:focus { border-color: var(--accent); }
+
+  button {
+    width: 100%;
+    margin-top: 6px;
+    padding: 11px 16px;
+    background: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1A2433;
+    cursor: pointer;
+    transition: background-color .15s ease, border-color .15s ease;
+  }
+  button:hover { background: var(--accent-d); border-color: var(--accent-d); }
+  button:disabled { opacity: .6; cursor: default; }
+
+  #error {
+    min-height: 1.2em;
+    margin-top: 14px;
+    font-size: 12.5px;
+    color: var(--red);
+  }
 </style>
 </head>
 <body>
-<h1>Mirai AgentOS</h1>
-<form id="login-form">
-  <input type="email" id="email" placeholder="email" required autocomplete="username">
-  <input type="password" id="password" placeholder="password" required autocomplete="current-password">
-  <button type="submit">ログイン</button>
-  <div id="error"></div>
-</form>
+<div class="card">
+  <h1>Mirai AgentOS</h1>
+  <form id="login-form">
+    <div class="field">
+      <label for="email">メールアドレス</label>
+      <input type="email" id="email" placeholder="email" required autocomplete="username">
+    </div>
+    <div class="field">
+      <label for="password">パスワード</label>
+      <input type="password" id="password" placeholder="password" required autocomplete="current-password">
+    </div>
+    <button type="submit" id="submit-btn">ログイン</button>
+    <div id="error" role="alert"></div>
+  </form>
+</div>
 <script type="module">
 import { api } from './app.js';
 
-document.getElementById('login-form').addEventListener('submit', async (e) => {
+const form = document.getElementById('login-form');
+const btn = document.getElementById('submit-btn');
+const errorEl = document.getElementById('error');
+
+form.addEventListener('submit', async (e) => {
   e.preventDefault();
   const email = document.getElementById('email').value;
   const password = document.getElementById('password').value;
+  errorEl.textContent = '';
+  btn.disabled = true;
   try {
     await api('/api/auth/login', { method: 'POST', body: { email, password } });
     location.href = './dashboard.html';
   } catch (err) {
-    document.getElementById('error').textContent = err.message;
+    errorEl.textContent = err.message;
+    btn.disabled = false;
   }
 });
 </script>
