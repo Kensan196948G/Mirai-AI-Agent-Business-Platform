@@ -1,0 +1,20 @@
+schema_version: "mirai.agent-definition/v1"
+agent_id: "project-case-research"
+version: "1.0.0"
+domain_pack: "mirai-construction"
+title: "施工実績・提案支援"
+owner_role: "営業・施工"
+purpose: >
+  承認済みの施工実績を検索し、類似・相違・不明条件を整理した出典付き比較表と、
+  提案草案の下書きを作成する。提案の正式内容・受注可否の決定は行わない。
+does_not: >
+  提案書の正式発行、受注可否の決定、契約条件の確定、顧客への直接送信は行わない。
+max_autonomy_level: "A1"
+skills:
+  - skill_id: project-case-search
+    version: "1.0.0"
+  - skill_id: case-comparison
+    version: "1.0.0"
+  - skill_id: evidence-backed-draft
+    version: "1.0.0"
+output: "出典付き施工実績比較表と提案草案（review_state=draft）"

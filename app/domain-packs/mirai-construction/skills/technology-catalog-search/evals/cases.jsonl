@@ -1,0 +1,2 @@
+{"case_id": "TC-01", "input": {"query": "汚濁防止膜と作業船の管理に関係する保有技術を整理したい"}, "expect": {"candidates_min": 0, "notes": "承認済みsource_recordsに合致があれば返す。0件でも失敗ではない"}}
+{"case_id": "TC-02", "input": {"query": "存在しない架空技術XYZ-999について"}, "expect": {"candidates_min": 0, "unknowns_min": 1, "notes": "該当なしはunknownsに記録され棄権する"}}

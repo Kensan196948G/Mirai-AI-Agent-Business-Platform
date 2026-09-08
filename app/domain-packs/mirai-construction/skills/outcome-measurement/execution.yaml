@@ -1,0 +1,17 @@
+schema_version: mirai.skill-execution/v1
+skill_id: outcome-measurement
+version: 1.0.0
+input_schema: schemas/input.schema.json
+output_schema: schemas/output.schema.json
+required_source_state: approved
+source_scope: internal_metrics
+execution_mode: deterministic
+allowed_tools: []
+forbidden_actions:
+  - equipment.control
+  - external.send
+  - formal-approval.decide
+result_class: report
+require_domain_review: false
+on_missing_evidence: abstain
+max_attempts: 1

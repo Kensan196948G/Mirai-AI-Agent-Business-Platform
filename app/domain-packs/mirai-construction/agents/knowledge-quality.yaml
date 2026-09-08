@@ -1,0 +1,21 @@
+schema_version: "mirai.agent-definition/v1"
+agent_id: "knowledge-quality"
+version: "1.0.0"
+domain_pack: "mirai-construction"
+title: "Knowledge品質支援"
+owner_role: "Knowledge Curator"
+purpose: >
+  Knowledge候補の正確性・根拠・重複・再利用性・機密性・有効期限を検査し、
+  人間レビュー用の候補一覧（差分・根拠・未解決事項付き）を作成する。
+does_not: >
+  Knowledgeの自己昇格（status=promoted への自動変更）は行わない。
+  昇格判定は既存の Knowledge Curator によるレビュー（既存 PATCH /api/knowledge/:id）に委ねる。
+max_autonomy_level: "A1"
+skills:
+  - skill_id: knowledge-quality-review
+    version: "1.0.0"
+  - skill_id: knowledge-dedup
+    version: "1.0.0"
+  - skill_id: knowledge-review-packet
+    version: "1.0.0"
+output: "レビュー用パケット（根拠・差分・未解決事項、review_state=draft）"

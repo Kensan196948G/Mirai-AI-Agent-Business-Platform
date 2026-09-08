@@ -1,0 +1,23 @@
+schema_version: "mirai.agent-definition/v1"
+agent_id: "technology-selection"
+version: "1.0.0"
+domain_pack: "mirai-construction"
+title: "技術選定・比較支援"
+owner_role: "技術"
+purpose: >
+  保有技術カタログから候補を検索し、案件条件との適用条件・不足情報を整理したうえで、
+  出典付きの比較草案を作成する。工法の採用・施工可否・品質合否の最終決定は行わない。
+does_not: >
+  施工設計の確定、工法採用の決定、設備・船舶の制御、警報の抑制・解除、正式なGate承認、
+  Notion／Slackへの確定書き込みは行わない。
+max_autonomy_level: "A1"
+skills:
+  - skill_id: technology-catalog-search
+    version: "1.0.0"
+  - skill_id: applicability-gap-check
+    version: "1.0.0"
+  - skill_id: technology-comparison
+    version: "1.0.0"
+  - skill_id: evidence-backed-draft
+    version: "1.0.0"
+output: "出典付き技術候補比較表と、専門家確認事項付きの草案（review_state=draft）"

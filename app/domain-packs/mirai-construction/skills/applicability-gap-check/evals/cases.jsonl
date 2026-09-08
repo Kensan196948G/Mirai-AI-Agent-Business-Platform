@@ -1,0 +1,1 @@
+{"case_id": "AG-01", "input": {"query": "汚濁防止膜の管理", "candidates": [{"source_record_id": 1, "title": "MC-Wake", "summary": "航跡波に関する記録支援技術（公開概要）"}]}, "expect": {"gaps_min": 0, "notes": "summaryの記載範囲を超える性能値は生成しないこと"}}
