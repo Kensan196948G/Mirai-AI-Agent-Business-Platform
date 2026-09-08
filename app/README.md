@@ -63,9 +63,27 @@ DATABASE_URL に `test` という文字列が含まれない場合は起動時�
 
 すべての作成・昇格・承認操作は `audit_log` に記録される（FR-103 の Evidence 要件）。
 
+## WebUI（`app/public/dashboard.html`）
+
+2026-09-08、ログイン後の画面を Claude Design プロジェクト（`https://claude.ai/design/p/17a2926e-a8b0-41ea-95a5-a5902d7118f4` の「Mirai AgentOS WebUI」アートボード）から**正本ファイルをそのまま**移植した。手動での再現（CSS変数の抽出だけに基づく再構築）ではなく、以下 3 ファイルを無改変でホストしている:
+
+| ファイル | 内容 |
+|---|---|
+| `dashboard.html` | 正本アートボードそのもの（サイドバー・ヘッダー・11画面） |
+| `support.js` | Design Components 実行エンジン（自動生成。React を unpkg.com から SRI 付きで自前ロードする） |
+| `agentos-data.js` | 正本のモック/デモデータ（`export function seed()`）。ブラウザの localStorage に状態を保持 |
+
+**現状は 11 画面すべてモックデータ**（ダッシュボード・AI相談・案件・タスク・承認・Knowledge・監査ログ・外部連携・監視・エージェント設定・ユーザー管理）。実 PostgreSQL バックエンド（本 README 冒頭の API）とはまだ接続していない。ログイン画面（`index.html`）のみ実認証・実DBに接続済み。
+
+### 既知の制約（このWebUI）
+
+- localStorage キー `mirai-agentos-state` にブラウザごとの状態を保持する（複数ユーザー間・複数デバイス間で共有されない）
+- ログアウト導線は正本デザインに存在しないため未実装（`index.html` の実ログアウトAPIとは別経路）
+- 実データ接続（Requests/Projects/Approvals API との連携）は別途対応
+
 ## 既知の制約（MVP スコープ）
 
 - ロール割当は DB に直接 INSERT する運用（管理 UI 未実装）
 - authentik / SSO 未統合。単一 email+password のみ
 - Notion / Slack / Gmail / GitHub 連携、Model Router、Workflow Engine の Phase/Gate 管理は未実装
-- フロントエンドはバニラ JS の最小 UI（`public/`）。SPA フレームワーク不使用
+- ログイン画面（`index.html`）はバニラ JS。ログイン後（`dashboard.html`）は React（unpkg.com から CDN ロード）を使う Design Components 実行エンジン上で動作

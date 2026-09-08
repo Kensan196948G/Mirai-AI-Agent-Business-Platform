@@ -1,152 +1,528 @@
-<!doctype html>
-<html lang="ja">
+<!DOCTYPE html>
+<html>
 <head>
 <meta charset="utf-8">
-<title>Mirai AgentOS — ダッシュボード</title>
-<style>
-  body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2em auto; padding: 0 1em; }
-  section { margin-bottom: 2em; }
-  table { width: 100%; border-collapse: collapse; }
-  th, td { text-align: left; padding: 0.4em; border-bottom: 1px solid #ddd; font-size: 0.9em; }
-  form.inline { display: flex; gap: 0.5em; margin-bottom: 1em; flex-wrap: wrap; }
-  input, textarea { padding: 0.4em; }
-  button { padding: 0.4em 0.8em; cursor: pointer; }
-  #who { float: right; font-size: 0.85em; color: #555; }
-  .msg { min-height: 1.2em; font-size: 0.85em; }
-  .msg.error { color: #b00020; }
-  .msg.ok { color: #2e7d32; }
-</style>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
 </head>
 <body>
-<div id="who"></div>
-<h1>Mirai AgentOS</h1>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--accent:#E08A2B;--accent-d:#C9781F;--side:#FFFFFF;--side-2:#FDEFE0;--side-line:#E3E8EF;--side-fg:#3D4858;--side-muted:#8A97A8;--side-label:#8A97A8;--side-title:#1A2433;--side-hover:#F2F4F8;--side-avatar:#E3E8EF;--side-avatar-fg:#1A2433;--side-active:#8A4A0C;--toast-bg:#141C29;--bg:#EEF1F5;--surface:#ffffff;--hover:#FAFBFC;--subtle:#F2F4F8;--line:#E3E8EF;--line-2:#EEF1F5;--ink:#1A2433;--ink-2:#5A6678;--muted:#8A97A8;--blue:#2E5AAC;--blue-2:#3E76D6;--blue-bg:#E9F0FB;--green:#1F8255;--green-2:#2E9E6B;--green-bg:#E4F3EC;--amber:#B5701A;--amber-bg:#FDEFE0;--red:#C5392F;--red-2:#D6443B;--red-bg:#FCE9E7;--purple:#6B45B0;--purple-bg:#EDE7F6;--muted-bg:#F2F4F8;--shadow:0 1px 2px rgba(16,24,40,.04);--overlay:rgba(16,24,40,.45);--mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;--pad:22px;--rowpad:12px 16px;color-scheme:light}
+[data-theme="dark"]{--side:#0B111B;--side-2:#182130;--side-line:rgba(255,255,255,.07);--side-fg:#A5B1C2;--side-muted:#6C7A8C;--side-label:#586577;--side-title:#FFFFFF;--side-hover:rgba(255,255,255,.05);--side-avatar:#2A3850;--side-avatar-fg:#FFFFFF;--side-active:#FFFFFF;--toast-bg:#1B2533;--bg:#0F1520;--surface:#161E2B;--hover:#1B2533;--subtle:#1E2836;--line:#283344;--line-2:#222C3B;--ink:#E8EDF4;--ink-2:#B5BFCD;--muted:#8A97A9;--blue:#8FB1EC;--blue-2:#5B8AE0;--blue-bg:#1B2A45;--green:#66C695;--green-2:#3FB07A;--green-bg:#16312A;--amber:#E8A757;--amber-bg:#3B2B15;--red:#F2857B;--red-2:#E4685F;--red-bg:#3F2220;--purple:#B9A2EA;--purple-bg:#2D2446;--muted-bg:#1E2836;--shadow:0 1px 2px rgba(0,0,0,.35);--overlay:rgba(0,0,0,.62);color-scheme:dark}
+[data-density="compact"]{--pad:14px;--rowpad:7px 12px}
+*{box-sizing:border-box}html,body{margin:0;padding:0;height:100%}
+body{font-family:'IBM Plex Sans JP',system-ui,-apple-system,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif;-webkit-font-smoothing:antialiased;background:var(--bg);color:var(--ink);font-size:14px}
+a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}
+button,input,select,textarea{font:inherit;color:inherit}
+input,select,textarea{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 11px;font-size:13px;color:var(--ink);outline:none;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+input::placeholder,textarea::placeholder{color:var(--muted)}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px;border:2px solid transparent;background-clip:padding-box}
+@keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+</style>
+</helmet>
+<div style="display:flex;height:100vh;width:100%;overflow:hidden;background:var(--bg);color:var(--ink)">
+  <aside style="width:272px;flex-shrink:0;background:var(--side);border-right:1px solid var(--side-line);display:flex;flex-direction:column;color:var(--side-fg)">
+    <div style="padding:18px 18px 16px;display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--side-line)">
+      <span style="width:34px;height:34px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#141C29"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M5 21V7l8-4v18"></path><path d="M19 21V11l-6-4"></path></svg></span>
+      <div style="line-height:1.2"><div style="color:var(--side-title);font-weight:600;font-size:14.5px;letter-spacing:.2px">Mirai AgentOS</div><div style="font-size:11px;color:var(--side-muted)">みらい建設工業 · AI/DX統制基盤</div></div>
+    </div>
+    <nav style="flex:1;overflow-y:auto;padding:10px 12px 14px;display:flex;flex-direction:column;gap:1px">
+      <sc-for list="{{ navGroups }}" as="g" hint-placeholder-count="4">
+        <div style="display:flex;flex-direction:column;gap:1px">
+          <button onClick="{{ g.toggle }}" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;cursor:pointer;padding:13px 8px 6px;font-size:10px;letter-spacing:1px;color:var(--side-label);font-weight:600;text-align:left" style-hover="color:var(--side-fg)"><span>{{ g.label }}</span><span style="display:inline-block;transition:transform .2s;transform:rotate({{ g.rot }})">▾</span></button>
+          <sc-if value="{{ g.open }}" hint-placeholder-val="{{ true }}">
+            <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="3">
+              <button onClick="{{ it.go }}" style="position:relative;display:flex;align-items:center;gap:10px;padding:8px 11px;border-radius:7px;color:{{ it.fg }};background:{{ it.bg }};font-size:13px;font-weight:500;border:none;cursor:pointer;width:100%;text-align:left" style-hover="background:{{ it.hoverBg }}">
+                <sc-if value="{{ it.active }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:2px;background:var(--accent)"></span></sc-if>
+                <span style="width:18px;text-align:center;flex-shrink:0;font-size:14px">{{ it.ico }}</span><span style="flex:1;line-height:1.3;min-width:0">{{ it.label }}</span>
+                <sc-if value="{{ it.hasBadge }}" hint-placeholder-val="{{ false }}"><span style="font-family:var(--mono);font-size:10.5px;padding:1px 6px;border-radius:9px;background:{{ it.badgeBg }};color:{{ it.badgeFg }}">{{ it.badge }}</span></sc-if>
+              </button>
+            </sc-for>
+          </sc-if>
+        </div>
+      </sc-for>
+    </nav>
+    <div style="padding:13px 14px;border-top:1px solid var(--side-line);display:flex;align-items:center;gap:11px">
+      <span style="width:34px;height:34px;border-radius:50%;background:var(--side-avatar);color:var(--side-avatar-fg);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex-shrink:0">{{ me.initial }}</span>
+      <div style="flex:1;line-height:1.25;min-width:0"><div style="color:var(--side-title);font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ me.name }}</div><div style="font-size:11px;color:var(--side-muted)">{{ me.dept }}</div></div>
+      <span style="font-size:10px;font-weight:600;color:var(--accent);border:1px solid rgba(224,138,43,.4);padding:1px 6px;border-radius:5px;white-space:nowrap">{{ me.roleShort }}</span>
+    </div>
+  </aside>
 
-<section>
-  <h2>案件依頼（Request）</h2>
-  <form class="inline" id="request-form">
-    <input id="title" placeholder="タイトル" required>
-    <input id="description" placeholder="内容" required size="30">
-    <button type="submit">登録</button>
-  </form>
-  <div class="msg" id="request-msg"></div>
-  <table id="request-table"><thead><tr><th>コード</th><th>タイトル</th><th>状態</th><th>依頼者</th><th></th></tr></thead><tbody></tbody></table>
-</section>
+  <main style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden">
+    <header style="min-height:62px;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;padding:10px 22px;gap:12px;flex-wrap:wrap">
+      <div style="line-height:1.2;min-width:140px;flex:1 1 200px"><div style="font-size:16px;font-weight:600;color:var(--ink);white-space:nowrap">{{ title }}</div><div style="font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ subtitle }}</div></div>
+      <div style="display:flex;align-items:center;gap:7px;background:var(--subtle);border:1px solid var(--line);border-radius:8px;padding:0 11px;color:var(--muted);height:36px;flex:0 1 220px;min-width:120px"><span style="font-size:13px">⌕</span><input value="{{ q }}" onChange="{{ setQ }}" onKeyDown="{{ searchKey }}" placeholder="案件・Task・承認を検索" style="border:none;background:none;padding:0;width:100%;min-width:0;font-size:12.5px"></div>
+      <select value="{{ role }}" onChange="{{ setRole }}" title="ロール切替（authentik RBAC）" style="width:auto;padding:7px 30px 7px 10px;font-size:12.5px;font-weight:500;height:36px;flex-shrink:0">
+        <sc-for list="{{ roles }}" as="r" hint-placeholder-count="6"><option value="{{ r }}">{{ r }}</option></sc-for>
+      </select>
+      <button onClick="{{ goApprovals }}" title="承認待ち" style="position:relative;height:36px;width:36px;border-radius:8px;border:1px solid var(--line);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink-2)" style-hover="background:var(--subtle)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.7 21a2 2 0 0 1-3.4 0"></path></svg>
+        <sc-if value="{{ hasPending }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;border-radius:9px;background:var(--red-2);color:#fff;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;padding:0 4px;font-family:var(--mono)">{{ pendingCount }}</span></sc-if>
+      </button>
+      <button onClick="{{ toggleTheme }}" title="ライト / ダーク切替" style="height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--line);background:var(--surface);cursor:pointer;display:flex;align-items:center;gap:6px;color:var(--ink-2);font-size:12px;font-weight:600" style-hover="background:var(--subtle)"><span style="font-size:14px">{{ themeIcon }}</span>{{ themeLabel }}</button>
+      <div title="実行環境: Local · Docker Compose" style="display:flex;align-items:center;gap:6px;background:var(--green-bg);color:var(--green);padding:0 10px;height:36px;border-radius:7px;font-size:12px;font-weight:600;white-space:nowrap;flex-shrink:0"><span style="width:7px;height:7px;border-radius:50%;background:var(--green-2);box-shadow:0 0 0 3px rgba(46,158,107,.18)"></span>Local</div>
+    </header>
 
-<section>
-  <h2>Project 一覧</h2>
-  <table id="project-table"><thead><tr><th>コード</th><th>タイトル</th><th>状態</th></tr></thead><tbody></tbody></table>
-</section>
+    <div style="flex:1;overflow:auto;padding:var(--pad)">
+      <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:16px">
+          <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+            <button onClick="{{ k.go }}" style="background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 17px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:7px;text-align:left;cursor:pointer" style-hover="border-color:var(--accent)">
+              <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11.5px;color:var(--muted);font-weight:500">{{ k.label }}</span><span style="width:8px;height:8px;border-radius:3px;background:{{ k.color }}"></span></div>
+              <div style="font-size:28px;font-weight:600;color:var(--ink);line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.5px">{{ k.value }}</div>
+              <div style="font-size:11px;font-weight:500;color:{{ k.subColor }}">{{ k.sub }}</div>
+            </button>
+          </sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;align-items:start">
+          <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+            <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)">
+              <div style="padding:15px 18px;border-bottom:1px solid var(--line-2);display:flex;align-items:center;gap:10px"><div style="flex:1"><div style="font-size:14px;font-weight:600">案件パイプライン</div><div style="font-size:11.5px;color:var(--muted)">Process SoR: PostgreSQL · {{ projectCount }} 件</div></div><button onClick="{{ goProjects }}" style="border:1px solid var(--line);background:var(--surface);color:var(--ink-2);padding:6px 11px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer" style-hover="background:var(--subtle)">すべて表示</button></div>
+              <div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+                <div style="display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--line-2)"><sc-for list="{{ pipeline }}" as="p" hint-placeholder-count="5"><span style="width:{{ p.pct }}%;background:{{ p.color }};display:block"></span></sc-for></div>
+                <div style="display:flex;flex-wrap:wrap;gap:8px 16px"><sc-for list="{{ pipeline }}" as="p" hint-placeholder-count="5"><span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-2)"><span style="width:9px;height:9px;border-radius:3px;background:{{ p.color }}"></span>{{ p.label }}<span style="font-family:var(--mono);font-weight:600;color:var(--ink)">{{ p.n }}</span></span></sc-for></div>
+              </div>
+              <div>
+                <sc-for list="{{ recentProjects }}" as="p" hint-placeholder-count="5">
+                  <button onClick="{{ p.open }}" style="display:flex;align-items:center;gap:14px;padding:12px 18px;border:none;border-top:1px solid var(--line-2);background:none;width:100%;text-align:left;cursor:pointer;color:var(--ink)" style-hover="background:var(--hover)">
+                    <span style="font-family:var(--mono);font-size:11.5px;color:var(--muted);flex-shrink:0">{{ p.key }}</span>
+                    <span style="flex:1;font-size:13px;font-weight:500;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.title }}</span>
+                    <span style="font-size:11.5px;color:var(--muted);white-space:nowrap">{{ p.phase }}</span>
+                    <span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:{{ p.fg }};background:{{ p.bg }};white-space:nowrap">{{ p.st }}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </section>
+            <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)">
+              <div style="padding:15px 18px;border-bottom:1px solid var(--line-2);display:flex;align-items:center;gap:10px"><div style="flex:1"><div style="font-size:14px;font-weight:600">最近の Agent Run</div><div style="font-size:11.5px;color:var(--muted)">Model Run · Tool Call · Cost</div></div><button onClick="{{ goTasks }}" style="border:1px solid var(--line);background:var(--surface);color:var(--ink-2);padding:6px 11px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer" style-hover="background:var(--subtle)">すべて表示</button></div>
+              <sc-for list="{{ recentTasks }}" as="t" hint-placeholder-count="4">
+                <button onClick="{{ t.open }}" style="display:flex;align-items:center;gap:12px;padding:11px 18px;border:none;border-bottom:1px solid var(--line-2);background:none;width:100%;text-align:left;cursor:pointer;color:var(--ink)" style-hover="background:var(--hover)">
+                  <span style="width:8px;height:8px;border-radius:50%;background:{{ t.fg }};flex-shrink:0;animation:{{ t.anim }}"></span>
+                  <span style="flex:1;min-width:0"><span style="display:block;font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.title }}</span><span style="display:block;font-size:11.5px;color:var(--muted)">{{ t.agent }} · {{ t.model }} · {{ t.pk }}</span></span>
+                  <span style="font-family:var(--mono);font-size:12px;color:var(--ink-2)">{{ t.costFmt }}</span>
+                </button>
+              </sc-for>
+            </section>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+            <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)">
+              <div style="padding:15px 18px;border-bottom:1px solid var(--line-2)"><div style="font-size:14px;font-weight:600">承認待ち</div><div style="font-size:11.5px;color:var(--muted)">Human-in-the-Loop · あなたのロール: {{ role }}</div></div>
+              <sc-for list="{{ pendingApprovals }}" as="a" hint-placeholder-count="3">
+                <button onClick="{{ a.open }}" style="display:flex;align-items:flex-start;gap:12px;padding:12px 18px;border:none;border-bottom:1px solid var(--line-2);background:none;width:100%;text-align:left;cursor:pointer;color:var(--ink)" style-hover="background:var(--hover)">
+                  <span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;font-family:var(--mono);color:{{ a.riskFg }};background:{{ a.riskBg }}">{{ a.risk }}</span>
+                  <span style="flex:1;min-width:0"><span style="display:block;font-size:13px;font-weight:500">{{ a.title }}</span><span style="display:block;font-size:11.5px;color:var(--muted)">{{ a.pk }} · 申請: {{ a.by }} · {{ a.at }}</span></span>
+                  <span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:{{ a.fg }};background:{{ a.bg }};white-space:nowrap">{{ a.st }}</span>
+                </button>
+              </sc-for>
+              <sc-if value="{{ noPending }}" hint-placeholder-val="{{ false }}"><div style="padding:22px 18px;text-align:center;font-size:12.5px;color:var(--muted)">承認待ちはありません</div></sc-if>
+            </section>
+            <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)">
+              <div style="padding:15px 18px;border-bottom:1px solid var(--line-2);display:flex;align-items:center"><div style="flex:1"><div style="font-size:14px;font-weight:600">AI利用（今月）</div><div style="font-size:11.5px;color:var(--muted)">Provider別 Token / Cost</div></div><button onClick="{{ goObs }}" style="border:1px solid var(--line);background:var(--surface);color:var(--ink-2);padding:6px 11px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer" style-hover="background:var(--subtle)">詳細</button></div>
+              <div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+                <sc-for list="{{ usageRows }}" as="u" hint-placeholder-count="3">
+                  <div style="display:flex;flex-direction:column;gap:5px"><div style="display:flex;justify-content:space-between;font-size:12.5px"><span style="color:var(--ink-2)">{{ u.p }}</span><span style="font-family:var(--mono);font-weight:600">{{ u.costFmt }} · {{ u.tokFmt }}</span></div><div style="height:6px;background:var(--line-2);border-radius:3px;overflow:hidden"><span style="display:block;height:100%;border-radius:3px;width:{{ u.pct }}%;background:{{ u.color }}"></span></div></div>
+                </sc-for>
+              </div>
+            </section>
+            <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)">
+              <div style="padding:15px 18px;border-bottom:1px solid var(--line-2);display:flex;align-items:center"><div style="flex:1"><div style="font-size:14px;font-weight:600">Knowledge候補</div><div style="font-size:11.5px;color:var(--muted)">レビュー待ち {{ knPendingCount }} 件</div></div><button onClick="{{ goKnowledge }}" style="border:1px solid var(--line);background:var(--surface);color:var(--ink-2);padding:6px 11px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer" style-hover="background:var(--subtle)">レビュー</button></div>
+              <sc-for list="{{ knPendingRows }}" as="k" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:12px;padding:11px 18px;border-bottom:1px solid var(--line-2)"><span style="font-family:var(--mono);font-size:11px;background:var(--subtle);color:var(--ink-2);border-radius:5px;padding:2px 7px">{{ k.type }}</span><span style="flex:1;font-size:12.5px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ k.title }}</span><span style="font-family:var(--mono);font-size:12px;font-weight:600;color:{{ k.scoreColor }}">{{ k.score }}</span></div></sc-for>
+            </section>
+          </div>
+        </div>
+      </sc-if>
 
-<section>
-  <h2>承認待ち（Gate 1）</h2>
-  <table id="approval-table"><thead><tr><th>Project</th><th>タイトル</th><th></th></tr></thead><tbody></tbody></table>
-  <div class="msg" id="approval-msg"></div>
-</section>
+      <sc-if value="{{ isChat }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:stretch">
+          <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);display:flex;flex-direction:column;height:min(calc(100vh - 62px - var(--pad) * 2),760px);min-height:520px;flex:1 1 440px;min-width:0">
+            <div style="padding:15px 18px;border-bottom:1px solid var(--line-2);display:flex;align-items:center;gap:10px"><div style="flex:1"><div style="font-size:14px;font-weight:600">AI相談窓口</div><div style="font-size:11.5px;color:var(--muted)">Intent Router → Planner · Knowledge参照: Notion · Model: {{ chatModel }}</div></div><button onClick="{{ resetChat }}" style="border:1px solid var(--line);background:var(--surface);color:var(--ink-2);padding:6px 11px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer" style-hover="background:var(--subtle)">新しい相談</button></div>
+            <div style="flex:1;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:14px">
+              <sc-for list="{{ messages }}" as="m" hint-placeholder-count="2">
+                <div style="display:flex;justify-content:{{ m.justify }}">
+                  <div style="max-width:78%;display:flex;flex-direction:column;gap:8px">
+                    <div style="padding:11px 14px;border-radius:12px;font-size:13.5px;line-height:1.65;white-space:pre-wrap;background:{{ m.bg }};color:{{ m.fg }};border:1px solid {{ m.border }}">{{ m.text }}</div>
+                    <sc-if value="{{ m.hasIdea }}" hint-placeholder-val="{{ false }}">
+                      <div style="border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)">
+                        <div style="padding:11px 14px;border-bottom:1px solid var(--line-2);display:flex;align-items:center;gap:8px"><span style="font-size:11px;font-weight:600;color:var(--accent);letter-spacing:.5px">IDEA 構造化</span><span style="flex:1;font-size:13px;font-weight:600">{{ m.ideaTitle }}</span><span style="font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:6px;color:{{ m.riskFg }};background:{{ m.riskBg }}">{{ m.risk }}</span></div>
+                        <dl style="display:grid;grid-template-columns:max-content 1fr;gap:8px 14px;margin:0;padding:12px 14px;font-size:12.5px"><sc-for list="{{ m.idea }}" as="row" hint-placeholder-count="6"><dt style="color:var(--muted);font-weight:600;font-size:12px">{{ row.k }}</dt><dd style="margin:0">{{ row.v }}</dd></sc-for></dl>
+                        <div style="padding:11px 14px;border-top:1px solid var(--line-2);display:flex;gap:8px;align-items:center"><span style="flex:1;font-size:11.5px;color:var(--muted)">Intent: {{ m.intent }} · Notion Idea として記録済</span><button onClick="{{ m.promote }}" style="background:var(--accent);color:#fff;border:1px solid var(--accent);padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--accent-d)">正式案件化（Project ID発番）</button></div>
+                      </div>
+                    </sc-if>
+                  </div>
+                </div>
+              </sc-for>
+              <sc-if value="{{ typing }}" hint-placeholder-val="{{ false }}"><div style="display:flex"><div style="padding:11px 14px;border-radius:12px;background:var(--subtle);color:var(--muted);font-size:12.5px;display:flex;gap:5px;align-items:center"><span style="width:6px;height:6px;border-radius:50%;background:var(--muted);animation:pulse 1s infinite"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--muted);animation:pulse 1s .2s infinite"></span><span style="width:6px;height:6px;border-radius:50%;background:var(--muted);animation:pulse 1s .4s infinite"></span>Knowledge参照・整理中</div></div></sc-if>
+            </div>
+            <div style="padding:14px 18px;border-top:1px solid var(--line-2);display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;gap:8px;flex-wrap:wrap"><sc-for list="{{ quickPrompts }}" as="qp" hint-placeholder-count="3"><button onClick="{{ qp.use }}" style="font-size:12px;padding:6px 11px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);cursor:pointer" style-hover="background:var(--subtle)">{{ qp.text }}</button></sc-for></div>
+              <div style="display:flex;gap:8px"><input value="{{ chatInput }}" onChange="{{ setChatInput }}" onKeyDown="{{ chatKey }}" placeholder="例：現場写真の整理に毎週3時間かかっている" style="flex:1"><button onClick="{{ sendChat }}" style="background:var(--accent);color:#fff;border:1px solid var(--accent);padding:8px 16px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap" style-hover="background:var(--accent-d)">送信</button></div>
+            </div>
+          </section>
+          <aside style="display:flex;flex-direction:column;gap:16px;min-width:0;flex:1 1 260px;max-width:420px">
+            <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:16px 18px;display:flex;flex-direction:column;gap:10px">
+              <div style="font-size:12px;font-weight:600;color:var(--ink-2)">相談の流れ</div>
+              <sc-for list="{{ chatSteps }}" as="s" hint-placeholder-count="5"><div style="display:flex;gap:10px;align-items:center;font-size:12.5px;color:{{ s.fg }}"><span style="width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:600;font-family:var(--mono);background:{{ s.bg }};color:{{ s.numFg }};flex-shrink:0">{{ s.n }}</span>{{ s.label }}</div></sc-for>
+            </section>
+            <section style="background:var(--blue-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;font-size:12.5px;line-height:1.6;color:var(--ink)"><strong>利用者に必要なのは「正しく問題を説明すること」。</strong><br>GitHub、PostgreSQL、AIモデルの違いを理解する必要はありません。重要な判断・承認だけ人が行います。</section>
+          </aside>
+        </div>
+      </sc-if>
 
-<script type="module">
-import { api, escapeHtml } from './app.js';
+      <sc-if value="{{ isProjects }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+          <sc-for list="{{ projChips }}" as="c" hint-placeholder-count="5"><button onClick="{{ c.set }}" style="font-size:12.5px;font-weight:500;padding:7px 13px;border-radius:8px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.fg }};cursor:pointer">{{ c.label }}<span style="font-family:var(--mono);opacity:.7;margin-left:4px">{{ c.n }}</span></button></sc-for>
+          <div style="flex:1"></div>
+          <button onClick="{{ openNewProject }}" style="background:var(--accent);color:#fff;border:1px solid var(--accent);padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--accent-d)">＋ 案件を登録</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr));gap:16px;align-items:start">
+          <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden">
+            <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+              <thead><tr><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Project</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Phase</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Owner</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Risk</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Status</th></tr></thead>
+              <tbody>
+                <sc-for list="{{ projectRows }}" as="p" hint-placeholder-count="6">
+                  <tr onClick="{{ p.open }}" style="cursor:pointer;background:{{ p.rowBg }}" style-hover="background:var(--hover)">
+                    <td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2)"><div style="font-family:var(--mono);font-size:11px;color:var(--muted)">{{ p.key }}</div><div style="font-weight:500;color:var(--ink)">{{ p.title }}</div></td>
+                    <td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);color:var(--ink-2);white-space:nowrap">{{ p.phase }}</td>
+                    <td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);color:var(--ink-2);white-space:nowrap">{{ p.ownerName }}</td>
+                    <td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2)"><span style="font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;color:{{ p.riskFg }};background:{{ p.riskBg }}">{{ p.risk }}</span></td>
+                    <td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2)"><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:{{ p.fg }};background:{{ p.bg }};white-space:nowrap">{{ p.st }}</span></td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+            <sc-if value="{{ noProjects }}" hint-placeholder-val="{{ false }}"><div style="padding:28px;text-align:center;font-size:12.5px;color:var(--muted)">該当する案件がありません</div></sc-if>
+          </section>
+          <sc-if value="{{ hasProject }}" hint-placeholder-val="{{ true }}">
+            <aside style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden">
+              <div style="padding:16px 18px;border-bottom:1px solid var(--line-2)">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="font-family:var(--mono);font-size:11.5px;color:var(--muted)">{{ proj.key }}</span><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:{{ proj.fg }};background:{{ proj.bg }}">{{ proj.st }}</span><span style="font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;color:{{ proj.riskFg }};background:{{ proj.riskBg }}">{{ proj.risk }}</span></div>
+                <div style="font-size:15px;font-weight:600;line-height:1.35">{{ proj.title }}</div>
+                <div style="font-size:12.5px;color:var(--ink-2);margin-top:6px;line-height:1.6">{{ proj.summary }}</div>
+              </div>
+              <div style="padding:16px 18px;display:flex;flex-direction:column;gap:18px">
+                <div><div style="font-size:11.5px;font-weight:600;color:var(--ink-2);margin-bottom:10px">Phase / Gate</div>
+                  <div style="display:flex;flex-direction:column;gap:0">
+                    <sc-for list="{{ proj.phases }}" as="ph" hint-placeholder-count="7">
+                      <div style="display:flex;gap:11px;align-items:stretch"><div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:18px"><span style="width:18px;height:18px;border-radius:50%;background:{{ ph.bg }};color:{{ ph.fg }};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;font-family:var(--mono);border:2px solid {{ ph.border }}">{{ ph.n }}</span><span style="width:2px;flex:1;background:{{ ph.line }};min-height:10px"></span></div><div style="padding-bottom:10px;display:flex;align-items:center;gap:8px;flex:1;min-width:0"><span style="font-size:12.5px;font-weight:{{ ph.weight }};color:{{ ph.textColor }}">{{ ph.label }}</span><sc-if value="{{ ph.gate }}" hint-placeholder-val="{{ false }}"><span style="font-size:10.5px;font-weight:600;color:var(--accent);border:1px solid rgba(224,138,43,.4);padding:0 6px;border-radius:5px">GATE</span></sc-if><span style="flex:1"></span><span style="font-size:11px;color:var(--muted)">{{ ph.note }}</span></div></div>
+                    </sc-for>
+                  </div>
+                </div>
+                <sc-if value="{{ proj.hasKpis }}" hint-placeholder-val="{{ true }}"><div><div style="font-size:11.5px;font-weight:600;color:var(--ink-2);margin-bottom:10px">KPI</div><div style="display:flex;flex-direction:column;gap:10px"><sc-for list="{{ proj.kpiRows }}" as="k" hint-placeholder-count="2"><div style="display:flex;flex-direction:column;gap:5px"><div style="display:flex;justify-content:space-between;font-size:12.5px"><span style="color:var(--ink-2)">{{ k.n }}</span><span style="font-family:var(--mono);font-weight:600">{{ k.c }} / {{ k.t }} {{ k.u }}</span></div><div style="height:6px;background:var(--line-2);border-radius:3px;overflow:hidden"><span style="display:block;height:100%;border-radius:3px;width:{{ k.pct }}%;background:{{ k.color }}"></span></div></div></sc-for></div></div></sc-if>
+                <div><div style="font-size:11.5px;font-weight:600;color:var(--ink-2);margin-bottom:8px">Task / Agent Run（{{ proj.taskCount }}）</div><div style="display:flex;flex-direction:column;gap:6px"><sc-for list="{{ proj.tasks }}" as="t" hint-placeholder-count="2"><button onClick="{{ t.open }}" style="display:flex;align-items:center;gap:8px;font-size:12.5px;background:var(--subtle);border:none;border-radius:7px;padding:8px 10px;cursor:pointer;text-align:left;color:var(--ink);width:100%" style-hover="background:var(--hover)"><span style="width:7px;height:7px;border-radius:50%;background:{{ t.fg }};flex-shrink:0"></span><span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.title }}</span><span style="font-family:var(--mono);font-size:11px;color:var(--muted)">{{ t.id }}</span></button></sc-for></div></div>
+                <dl style="display:grid;grid-template-columns:max-content 1fr;gap:8px 14px;margin:0;font-size:12.5px"><dt style="color:var(--muted);font-weight:600;font-size:12px">Owner</dt><dd style="margin:0">{{ proj.ownerName }}（{{ proj.ownerDept }}）</dd><dt style="color:var(--muted);font-weight:600;font-size:12px">GitHub</dt><dd style="margin:0;font-family:var(--mono);font-size:12px">{{ proj.repo }}</dd><dt style="color:var(--muted);font-weight:600;font-size:12px">Notion</dt><dd style="margin:0;font-family:var(--mono);font-size:12px">{{ proj.notion }}</dd><dt style="color:var(--muted);font-weight:600;font-size:12px">Slack</dt><dd style="margin:0;font-family:var(--mono);font-size:12px">{{ proj.slack }}</dd><dt style="color:var(--muted);font-weight:600;font-size:12px">登録日</dt><dd style="margin:0">{{ proj.created }}</dd></dl>
+              </div>
+              <div style="padding:13px 18px;border-top:1px solid var(--line-2);display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                <span style="font-size:11.5px;color:var(--muted);width:100%">State Transition（Workflow Definition v1）</span>
+                <sc-for list="{{ proj.transitions }}" as="tr" hint-placeholder-count="1"><button onClick="{{ tr.run }}" style="display:inline-flex;align-items:center;gap:6px;border:1px solid {{ tr.border }};background:{{ tr.bg }};color:{{ tr.fg }};padding:7px 12px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer">{{ tr.label }}<span style="font-family:var(--mono);font-size:10.5px;opacity:.75">{{ tr.risk }}</span></button></sc-for>
+                <sc-if value="{{ proj.noTransitions }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;color:var(--muted)">終端状態のため遷移はありません</span></sc-if>
+              </div>
+            </aside>
+          </sc-if>
+        </div>
+      </sc-if>
 
-async function requireLogin() {
-  try {
-    const { user } = await api('/api/auth/me');
-    document.getElementById('who').innerHTML =
-      `${escapeHtml(user.name)}（${escapeHtml(user.role)}） <a href="#" id="logout">ログアウト</a>`;
-    document.getElementById('logout').addEventListener('click', async (e) => {
-      e.preventDefault();
-      try {
-        await api('/api/auth/logout', { method: 'POST' });
-      } finally {
-        location.href = './index.html';
-      }
-    });
-    return user;
-  } catch {
-    location.href = './index.html';
-    throw new Error('redirect');
+      <sc-if value="{{ isTasks }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px"><sc-for list="{{ taskChips }}" as="c" hint-placeholder-count="5"><button onClick="{{ c.set }}" style="font-size:12.5px;font-weight:500;padding:7px 13px;border-radius:8px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.fg }};cursor:pointer">{{ c.label }}<span style="font-family:var(--mono);opacity:.7;margin-left:4px">{{ c.n }}</span></button></sc-for></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr));gap:16px;align-items:start">
+          <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden">
+            <table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Task</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Agent / Model</th><th style="text-align:right;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Cost</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Status</th></tr></thead>
+            <tbody><sc-for list="{{ taskRows }}" as="t" hint-placeholder-count="6"><tr onClick="{{ t.open }}" style="cursor:pointer;background:{{ t.rowBg }}" style-hover="background:var(--hover)"><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2)"><div style="font-family:var(--mono);font-size:11px;color:var(--muted)">{{ t.id }} · {{ t.pk }}</div><div style="font-weight:500">{{ t.title }}</div></td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);color:var(--ink-2);white-space:nowrap"><div>{{ t.agent }}</div><div style="font-size:11.5px;color:var(--muted)">{{ t.model }}</div></td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);font-family:var(--mono);text-align:right;white-space:nowrap">{{ t.costFmt }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2)"><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:{{ t.fg }};background:{{ t.bg }};white-space:nowrap">{{ t.st }}</span></td></tr></sc-for></tbody></table>
+          </section>
+          <sc-if value="{{ hasTask }}" hint-placeholder-val="{{ true }}">
+            <aside style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden">
+              <div style="padding:16px 18px;border-bottom:1px solid var(--line-2)"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="font-family:var(--mono);font-size:11.5px;color:var(--muted)">{{ task.id }}</span><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:{{ task.fg }};background:{{ task.bg }}">{{ task.st }}</span></div><div style="font-size:15px;font-weight:600;line-height:1.35">{{ task.title }}</div><div style="font-size:12px;color:var(--muted);margin-top:4px">{{ task.pk }} · {{ task.at }}</div></div>
+              <div style="padding:16px 18px;display:flex;flex-direction:column;gap:16px">
+                <sc-if value="{{ task.hasErr }}" hint-placeholder-val="{{ false }}"><div style="padding:10px 12px;border-radius:8px;background:var(--red-bg);color:var(--red);font-size:12.5px">{{ task.err }}</div></sc-if>
+                <sc-if value="{{ task.isBlocked }}" hint-placeholder-val="{{ false }}"><button onClick="{{ task.openBlocker }}" style="padding:10px 12px;border-radius:8px;background:var(--amber-bg);color:var(--amber);font-size:12.5px;border:none;text-align:left;cursor:pointer">Approval Pending — {{ task.blockedBy }} の承認待ちでBlocked。クリックで承認画面へ</button></sc-if>
+                <div><div style="font-size:11.5px;font-weight:600;color:var(--ink-2);margin-bottom:8px">Trace（Request → Knowledge）</div><div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center"><sc-for list="{{ task.trace }}" as="tr" hint-placeholder-count="6"><span style="font-family:var(--mono);font-size:11px;padding:3px 7px;border-radius:5px;background:{{ tr.bg }};color:{{ tr.fg }}">{{ tr.t }}</span></sc-for></div></div>
+                <div><div style="font-size:11.5px;font-weight:600;color:var(--ink-2);margin-bottom:8px">Model Run</div><dl style="display:grid;grid-template-columns:max-content 1fr;gap:8px 14px;margin:0;font-size:12.5px"><dt style="color:var(--muted);font-weight:600;font-size:12px">Agent</dt><dd style="margin:0">{{ task.agent }}</dd><dt style="color:var(--muted);font-weight:600;font-size:12px">Provider / Model</dt><dd style="margin:0">{{ task.provider }} · {{ task.model }}</dd><dt style="color:var(--muted);font-weight:600;font-size:12px">Tokens</dt><dd style="margin:0;font-family:var(--mono)">in {{ task.tinFmt }} / out {{ task.toutFmt }}</dd><dt style="color:var(--muted);font-weight:600;font-size:12px">Cost</dt><dd style="margin:0;font-family:var(--mono)">{{ task.costFmt }}</dd><dt style="color:var(--muted);font-weight:600;font-size:12px">Latency</dt><dd style="margin:0;font-family:var(--mono)">{{ task.latFmt }}</dd></dl></div>
+                <div><div style="font-size:11.5px;font-weight:600;color:var(--ink-2);margin-bottom:8px">Tool Call · Policy Decision</div><div style="display:flex;flex-direction:column;gap:6px"><sc-for list="{{ task.tools }}" as="tc" hint-placeholder-count="2"><div style="display:flex;align-items:center;gap:8px;font-size:12.5px;background:var(--subtle);border-radius:7px;padding:7px 10px"><span style="font-family:var(--mono);flex:1">{{ tc.n }}</span><span style="font-family:var(--mono);font-size:11px;padding:1px 7px;border-radius:5px;font-weight:600;color:{{ tc.riskFg }};background:{{ tc.riskBg }}">{{ tc.r }}</span><span style="font-family:var(--mono);font-size:11px;font-weight:600;color:{{ tc.dFg }}">{{ tc.d }}</span></div></sc-for></div></div>
+              </div>
+              <div style="padding:13px 18px;border-top:1px solid var(--line-2);display:flex;gap:8px"><button onClick="{{ task.retry }}" style="border:1px solid var(--line);background:var(--surface);color:var(--ink-2);padding:7px 12px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--subtle)">Retry / Resume</button><button onClick="{{ task.cancel }}" style="border:1px solid var(--line);background:var(--surface);color:var(--red);padding:7px 12px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--red-bg)">Cancel</button></div>
+            </aside>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isApprovals }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr));gap:16px;align-items:start">
+          <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)">
+            <sc-for list="{{ approvalRows }}" as="a" hint-placeholder-count="5">
+              <button onClick="{{ a.open }}" style="display:flex;align-items:flex-start;gap:12px;padding:13px 18px;border:none;border-bottom:1px solid var(--line-2);background:{{ a.rowBg }};width:100%;text-align:left;cursor:pointer;color:var(--ink)" style-hover="background:var(--hover)">
+                <span style="font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;color:{{ a.riskFg }};background:{{ a.riskBg }}">{{ a.risk }}</span>
+                <span style="flex:1;min-width:0"><span style="display:block;font-size:13px;font-weight:500">{{ a.title }}</span><span style="display:block;font-size:11.5px;color:var(--muted)">{{ a.id }} · {{ a.pk }} · 申請: {{ a.by }} · {{ a.at }}</span></span>
+                <span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:{{ a.fg }};background:{{ a.bg }};white-space:nowrap">{{ a.st }}</span>
+              </button>
+            </sc-for>
+          </section>
+          <sc-if value="{{ hasApproval }}" hint-placeholder-val="{{ true }}">
+            <aside style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden">
+              <div style="padding:16px 18px;border-bottom:1px solid var(--line-2)"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="font-family:var(--mono);font-size:11.5px;color:var(--muted)">{{ apr.id }}</span><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:{{ apr.fg }};background:{{ apr.bg }}">{{ apr.st }}</span><span style="font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;color:{{ apr.riskFg }};background:{{ apr.riskBg }}">{{ apr.risk }}</span></div><div style="font-size:15px;font-weight:600;line-height:1.35">{{ apr.title }}</div><div style="font-size:12px;color:var(--muted);margin-top:4px">{{ apr.pk }} · 申請: {{ apr.by }} · {{ apr.at }}</div></div>
+              <div style="padding:16px 18px;display:flex;flex-direction:column;gap:16px">
+                <dl style="display:grid;grid-template-columns:max-content 1fr;gap:8px 14px;margin:0;font-size:12.5px"><dt style="color:var(--muted);font-weight:600;font-size:12px">Action Type</dt><dd style="margin:0;font-family:var(--mono);font-size:12px">{{ apr.type }}</dd><dt style="color:var(--muted);font-weight:600;font-size:12px">対象</dt><dd style="margin:0">{{ apr.target }}</dd></dl>
+                <div><div style="font-size:11.5px;font-weight:600;color:var(--ink-2);margin-bottom:8px">Evidence</div><ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--ink-2)"><sc-for list="{{ apr.evidence }}" as="e" hint-placeholder-count="3"><li>{{ e }}</li></sc-for></ul></div>
+                <div><div style="font-size:11.5px;font-weight:600;color:var(--ink-2);margin-bottom:8px">Approval Steps</div><div style="display:flex;flex-direction:column;gap:6px"><sc-for list="{{ apr.steps }}" as="s" hint-placeholder-count="2"><div style="display:flex;align-items:center;gap:10px;font-size:12.5px;background:var(--subtle);border-radius:7px;padding:8px 10px"><span style="width:8px;height:8px;border-radius:50%;background:{{ s.color }}"></span><span style="font-weight:600;width:70px">{{ s.role }}</span><span style="flex:1;color:var(--ink-2)">{{ s.who }}</span><span style="font-size:11px;color:var(--muted);font-family:var(--mono)">{{ s.at }}</span><span style="font-size:11px;font-weight:600;color:{{ s.color }}">{{ s.label }}</span></div></sc-for></div></div>
+                <sc-if value="{{ apr.hasLog }}" hint-placeholder-val="{{ false }}"><div><div style="font-size:11.5px;font-weight:600;color:var(--ink-2);margin-bottom:8px">Decision Log（Append-only）</div><sc-for list="{{ apr.log }}" as="l" hint-placeholder-count="1"><div style="font-size:12.5px;padding:8px 0;border-bottom:1px solid var(--line-2)"><div style="display:flex;gap:8px;color:var(--muted);font-size:11.5px"><span style="font-family:var(--mono)">{{ l.at }}</span><span>{{ l.who }}</span><span style="font-weight:600;color:{{ l.color }}">{{ l.label }}</span></div><div style="margin-top:3px">{{ l.reason }}</div></div></sc-for></div></sc-if>
+                <sc-if value="{{ apr.isOpen }}" hint-placeholder-val="{{ true }}"><div style="display:flex;flex-direction:column;gap:5px"><label style="font-size:12px;font-weight:600;color:var(--ink-2)">判断理由（必須・Auditに記録）</label><textarea value="{{ reason }}" onChange="{{ setReason }}" rows="3" placeholder="例：E2E・Security Scan・Rollback手順を確認。リリースを承認する。" style="resize:vertical"></textarea></div></sc-if>
+              </div>
+              <sc-if value="{{ apr.isOpen }}" hint-placeholder-val="{{ true }}"><div style="padding:13px 18px;border-top:1px solid var(--line-2);display:flex;gap:8px;flex-wrap:wrap"><button onClick="{{ apr.approve }}" style="background:var(--green);color:#fff;border:1px solid var(--green);padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer">承認</button><button onClick="{{ apr.return }}" style="border:1px solid var(--line);background:var(--surface);color:var(--amber);padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--amber-bg)">差戻し</button><button onClick="{{ apr.reject }}" style="border:1px solid var(--line);background:var(--surface);color:var(--red);padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--red-bg)">却下</button><span style="flex:1"></span><span style="font-size:11.5px;color:var(--muted);align-self:center">Policy: {{ apr.policyNote }}</span></div></sc-if>
+            </aside>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isKnowledge }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px"><sc-for list="{{ knChips }}" as="c" hint-placeholder-count="3"><button onClick="{{ c.set }}" style="font-size:12.5px;font-weight:500;padding:7px 13px;border-radius:8px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.fg }};cursor:pointer">{{ c.label }}<span style="font-family:var(--mono);opacity:.7;margin-left:4px">{{ c.n }}</span></button></sc-for><div style="flex:1"></div><span style="font-size:12px;color:var(--muted)">Curator: {{ curatorName }} · 昇格先: Notion Knowledge DB</span></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px">
+          <sc-for list="{{ knRows }}" as="k" hint-placeholder-count="3">
+            <article style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);display:flex;flex-direction:column">
+              <div style="padding:14px 16px;border-bottom:1px solid var(--line-2);display:flex;align-items:center;gap:8px"><span style="font-family:var(--mono);font-size:11px;background:var(--subtle);color:var(--ink-2);border-radius:5px;padding:2px 7px">{{ k.type }}</span><span style="font-family:var(--mono);font-size:11px;color:var(--muted)">{{ k.id }} · {{ k.pk }}</span><span style="flex:1"></span><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:{{ k.fg }};background:{{ k.bg }}">{{ k.st }}</span></div>
+              <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;flex:1"><div style="font-size:14px;font-weight:600;line-height:1.4">{{ k.title }}</div><div style="font-size:12.5px;color:var(--ink-2);line-height:1.65">{{ k.summary }}</div>
+                <div style="display:flex;align-items:center;gap:10px"><span style="font-size:11.5px;color:var(--muted);width:78px">品質スコア</span><div style="flex:1;height:6px;background:var(--line-2);border-radius:3px;overflow:hidden"><span style="display:block;height:100%;width:{{ k.score }}%;background:{{ k.scoreColor }}"></span></div><span style="font-family:var(--mono);font-size:12px;font-weight:600;color:{{ k.scoreColor }}">{{ k.score }}</span></div>
+                <dl style="display:grid;grid-template-columns:max-content 1fr;gap:6px 12px;margin:0;font-size:12px"><dt style="color:var(--muted);font-weight:600">出典</dt><dd style="margin:0">{{ k.src }}</dd><dt style="color:var(--muted);font-weight:600">重複判定</dt><dd style="margin:0;color:{{ k.dupColor }}">{{ k.dup }}</dd></dl>
+              </div>
+              <sc-if value="{{ k.isPending }}" hint-placeholder-val="{{ true }}"><div style="padding:12px 16px;border-top:1px solid var(--line-2);display:flex;gap:8px"><button onClick="{{ k.promote }}" style="background:var(--accent);color:#fff;border:1px solid var(--accent);padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--accent-d)">Notionへ昇格</button><button onClick="{{ k.reject }}" style="border:1px solid var(--line);background:var(--surface);color:var(--red);padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--red-bg)">却下</button></div></sc-if>
+              <sc-if value="{{ k.hasNotion }}" hint-placeholder-val="{{ false }}"><div style="padding:12px 16px;border-top:1px solid var(--line-2);font-family:var(--mono);font-size:11.5px;color:var(--green)">{{ k.notion }}</div></sc-if>
+            </article>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isAudit }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px"><select value="{{ auditType }}" onChange="{{ setAuditType }}" style="width:auto;padding:7px 30px 7px 10px;font-size:12.5px"><sc-for list="{{ auditTypes }}" as="t" hint-placeholder-count="5"><option value="{{ t.v }}">{{ t.label }}</option></sc-for></select><input value="{{ auditQ }}" onChange="{{ setAuditQ }}" placeholder="Actor / Resource / 内容で絞り込み" style="width:280px"><div style="flex:1"></div><span style="font-size:12px;color:var(--muted)">{{ auditCount }} events · Hash Chain 整合: <span style="color:var(--green);font-weight:600">OK</span></span></div>
+        <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover);white-space:nowrap">Occurred</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Actor</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Event</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Resource</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Summary</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Hash</th></tr></thead>
+          <tbody><sc-for list="{{ auditRows }}" as="e" hint-placeholder-count="8"><tr style-hover="background:var(--hover)"><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);font-family:var(--mono);font-size:11.5px;color:var(--ink-2);white-space:nowrap">{{ e.at }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);white-space:nowrap"><div>{{ e.actor }}</div><div style="font-size:11px;color:var(--muted)">{{ e.actorType }}</div></td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2)"><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;font-family:var(--mono);color:{{ e.fg }};background:{{ e.bg }};white-space:nowrap">{{ e.type }}</span></td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);font-family:var(--mono);font-size:11.5px;white-space:nowrap">{{ e.resType }}/{{ e.resId }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);color:var(--ink-2)">{{ e.summary }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap">{{ e.hash }}<br><span style="opacity:.6">← {{ e.prev }}</span></td></tr></sc-for></tbody></table>
+        </section>
+      </sc-if>
+
+      <sc-if value="{{ isIntegrations }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-bottom:16px">
+          <sc-for list="{{ integRows }}" as="i" hint-placeholder-count="4">
+            <article style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:16px 18px;display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;align-items:center;gap:10px"><span style="width:36px;height:36px;border-radius:9px;background:var(--subtle);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:var(--ink-2)">{{ i.initial }}</span><div style="flex:1;line-height:1.25"><div style="font-size:14px;font-weight:600">{{ i.name }}</div><div style="font-size:11.5px;color:var(--muted)">{{ i.role }}</div></div><span style="display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:{{ i.fg }}"><span style="width:7px;height:7px;border-radius:50%;background:{{ i.fg }};animation:{{ i.anim }}"></span>{{ i.stLabel }}</span></div>
+              <div style="font-size:12.5px;color:var(--ink-2)">{{ i.detail }}</div>
+              <div style="font-size:11.5px;color:var(--muted);padding:8px 10px;background:var(--subtle);border-radius:7px">{{ i.note }}</div>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:2px"><span style="flex:1;font-size:11.5px;color:var(--muted);font-family:var(--mono)">last sync {{ i.last }}</span><button onClick="{{ i.sync }}" style="border:1px solid var(--line);background:var(--surface);color:var(--blue);padding:6px 11px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer" style-hover="background:var(--blue-bg)">{{ i.btn }}</button></div>
+            </article>
+          </sc-for>
+        </div>
+        <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden">
+          <div style="padding:15px 18px;border-bottom:1px solid var(--line-2)"><div style="font-size:14px;font-weight:600">Webhook Events</div><div style="font-size:11.5px;color:var(--muted)">Event ID保存 · idempotency_key付与 · sync_statesでcursor保持（重複処理防止）</div></div>
+          <table style="width:100%;border-collapse:collapse;font-size:12.5px"><tbody><sc-for list="{{ webhookRows }}" as="w" hint-placeholder-count="5"><tr style-hover="background:var(--hover)"><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap">{{ w.id }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);font-weight:500;white-space:nowrap">{{ w.src }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);font-family:var(--mono);font-size:12px">{{ w.ev }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);color:var(--ink-2)">{{ w.payload }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2)"><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:{{ w.fg }};background:{{ w.bg }};white-space:nowrap">{{ w.st }}</span></td></tr></sc-for></tbody></table>
+        </section>
+      </sc-if>
+
+      <sc-if value="{{ isObs }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px"><sc-for list="{{ rangeChips }}" as="c" hint-placeholder-count="3"><button onClick="{{ c.set }}" style="font-size:12.5px;font-weight:500;padding:7px 13px;border-radius:8px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.fg }};cursor:pointer">{{ c.label }}</button></sc-for><div style="flex:1"></div><span style="font-size:12px;color:var(--muted)">Prometheus · Loki · Grafana（Alloy収集）</span></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:16px"><sc-for list="{{ obsKpis }}" as="k" hint-placeholder-count="4"><div style="background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 17px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:7px"><div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11.5px;color:var(--muted);font-weight:500">{{ k.label }}</span><span style="width:8px;height:8px;border-radius:3px;background:{{ k.color }}"></span></div><div style="font-size:28px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.5px">{{ k.value }}</div><div style="font-size:11px;color:var(--muted);font-family:var(--mono)">{{ k.metric }}</div></div></sc-for></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;align-items:start">
+          <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)"><div style="padding:15px 18px;border-bottom:1px solid var(--line-2)"><div style="font-size:14px;font-weight:600">Provider別 Token / Cost</div><div style="font-size:11.5px;color:var(--muted);font-family:var(--mono)">agentos_model_tokens_total / agentos_model_cost_total</div></div><div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px"><sc-for list="{{ usageRows }}" as="u" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:5px"><div style="display:flex;justify-content:space-between;font-size:12.5px"><span style="color:var(--ink-2)">{{ u.p }}</span><span style="font-family:var(--mono);font-weight:600">{{ u.tokFmt }} tok · {{ u.costFmt }} · {{ u.runs }} runs</span></div><div style="height:8px;background:var(--line-2);border-radius:4px;overflow:hidden"><span style="display:block;height:100%;border-radius:4px;width:{{ u.pct }}%;background:{{ u.color }}"></span></div></div></sc-for></div></section>
+          <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)"><div style="padding:15px 18px;border-bottom:1px solid var(--line-2)"><div style="font-size:14px;font-weight:600">Agent Run 状態</div><div style="font-size:11.5px;color:var(--muted);font-family:var(--mono)">agentos_agent_runs_total{status}</div></div><div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px"><div style="display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--line-2)"><sc-for list="{{ runDist }}" as="r" hint-placeholder-count="4"><span style="width:{{ r.pct }}%;background:{{ r.color }};display:block"></span></sc-for></div><div style="display:flex;flex-direction:column;gap:9px"><sc-for list="{{ runDist }}" as="r" hint-placeholder-count="4"><div style="display:flex;align-items:center;gap:10px"><span style="width:9px;height:9px;border-radius:3px;background:{{ r.color }}"></span><span style="flex:1;font-size:12.5px;color:var(--ink-2)">{{ r.label }}</span><span style="font-family:var(--mono);font-size:12.5px;font-weight:600">{{ r.n }}</span></div></sc-for></div></div></section>
+          <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)"><div style="padding:15px 18px;border-bottom:1px solid var(--line-2)"><div style="font-size:14px;font-weight:600">Approval / Policy</div><div style="font-size:11.5px;color:var(--muted);font-family:var(--mono)">agentos_approval_pending_total{risk} / agentos_policy_denied_total</div></div><div style="padding:16px 18px;display:flex;flex-direction:column;gap:9px"><sc-for list="{{ riskDist }}" as="r" hint-placeholder-count="4"><div style="display:flex;align-items:center;gap:10px"><span style="font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;color:{{ r.fg }};background:{{ r.bg }};width:38px;text-align:center">{{ r.risk }}</span><div style="flex:1;height:6px;background:var(--line-2);border-radius:3px;overflow:hidden"><span style="display:block;height:100%;width:{{ r.pct }}%;background:{{ r.fg }}"></span></div><span style="font-family:var(--mono);font-size:12.5px;font-weight:600;width:20px;text-align:right">{{ r.n }}</span></div></sc-for><div style="display:flex;justify-content:space-between;font-size:12.5px;padding-top:8px;border-top:1px solid var(--line-2);margin-top:4px"><span style="color:var(--ink-2)">Policy DENY（期間内）</span><span style="font-family:var(--mono);font-weight:600;color:var(--red)">{{ deniedCount }}</span></div></div></section>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isAgents }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;align-items:start">
+          <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:auto;grid-column:1 / -1"><div style="padding:15px 18px;border-bottom:1px solid var(--line-2);display:flex;align-items:center"><div style="flex:1"><div style="font-size:14px;font-weight:600">Agent Registry</div><div style="font-size:11.5px;color:var(--muted)">実装Agentと Review Agent は別モデルで分離（FR-205）</div></div><span style="font-size:12px;color:var(--muted)">{{ agentPolicyNote }}</span></div>
+            <table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Agent</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">責務</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Skills</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Default Model</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">有効</th></tr></thead>
+            <tbody><sc-for list="{{ agentRows }}" as="a" hint-placeholder-count="7"><tr style-hover="background:var(--hover)"><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);font-weight:600;white-space:nowrap">{{ a.name }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);color:var(--ink-2)">{{ a.duty }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);font-family:var(--mono);font-size:11.5px;color:var(--ink-2)">{{ a.skills }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2)"><select value="{{ a.model }}" onChange="{{ a.setModel }}" style="width:auto;padding:5px 26px 5px 8px;font-size:12px"><sc-for list="{{ models }}" as="m" hint-placeholder-count="6"><option value="{{ m }}">{{ m }}</option></sc-for></select></td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2)"><button onClick="{{ a.toggle }}" title="有効 / 無効" style="width:38px;height:22px;border-radius:11px;border:none;cursor:pointer;background:{{ a.togBg }};position:relative;padding:0"><span style="position:absolute;top:3px;left:{{ a.knob }};width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 2px rgba(0,0,0,.25)"></span></button></td></tr></sc-for></tbody></table>
+          </section>
+          <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden;grid-column:1 / -1"><div style="padding:15px 18px;border-bottom:1px solid var(--line-2)"><div style="font-size:14px;font-weight:600">Model Router ルール</div><div style="font-size:11.5px;color:var(--muted)">Capability / Cost / Latency / Independence / Data Policy</div></div>
+            <div style="padding:8px 0"><sc-for list="{{ routerRows }}" as="r" hint-placeholder-count="5"><div style="display:flex;align-items:center;gap:12px;padding:9px 18px"><span style="flex:1;font-size:12.5px;font-weight:500">{{ r.cat }}</span><span style="color:var(--muted)">→</span><select value="{{ r.model }}" onChange="{{ r.set }}" style="width:180px;padding:6px 26px 6px 9px;font-size:12px"><sc-for list="{{ models }}" as="m" hint-placeholder-count="6"><option value="{{ m }}">{{ m }}</option></sc-for></select></div></sc-for></div>
+            <div style="padding:12px 18px;border-top:1px solid var(--line-2);font-size:12px;color:{{ routerWarnColor }}">{{ routerWarn }}</div>
+          </section>
+          <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:auto;grid-column:1 / -1"><div style="padding:15px 18px;border-bottom:1px solid var(--line-2)"><div style="font-size:14px;font-weight:600">Skill Registry</div><div style="font-size:11.5px;color:var(--muted)">status: draft → approved → deprecated · risk_ceiling</div></div>
+            <table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Skill</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Version</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Agent</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Risk Ceiling</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Status</th></tr></thead><tbody><sc-for list="{{ skillRows }}" as="s" hint-placeholder-count="8"><tr style-hover="background:var(--hover)"><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);font-family:var(--mono);font-weight:600">{{ s.id }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);font-family:var(--mono);font-size:11.5px;color:var(--muted)">v{{ s.v }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);color:var(--ink-2)">{{ s.agent }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2)"><span style="font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;color:{{ s.riskFg }};background:{{ s.riskBg }}">{{ s.risk }}</span></td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2)"><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:{{ s.fg }};background:{{ s.bg }}">{{ s.st }}</span></td></tr></sc-for></tbody></table>
+          </section>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isUsers }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:16px"><sc-for list="{{ roleCards }}" as="r" hint-placeholder-count="6"><div style="background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;box-shadow:var(--shadow)"><div style="font-size:11.5px;color:var(--muted);font-weight:500">{{ r.role }}</div><div style="font-size:22px;font-weight:600;margin:6px 0 4px;font-variant-numeric:tabular-nums">{{ r.n }}</div><div style="font-size:11px;color:var(--ink-2)">{{ r.desc }}</div></div></sc-for></div>
+        <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden">
+          <div style="padding:15px 18px;border-bottom:1px solid var(--line-2);display:flex;align-items:center"><div style="flex:1"><div style="font-size:14px;font-weight:600">ユーザー一覧</div><div style="font-size:11.5px;color:var(--muted)">Identity: authentik（OIDC）· Administrator も Audit は改ざん不可</div></div><button onClick="{{ resetAll }}" style="border:1px solid var(--line);background:var(--surface);color:var(--ink-2);padding:6px 11px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer" style-hover="background:var(--subtle)">デモデータを初期化</button></div>
+          <table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">氏名</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">部署</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Role</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">最終ログイン</th></tr></thead>
+          <tbody><sc-for list="{{ userRows }}" as="u" hint-placeholder-count="6"><tr style-hover="background:var(--hover)"><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2)"><div style="display:flex;align-items:center;gap:10px"><span style="width:30px;height:30px;border-radius:50%;background:var(--subtle);color:var(--ink-2);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px">{{ u.initial }}</span><span style="font-weight:500">{{ u.name }}</span></div></td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);color:var(--ink-2)">{{ u.dept }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2)"><select value="{{ u.role }}" onChange="{{ u.setRole }}" style="width:auto;padding:5px 26px 5px 8px;font-size:12px"><sc-for list="{{ roles }}" as="r" hint-placeholder-count="6"><option value="{{ r }}">{{ r }}</option></sc-for></select></td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);font-family:var(--mono);font-size:11.5px;color:var(--muted)">{{ u.last }}</td></tr></sc-for></tbody></table>
+        </section>
+      </sc-if>
+    </div>
+  </main>
+
+  <sc-if value="{{ modalNew }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position:fixed;inset:0;background:var(--overlay);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px">
+      <div onClick="{{ stop }}" style="width:100%;max-width:520px;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 40px rgba(16,24,40,.2);overflow:hidden">
+        <div style="padding:16px 20px;border-bottom:1px solid var(--line-2)"><div style="font-size:15px;font-weight:600">案件を登録（Idea として起票）</div><div style="font-size:11.5px;color:var(--muted)">Project ID を発番し PostgreSQL core.projects へ登録します</div></div>
+        <div style="padding:18px 20px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:5px"><label style="font-size:12px;font-weight:600;color:var(--ink-2)">案件名</label><input value="{{ np.title }}" onChange="{{ npTitle }}" placeholder="例：安全巡視記録の音声入力化"></div>
+          <div style="display:flex;flex-direction:column;gap:5px"><label style="font-size:12px;font-weight:600;color:var(--ink-2)">概要</label><textarea value="{{ np.summary }}" onChange="{{ npSummary }}" rows="3" placeholder="対象業務・現状・期待効果" style="resize:vertical"></textarea></div>
+          <div style="display:flex;gap:10px"><div style="display:flex;flex-direction:column;gap:5px;flex:1"><label style="font-size:12px;font-weight:600;color:var(--ink-2)">Owner</label><select value="{{ np.owner }}" onChange="{{ npOwner }}"><sc-for list="{{ userRows }}" as="u" hint-placeholder-count="6"><option value="{{ u.id }}">{{ u.name }}（{{ u.dept }}）</option></sc-for></select></div><div style="display:flex;flex-direction:column;gap:5px;width:130px"><label style="font-size:12px;font-weight:600;color:var(--ink-2)">Risk候補</label><select value="{{ np.risk }}" onChange="{{ npRisk }}"><option value="R1">R1</option><option value="R2">R2</option><option value="R3">R3</option><option value="R4">R4</option></select></div></div>
+        </div>
+        <div style="padding:13px 20px;border-top:1px solid var(--line-2);display:flex;gap:8px;justify-content:flex-end"><button onClick="{{ closeModal }}" style="border:1px solid var(--line);background:var(--surface);color:var(--ink-2);padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer">キャンセル</button><button onClick="{{ createProject }}" style="background:var(--accent);color:#fff;border:1px solid var(--accent);padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--accent-d)">登録</button></div>
+      </div>
+    </div>
+  </sc-if>
+
+  <div style="position:fixed;right:20px;bottom:20px;display:flex;flex-direction:column;gap:8px;z-index:60;pointer-events:none">
+    <sc-for list="{{ toasts }}" as="t" hint-placeholder-count="0"><div style="pointer-events:auto;min-width:260px;max-width:380px;padding:11px 14px;border-radius:9px;background:var(--toast-bg);color:#fff;font-size:12.5px;box-shadow:0 8px 24px rgba(0,0,0,.25);display:flex;gap:10px;align-items:flex-start;animation:toastIn .2s ease-out;border-left:3px solid {{ t.color }}"><span style="flex:1;line-height:1.5">{{ t.text }}</span><button onClick="{{ t.close }}" style="background:none;border:none;color:#9AA7B8;cursor:pointer;padding:0;font-size:14px;line-height:1">×</button></div></sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;comfortable&quot;,&quot;compact&quot;],&quot;default&quot;:&quot;comfortable&quot;,&quot;tsType&quot;:&quot;'comfortable' | 'compact'&quot;,&quot;section&quot;:&quot;表示&quot;},&quot;currency&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;USD&quot;,&quot;JPY&quot;],&quot;default&quot;:&quot;USD&quot;,&quot;tsType&quot;:&quot;'USD' | 'JPY'&quot;,&quot;section&quot;:&quot;表示&quot;}}">
+class Component extends DCLogic {
+  constructor(p){ super(p);
+    this.state={ready:false,toasts:[],typing:false,modal:null,np:{title:'',owner:'u3',risk:'R2',summary:''},reason:'',chatInput:'',q:'',projFilter:'all',taskFilter:'all',knFilter:'pending',auditType:'all',auditQ:'',range:'7d',syncing:{}};
+    this.D=null;
+    import('./agentos-data.js').then(D=>{this.D=D;let saved=null;try{saved=JSON.parse(localStorage.getItem(D.KEY));}catch(e){}
+      const data=(saved&&saved.v===D.VERSION)?saved.data:D.seed();this.setState(Object.assign({ready:true},data));});
+  }
+  PERSIST(){return ['users','projects','tasks','approvals','knowledge','audit','integrations','agents','router','chat','theme','role','screen','openGroups','selProject','selTask','selApproval','webhooks','skills','usage'];}
+  componentDidMount(){this.applyDoc();}
+  componentDidUpdate(){this.applyDoc();}
+  setState(u,cb){super.setState(u,()=>{this.applyDoc();if(this.state.ready&&this.D)this.persist();if(cb)cb();});}
+  applyDoc(){const d=document.documentElement;d.dataset.theme=this.state.theme||'light';d.dataset.density=this.props.density??'comfortable';}
+  persist(){const data={};this.PERSIST().forEach(k=>data[k]=this.state[k]);try{localStorage.setItem(this.D.KEY,JSON.stringify({v:this.D.VERSION,data}));}catch(e){}}
+  tone(n){return n==='muted'?{fg:'var(--ink-2)',bg:'var(--subtle)'}:{fg:`var(--${n})`,bg:`var(--${n}-bg)`};}
+  risk(r){return this.tone(this.D.RISK[r]||'muted');}
+  me(){const s=this.state;const u=s.users.find(u=>u.role===s.role)||{name:s.role+'（仮）',dept:'—'};return Object.assign({},u,{initial:u.name[0],roleShort:s.role.toUpperCase().replace('KNOWLEDGE CURATOR','CURATOR').replace('ADMINISTRATOR','ADMIN')});}
+  can(a){return this.D.PERM[a].includes(this.state.role);}
+  deny(a,label){this.toast(`Policy: DENY — ロール「${this.state.role}」に「${label}」の権限がありません`,'red');this.setState(s=>({audit:[this.ev(s,'policy_denied','policy',a,`${label} → DENY（Role: ${s.role}）`),...s.audit]}));}
+  ev(s,type,resType,resId,summary,actor,actorType){const prev=s.audit[0]?s.audit[0].hash:'00000000';const who=actor||this.me().name;return {id:'AE-'+String(9001+s.audit.length).padStart(5,'0'),at:this.D.now(),actorType:actorType||(actor?'agent':'user'),actor:who,type,resType,resId,summary,prev,hash:this.D.hash(prev+type+resId+summary+Date.now())};}
+  toast(text,color){const id=Date.now()+Math.random();this.setState(s=>({toasts:[...s.toasts,{id,text,color:color||'accent'}]}));setTimeout(()=>this.setState(s=>({toasts:s.toasts.filter(t=>t.id!==id)})),4200);}
+  go(screen){this.setState({screen});}
+  fmtCost(c){return (this.props.currency??'USD')==='JPY'?'¥'+Math.round(c*150).toLocaleString():'$'+c.toFixed(2);}
+  fmtTok(n){return n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e3?Math.round(n/1e3)+'k':String(n);}
+  chip(label,n,on,set){return {label,n,set,border:on?'var(--accent)':'var(--line)',bg:on?'var(--amber-bg)':'var(--surface)',fg:on?'var(--amber)':'var(--ink-2)'};}
+  // --- domain actions
+  transition(pk,t){if(!this.can('transition'))return this.deny('transition','State Transition');
+    if(t.approval){const exists=this.state.approvals.find(a=>a.pk===pk&&a.type===t.approval&&['requested','in_review'].includes(a.status));if(exists){this.toast(`${exists.id} が承認待ちです（${t.risk}）。承認後に遷移します`,'amber');return this.setState({screen:'approvals',selApproval:exists.id});}
+      const id='APR-0'+(109+this.state.approvals.length);const p=this.state.projects.find(x=>x.key===pk);
+      this.setState(s=>({approvals:[{id,pk,type:t.approval,title:t.label+(t.approval==='project_gate'?'（企画審査Gate）':'（本番Gate）'),risk:t.risk,status:'requested',by:this.me().name,at:this.D.now(),target:'Project '+pk+(p?' / '+p.repo:''),evidence:t.approval==='project_gate'?['Idea構造化: Notion Idea','期待効果・MVP範囲を記載']:['E2E / Security Scan 結果','Rollback手順','UAT承認'],steps:t.approval==='project_gate'?[{role:'Approver',who:'山田 太郎',st:'pending',at:''}]:[{role:'Reviewer',who:'高橋 美咲',st:'pending',at:''},{role:'Approver',who:'山田 太郎',st:'pending',at:''}],log:[]},...s.approvals],audit:[this.ev(s,'approval_request','approval',id,`${t.label} (${t.risk}) → APPROVAL_REQUIRED`),...s.audit],screen:'approvals',selApproval:id}));
+      return this.toast(`Policy: APPROVAL_REQUIRED — ${id} を生成しました（${t.risk}）`,'amber');}
+    this.setState(s=>({projects:s.projects.map(p=>p.key===pk?Object.assign({},p,{status:t.to}):p),audit:[this.ev(s,'state_transition','project',pk,`${p0(s,pk)} → ${t.to}（${t.label}）`),...s.audit]}));this.toast(`${pk}: ${t.label} を実行しました`,'green');
+    function p0(s,k){const p=s.projects.find(x=>x.key===k);return p?p.status:'?';}}
+  decide(id,action){const s=this.state;const a=s.approvals.find(x=>x.id===id);if(!a)return;const step=a.steps.find(st=>st.st==='pending');const need=action==='approved'?(step&&step.role==='Reviewer'?'review':'approve'):'review';if(!this.can(need))return this.deny(need,action==='approved'?'承認':action==='returned'?'差戻し':'却下');
+    if(!s.reason.trim())return this.toast('判断理由を入力してください（Auditに記録されます）','red');
+    const label={approved:'承認',returned:'差戻し',rejected:'却下'}[action];const me=this.me().name;const t=this.D.now();
+    this.setState(st=>{let steps=a.steps.map(x=>x);let status=a.status;let projects=st.projects,tasks=st.tasks;
+      if(action==='approved'){const i=steps.findIndex(x=>x.st==='pending');if(i>=0)steps[i]=Object.assign({},steps[i],{st:'approved',who:me,at:t});if(steps.every(x=>x.st==='approved')){status='approved';
+          if(a.type==='project_gate')projects=projects.map(p=>p.key===a.pk?Object.assign({},p,{status:'approved'}):p);
+          if(a.type==='production_release'){projects=projects.map(p=>p.key===a.pk?Object.assign({},p,{status:'production'}):p);tasks=tasks.map(x=>x.blockedBy===id?Object.assign({},x,{status:'ready',blockedBy:null}):x);}
+          if(a.type==='github_merge')tasks=tasks.map(x=>x.id==='T-1019'&&a.pk===x.pk?Object.assign({},x,{status:'completed'}):x);}else status='in_review';}
+      else{status=action;const i=steps.findIndex(x=>x.st==='pending');if(i>=0)steps[i]=Object.assign({},steps[i],{st:action,who:me,at:t});}
+      const na=Object.assign({},a,{status,steps,log:[...a.log,{at:t,who:me,action,reason:st.reason}]});
+      return {approvals:st.approvals.map(x=>x.id===id?na:x),projects,tasks,reason:'',audit:[this.ev(st,'approval_action','approval',id,`${label}: ${st.reason.slice(0,40)}`),...st.audit]};});
+    this.toast(`${id} を${label}しました（Audit記録済）`,action==='approved'?'green':action==='returned'?'amber':'red');}
+  knAct(id,status){if(!this.can('promote'))return this.deny('promote','Knowledge昇格');this.setState(s=>({knowledge:s.knowledge.map(k=>k.id===id?Object.assign({},k,{status,notion:status==='promoted'?'notion://knowledge/'+k.type.toLowerCase()+'/'+id:undefined}):k),audit:[this.ev(s,'knowledge','knowledge',id,status==='promoted'?'Knowledge候補をNotionへ昇格':'Knowledge候補を却下'),...s.audit]}));this.toast(status==='promoted'?`${id} をNotion Knowledge DBへ反映しました`:`${id} を却下しました`,status==='promoted'?'green':'red');}
+  taskAct(id,act){if(!this.can('run'))return this.deny('run',act==='retry'?'Task Retry':'Task Cancel');const t=this.state.tasks.find(x=>x.id===id);if(!t)return;
+    if(act==='cancel'){if(['completed','cancelled'].includes(t.status))return this.toast('終了済みのTaskは取消できません','amber');this.setState(s=>({tasks:s.tasks.map(x=>x.id===id?Object.assign({},x,{status:'cancelled'}):x),audit:[this.ev(s,'task_cancel','task',id,'Task を Cancel'),...s.audit]}));return this.toast(`${id} を取消しました`,'amber');}
+    if(t.status==='blocked')return this.toast(`${id} は ${t.blockedBy} の承認待ちです（Policy: Retry禁止）`,'amber');if(t.status==='running')return this.toast(`${id} は実行中です`,'amber');
+    if(t.err&&/Validation/.test(t.err)){this.toast('Validation Error は Retry 対象外です。戦略変更または Human Escalation へ','red');return;}
+    this.setState(s=>({tasks:s.tasks.map(x=>x.id===id?Object.assign({},x,{status:'running',err:null,at:this.D.now()}):x),audit:[this.ev(s,'task_run','task',id,'Retry / Resume を開始',t.agent),...s.audit]}));this.toast(`${id} を再実行しています…`,'accent');
+    setTimeout(()=>{const add=Math.round(20000+Math.random()*60000);this.setState(s=>({tasks:s.tasks.map(x=>x.id===id?Object.assign({},x,{status:'completed',tin:x.tin+add,tout:x.tout+Math.round(add*.2),cost:+(x.cost+add*0.000006).toFixed(2),lat:Math.round(8000+Math.random()*30000)}):x),audit:[this.ev(s,'task_completed','task',id,'Agent Run 完了',t.agent),...s.audit]}));this.toast(`${id} が完了しました`,'green');},2600);}
+  sync(id){if(!this.can('sync'))return this.deny('sync','Integration Sync');this.setState(s=>({syncing:Object.assign({},s.syncing,{[id]:true})}));setTimeout(()=>this.setState(s=>({syncing:Object.assign({},s.syncing,{[id]:false}),integrations:s.integrations.map(i=>i.id===id?Object.assign({},i,{last:this.D.now(),status:'connected'}):i),audit:[this.ev(s,'sync','integration',id,'手動同期 完了',id+' sync','service'),...s.audit]})),1600);}
+  createProject(fromIdea){const np=fromIdea||this.state.np;if(!this.can('create'))return this.deny('create','Project作成');if(!np.title.trim())return this.toast('案件名を入力してください','red');
+    const key='DX-2026-00'+(52+this.state.projects.filter(p=>p.key.startsWith('DX-2026')).length);
+    this.setState(s=>({projects:[{key,title:np.title,status:'idea',owner:np.owner,risk:np.risk,summary:np.summary,created:this.D.now().slice(0,10),kpis:[],repo:'—',notion:'notion://ideas/'+key,slack:'#dx-'+key.slice(-4)},...s.projects],audit:[this.ev(s,'project_created','project',key,'Project ID 発番 / Idea 登録'),...s.audit],modal:null,np:{title:'',owner:'u3',risk:'R2',summary:''},screen:'projects',selProject:key,projFilter:'all'}));this.toast(`${key} を発番し、Idea として登録しました`,'green');}
+  send(text){const msg=(text??this.state.chatInput).trim();if(!msg)return;const D=this.D;this.setState(s=>{const c=s.chat;const topic=c.topic<0?D.SCENARIOS.findIndex(x=>x.match.test(msg)):c.topic;return {chatInput:'',typing:true,chat:Object.assign({},c,{topic,messages:[...c.messages,{role:'user',text:msg}]})};});
+    setTimeout(()=>this.setState(s=>{const c=s.chat;const sc=D.SCENARIOS[c.topic];const step=c.step+1;let m;
+      if(step===1)m={role:'ai',text:sc.clarify};else if(step===2)m={role:'ai',text:'ありがとうございます。相談内容をIdeaとして構造化しました。内容を確認し、問題なければ「正式案件化」で Project ID を発番できます（企画審査Gateで Approver が承認します）。',idea:sc.idea,ideaTitle:sc.title,intent:sc.intent,risk:sc.risk};
+      else m={role:'ai',text:'補足を反映しました。Notion の Idea ページを更新しています。案件化はいつでも上のカードから実行できます。'};
+      const audit=step===1?[this.ev(s,'request','request','R-'+(2100+c.messages.length),`Intent分類: ${sc.intent} / Risk候補 ${sc.risk}`,'Intent Router'),...s.audit]:s.audit;
+      return {typing:false,audit,chat:Object.assign({},c,{step,messages:[...c.messages,m]})};}),1100);}
+  renderVals(){const s=this.state,D=this.D;if(!s.ready)return {ready:false,navGroups:[],roles:[],title:'Mirai AgentOS',subtitle:'読み込み中…',me:{initial:'…',name:'',dept:'',roleShort:''},toasts:[],themeIcon:'☀',themeLabel:'Light',q:'',role:'',hasPending:false,isDashboard:false,kpis:[]};
+    const me=this.me();const role=s.role;const roles=D.ROLES;
+    const pendA=s.approvals.filter(a=>['requested','in_review'].includes(a.status));const knPend=s.knowledge.filter(k=>k.status==='pending');
+    const navGroups=D.NAV.map(g=>{const open=s.openGroups[g.id]!==false;return {label:g.label,open,rot:open?'0deg':'-90deg',toggle:()=>this.setState(st=>({openGroups:Object.assign({},st.openGroups,{[g.id]:!open})})),items:g.items.filter(it=>!it.perm||this.can(it.perm)).map(it=>{const active=s.screen===it.key;const badge=it.key==='approvals'?pendA.length:it.key==='knowledge'?knPend.length:0;return {label:it.label,ico:it.ico,active,go:()=>this.go(it.key),fg:active?'var(--side-active)':'var(--side-fg)',bg:active?'var(--side-2)':'transparent',hoverBg:active?'var(--side-2)':'var(--side-hover)',hasBadge:badge>0,badge,badgeBg:it.key==='approvals'?'var(--red-2)':'var(--side-hover)',badgeFg:it.key==='approvals'?'#fff':'var(--side-fg)'};})};});
+    const [title,subtitle]=D.TITLES[s.screen]||['',''];const st=x=>{const [label,tone]=x;return Object.assign({st:label},this.tone(tone));};
+    const uname=id=>{const u=s.users.find(u=>u.id===id);return u?u.name:'—';};const udept=id=>{const u=s.users.find(u=>u.id===id);return u?u.dept:'—';};
+    const q=s.q.trim().toLowerCase();
+    // dashboard
+    const active=s.projects.filter(p=>['approved','active','staging'].includes(p.status)).length;const running=s.tasks.filter(t=>t.status==='running').length;const cost=s.tasks.reduce((a,t)=>a+t.cost,0)+s.usage.reduce((a,u)=>a+u.cost,0);
+    const kpis=[{label:'進行中案件',value:active,sub:`全 ${s.projects.length} 件 · 本番 ${s.projects.filter(p=>p.status==='production').length}`,subColor:'var(--muted)',color:'var(--blue-2)',go:()=>this.go('projects')},{label:'承認待ち',value:pendA.length,sub:pendA.some(a=>a.risk==='R4')?'R4 本番リリース含む':'高リスクなし',subColor:pendA.some(a=>a.risk==='R4')?'var(--red)':'var(--green)',color:'var(--red-2)',go:()=>this.go('approvals')},{label:'実行中 Agent Run',value:running,sub:`Blocked ${s.tasks.filter(t=>t.status==='blocked').length} · Failed ${s.tasks.filter(t=>t.status==='failed').length}`,subColor:'var(--muted)',color:'var(--purple)',go:()=>this.go('tasks')},{label:'AIコスト（今月）',value:this.fmtCost(cost),sub:`${this.fmtTok(s.usage.reduce((a,u)=>a+u.tok,0))} tokens · 3 providers`,subColor:'var(--muted)',color:'var(--accent)',go:()=>this.go('observability')}];
+    const order=['idea','proposed','approved','active','staging','production','suspended','closed','archived'];const pipeline=order.map(k=>({k,n:s.projects.filter(p=>p.status===k).length})).filter(x=>x.n).map(x=>Object.assign({label:D.STATUS[x.k][0],n:x.n,pct:x.n/s.projects.length*100,color:this.tone(D.STATUS[x.k][1]).fg}));
+    const projRow=p=>Object.assign({key:p.key,title:p.title,phase:D.PHASES[D.STATUS_PHASE[p.status]],ownerName:uname(p.owner),risk:p.risk,open:()=>this.setState({screen:'projects',selProject:p.key}),rowBg:s.selProject===p.key?'var(--subtle)':'transparent'},st(D.STATUS[p.status]),{riskFg:this.risk(p.risk).fg,riskBg:this.risk(p.risk).bg});
+    const taskRow=t=>Object.assign({id:t.id,pk:t.pk,title:t.title,agent:t.agent,model:t.model,costFmt:this.fmtCost(t.cost),anim:t.status==='running'?'pulse 1.2s infinite':'none',open:()=>this.setState({screen:'tasks',selTask:t.id}),rowBg:s.selTask===t.id?'var(--subtle)':'transparent'},st(D.TASK_ST[t.status]));
+    const aprRow=a=>Object.assign({id:a.id,pk:a.pk,title:a.title,risk:a.risk,by:a.by,at:a.at,open:()=>this.setState({screen:'approvals',selApproval:a.id,reason:''}),rowBg:s.selApproval===a.id?'var(--subtle)':'transparent'},st(D.APR_ST[a.status]),{riskFg:this.risk(a.risk).fg,riskBg:this.risk(a.risk).bg});
+    const maxTok=Math.max(...s.usage.map(u=>u.tok));const rf={'24h':.15,'7d':1,'30d':4.2}[s.range]||1;const usageRows=s.usage.map(u=>({p:u.p,costFmt:this.fmtCost(u.cost*(s.screen==='observability'?rf:1)),tokFmt:this.fmtTok(u.tok*(s.screen==='observability'?rf:1)),runs:Math.round(u.runs*(s.screen==='observability'?rf:1)),pct:u.tok/maxTok*100,color:u.color}));
+    const scoreColor=n=>n>=80?'var(--green)':n>=60?'var(--amber)':'var(--red)';
+    // projects
+    const pf=s.projFilter;const filtered=s.projects.filter(p=>(pf==='all'||(pf==='live'?['approved','active','staging'].includes(p.status):pf==='pre'?['idea','proposed'].includes(p.status):pf==='prod'?p.status==='production':['suspended','closed','archived'].includes(p.status)))&&(!q||(p.key+p.title+p.summary).toLowerCase().includes(q)));
+    const cnt=f=>s.projects.filter(p=>f==='all'||(f==='live'?['approved','active','staging'].includes(p.status):f==='pre'?['idea','proposed'].includes(p.status):f==='prod'?p.status==='production':['suspended','closed','archived'].includes(p.status))).length;
+    const projChips=[['all','すべて'],['pre','Idea / 審査'],['live','進行中'],['prod','本番'],['done','保留 / 完了']].map(([k,l])=>this.chip(l,cnt(k),pf===k,()=>this.setState({projFilter:k})));
+    const P=s.projects.find(p=>p.key===s.selProject);let proj=null;if(P){const cur=D.STATUS_PHASE[P.status];const gateApr=(type)=>s.approvals.find(a=>a.pk===P.key&&a.type===type);
+      proj=Object.assign({key:P.key,title:P.title,summary:P.summary,risk:P.risk,ownerName:uname(P.owner),ownerDept:udept(P.owner),repo:P.repo,notion:P.notion,slack:P.slack,created:P.created,riskFg:this.risk(P.risk).fg,riskBg:this.risk(P.risk).bg,hasKpis:P.kpis.length>0,kpiRows:P.kpis.map(k=>{const pct=k.t===0?(k.c===0?100:30):Math.min(100,k.c/k.t*100);return {n:k.n,t:k.t,c:k.c,u:k.u,pct,color:pct>=100?'var(--green-2)':pct>=50?'var(--blue-2)':'var(--amber)'};}),
+        phases:D.PHASES.map((label,i)=>{const done=i<cur,now=i===cur;const gate=i===1||i===5;const ap=i===1?gateApr('project_gate'):i===5?gateApr('production_release'):null;return {n:i+1,label,gate,done,bg:done?'var(--green-2)':now?'var(--accent)':'var(--surface)',fg:done||now?'#fff':'var(--muted)',border:done?'var(--green-2)':now?'var(--accent)':'var(--line)',line:i<cur?'var(--green-2)':'var(--line-2)',weight:now?600:500,textColor:done||now?'var(--ink)':'var(--muted)',note:ap?`${ap.id} · ${D.APR_ST[ap.status][0]}`:(now?'現在':(done?'完了':''))};}),
+        tasks:s.tasks.filter(t=>t.pk===P.key).map(taskRow),taskCount:s.tasks.filter(t=>t.pk===P.key).length,
+        transitions:(D.TRANSITIONS[P.status]||[]).map(t=>({label:t.label,risk:t.risk,run:()=>this.transition(P.key,t),border:t.approval?'var(--accent)':'var(--line)',bg:t.approval?'var(--amber-bg)':'var(--surface)',fg:t.approval?'var(--amber)':t.to==='suspended'?'var(--red)':'var(--ink-2)'})),noTransitions:(D.TRANSITIONS[P.status]||[]).length===0},st(D.STATUS[P.status]));}
+    // tasks
+    const tf=s.taskFilter;const tks=s.tasks.filter(t=>(tf==='all'||(tf==='live'?['running','ready','review','pending'].includes(t.status):tf==='blocked'?['blocked','failed'].includes(t.status):['completed','cancelled'].includes(t.status)))&&(!q||(t.id+t.title+t.pk+t.agent).toLowerCase().includes(q)));
+    const tcnt=f=>s.tasks.filter(t=>f==='all'||(f==='live'?['running','ready','review','pending'].includes(t.status):f==='blocked'?['blocked','failed'].includes(t.status):['completed','cancelled'].includes(t.status))).length;
+    const taskChips=[['all','すべて'],['live','実行中 / 待機'],['blocked','Blocked / Failed'],['done','完了']].map(([k,l])=>this.chip(l,tcnt(k),tf===k,()=>this.setState({taskFilter:k})));
+    const T=s.tasks.find(t=>t.id===s.selTask);let task=null;if(T){const dcol={PERMIT:'var(--green)',DENY:'var(--red)',APPROVAL_REQUIRED:'var(--amber)'};const n=T.id.slice(2);
+      task=Object.assign({id:T.id,pk:T.pk,title:T.title,at:T.at,agent:T.agent,provider:T.provider,model:T.model,tinFmt:this.fmtTok(T.tin),toutFmt:this.fmtTok(T.tout),costFmt:this.fmtCost(T.cost),latFmt:(T.lat/1000).toFixed(1)+' s',hasErr:!!T.err,err:T.err||'',isBlocked:T.status==='blocked',blockedBy:T.blockedBy||'',openBlocker:()=>this.setState({screen:'approvals',selApproval:T.blockedBy}),
+        trace:[['R-'+(1000+ +n),'request'],['PL-'+n,'plan'],[T.id,'task'],['AR-'+n+'a','agent_run'],['ART-'+n,'artifact'],[T.blockedBy||'—','approval']].map(([t,k],i)=>({t,bg:i===2?'var(--accent)':'var(--subtle)',fg:i===2?'#fff':'var(--ink-2)'})),
+        tools:T.tools.map(([nm,r,d])=>({n:nm,r,d,riskFg:this.risk(r).fg,riskBg:this.risk(r).bg,dFg:dcol[d]})),retry:()=>this.taskAct(T.id,'retry'),cancel:()=>this.taskAct(T.id,'cancel')},st(D.TASK_ST[T.status]));}
+    // approvals
+    const A=s.approvals.find(a=>a.id===s.selApproval);let apr=null;if(A){const scol={approved:'var(--green)',pending:'var(--amber)',rejected:'var(--red)',returned:'var(--amber)'};const slab={approved:'承認',pending:'待ち',rejected:'却下',returned:'差戻し'};const isOpen=['requested','in_review'].includes(A.status);const step=A.steps.find(x=>x.st==='pending');
+      apr=Object.assign({id:A.id,pk:A.pk,title:A.title,risk:A.risk,by:A.by,at:A.at,type:A.type,target:A.target,evidence:A.evidence,riskFg:this.risk(A.risk).fg,riskBg:this.risk(A.risk).bg,isOpen,hasLog:A.log.length>0,steps:A.steps.map(x=>({role:x.role,who:x.who,at:x.at,color:scol[x.st],label:slab[x.st]})),log:A.log.map(l=>({at:l.at,who:l.who,reason:l.reason,color:scol[l.action],label:slab[l.action]})),
+        approve:()=>this.decide(A.id,'approved'),return:()=>this.decide(A.id,'returned'),reject:()=>this.decide(A.id,'rejected'),policyNote:step?`現在の Step は ${step.role}。${A.risk} は Human Approval 必須`:'—'},st(D.APR_ST[A.status]));}
+    // knowledge
+    const kf=s.knFilter;const knChips=[['pending','レビュー待ち'],['promoted','Notion反映済'],['rejected','却下']].map(([k,l])=>this.chip(l,s.knowledge.filter(x=>x.status===k).length,kf===k,()=>this.setState({knFilter:k})));
+    const knRows=s.knowledge.filter(k=>k.status===kf).map(k=>Object.assign({id:k.id,title:k.title,type:k.type,pk:k.pk,score:k.score,summary:k.summary,src:k.src,dup:k.dup,dupColor:/重複なし/.test(k.dup)?'var(--green)':'var(--amber)',scoreColor:scoreColor(k.score),isPending:k.status==='pending',hasNotion:!!k.notion,notion:k.notion||'',promote:()=>this.knAct(k.id,'promoted'),reject:()=>this.knAct(k.id,'rejected')},st(D.KN_ST[k.status])));
+    // audit
+    const atone={policy_denied:'red',task_failed:'red',approval_action:'green',approval_request:'amber',policy_decision:'amber',tool_call:'blue',knowledge:'purple',user_login:'green',state_transition:'blue',project_created:'blue',request:'blue',task_run:'purple',task_completed:'green',task_cancel:'muted',sync:'muted',webhook:'muted',backup:'muted'};
+    const types=[...new Set(s.audit.map(e=>e.type))].sort();const aq=s.auditQ.trim().toLowerCase();
+    const auditList=s.audit.filter(e=>(s.auditType==='all'||e.type===s.auditType)&&(!aq||(e.actor+e.resId+e.summary+e.resType).toLowerCase().includes(aq)));
+    const auditRows=auditList.map(e=>Object.assign({},e,this.tone(atone[e.type]||'muted')));
+    // integrations
+    const integRows=s.integrations.map(i=>{const sy=s.syncing[i.id];return {name:i.name,role:i.role,initial:i.name[0],detail:i.detail,note:i.note,last:i.last,fg:sy?'var(--blue)':i.status==='connected'?'var(--green)':'var(--amber)',stLabel:sy?'同期中':i.status==='connected'?'Connected':'要確認',anim:sy?'pulse 1s infinite':'none',btn:sy?'同期中…':'今すぐ同期',sync:()=>this.sync(i.id)};});
+    const wtone={processed:['処理済','green'],human_review:['Human Review','amber'],failed:['失敗','red']};const webhookRows=s.webhooks.map(([id,src,ev,payload,stt])=>Object.assign({id,src,ev,payload},st(wtone[stt]||['—','muted'])));
+    // observability
+    const rangeChips=[['24h','24時間'],['7d','7日'],['30d','30日']].map(([k,l])=>this.chip(l,'',s.range===k,()=>this.setState({range:k})));
+    const denied=s.audit.filter(e=>e.type==='policy_denied').length;
+    const obsKpis=[{label:'Agent Runs',value:Math.round(237*rf),metric:'agentos_agent_runs_total',color:'var(--purple)'},{label:'Queue Depth',value:s.tasks.filter(t=>['ready','pending','running'].includes(t.status)).length,metric:'agentos_task_queue_depth',color:'var(--blue-2)'},{label:'AI Cost',value:this.fmtCost(s.usage.reduce((a,u)=>a+u.cost,0)*rf),metric:'agentos_model_cost_total',color:'var(--accent)'},{label:'API p95',value:(0.42*(rf>1?1.1:1)).toFixed(2)+'s',metric:'agentos_http_request_duration_seconds',color:'var(--green-2)'}];
+    const rdef=[['completed','green'],['running','purple'],['review','blue'],['blocked','amber'],['failed','red'],['cancelled','muted']];const runDist=rdef.map(([k,c])=>({label:D.TASK_ST[k][0],n:s.tasks.filter(t=>t.status===k).length,color:this.tone(c).fg})).filter(x=>x.n).map(x=>Object.assign(x,{pct:x.n/s.tasks.length*100}));
+    const riskDist=['R1','R2','R3','R4'].map(r=>{const n=pendA.filter(a=>a.risk===r).length;return {risk:r,n,pct:pendA.length?n/pendA.length*100:0,fg:this.risk(r).fg,bg:this.risk(r).bg};});
+    // agents
+    const canA=this.can('agents');const agentRows=s.agents.map(a=>({name:a.name,duty:a.duty,skills:a.skills,model:a.model,togBg:a.on?'var(--green-2)':'var(--line)',knob:a.on?'19px':'3px',toggle:()=>{if(!canA)return this.deny('agents','Agent設定変更');this.setState(st=>({agents:st.agents.map(x=>x.id===a.id?Object.assign({},x,{on:!x.on}):x),audit:[this.ev(st,'agent_config','agent',a.id,(a.on?'無効化':'有効化')),...st.audit]}));},setModel:e=>{const v=e.target.value;if(!canA)return this.deny('agents','Agent設定変更');this.setState(st=>({agents:st.agents.map(x=>x.id===a.id?Object.assign({},x,{model:v}):x)}));}}));
+    const routerRows=s.router.map((r,i)=>({cat:r.cat,model:r.model,set:e=>{const v=e.target.value;if(!canA)return this.deny('agents','Model Router変更');this.setState(st=>({router:st.router.map((x,j)=>j===i?Object.assign({},x,{model:v}):x),audit:[this.ev(st,'router_config','router',r.cat,`→ ${v}`),...st.audit]}));}}));
+    const devM=(s.router[2]||{}).model,revM=(s.router[3]||{}).model;const same=devM&&revM&&devM.split(' ')[0]===revM.split(' ')[0];
+    const stone={approved:['approved','green'],draft:['draft','amber'],deprecated:['deprecated','muted']};const skillRows=s.skills.map(([id,v,agent,r,stt])=>Object.assign({id,v,agent,risk:r,riskFg:this.risk(r).fg,riskBg:this.risk(r).bg},st(stone[stt])));
+    // users
+    const canU=this.can('users');const rdesc={Administrator:'基盤・設定・Integration・監視',Developer:'設計・実装・Test・PR（R2まで）',Reviewer:'設計・Code・Security Review',Approver:'Gate承認 / 差戻し / 却下','Knowledge Curator':'Knowledge候補の品質確認・昇格',Viewer:'参照のみ'};
+    const roleCards=roles.map(r=>({role:r,n:s.users.filter(u=>u.role===r).length,desc:rdesc[r]}));
+    const userRows=s.users.map(u=>({id:u.id,name:u.name,dept:u.dept,role:u.role,last:u.last,initial:u.name[0],setRole:e=>{const v=e.target.value;if(!canU)return this.deny('users','ロール変更');this.setState(st=>({users:st.users.map(x=>x.id===u.id?Object.assign({},x,{role:v}):x),audit:[this.ev(st,'role_change','user',u.id,`${u.name}: ${u.role} → ${v}`),...st.audit]}));this.toast(`${u.name} のロールを ${v} に変更しました`,'green');}}));
+    // chat
+    const messages=s.chat.messages.map(m=>{const ai=m.role==='ai';return {text:m.text,justify:ai?'flex-start':'flex-end',bg:ai?'var(--subtle)':'var(--accent)',fg:ai?'var(--ink)':'#fff',border:ai?'var(--line-2)':'var(--accent)',hasIdea:!!m.idea,idea:(m.idea||[]).map(([k,v])=>({k,v})),ideaTitle:m.ideaTitle||'',intent:m.intent||'',risk:m.risk||'',riskFg:this.risk(m.risk||'R1').fg,riskBg:this.risk(m.risk||'R1').bg,promote:()=>this.createProject({title:m.ideaTitle,owner:me.id||'u3',risk:m.risk,summary:(m.idea||[]).slice(0,3).map(x=>x[1]).join('。')})};});
+    const cstep=s.chat.step;const chatSteps=['相談を入力','AIが追加質問で整理','Idea構造化（Notion記録）','正式案件化（Project ID発番）','企画審査Gateで承認'].map((label,i)=>{const done=i<Math.min(cstep,2)||(i===2&&cstep>=2);const now=i===Math.min(cstep,2)&&!done;return {n:i+1,label,fg:done||now?'var(--ink)':'var(--muted)',bg:done?'var(--green-2)':now?'var(--accent)':'var(--subtle)',numFg:done||now?'#fff':'var(--muted)'};});
+    const quickPrompts=['現場写真の整理に毎週3時間かかっている','工事日報の作成を自動化したい','過去の積算根拠を素早く探したい'].map(text=>({text,use:()=>this.send(text)}));
+    return {ready:true,navGroups,roles,role,me,title,subtitle,q:s.q,setQ:e=>this.setState({q:e.target.value}),searchKey:e=>{if(e.key==='Enter')this.go('projects');},setRole:e=>{const v=e.target.value;this.setState(st=>({role:v,screen:(st.screen==='users'&&v!=='Administrator')?'dashboard':st.screen,audit:[this.ev(st,'user_login','session','authentik',`ロール切替: ${v}（OIDC）`,(st.users.find(u=>u.role===v)||{name:v}).name,'user'),...st.audit]}));this.toast(`ロールを ${v} に切り替えました`,'accent');},
+      hasPending:pendA.length>0,pendingCount:pendA.length,goApprovals:()=>this.go('approvals'),toggleTheme:()=>this.setState(st=>({theme:st.theme==='dark'?'light':'dark'})),themeIcon:s.theme==='dark'?'☾':'☀',themeLabel:s.theme==='dark'?'Dark':'Light',
+      isDashboard:s.screen==='dashboard',isChat:s.screen==='chat',isProjects:s.screen==='projects',isTasks:s.screen==='tasks',isApprovals:s.screen==='approvals',isKnowledge:s.screen==='knowledge',isAudit:s.screen==='audit',isIntegrations:s.screen==='integrations',isObs:s.screen==='observability',isAgents:s.screen==='agents',isUsers:s.screen==='users',
+      kpis,pipeline,projectCount:s.projects.length,recentProjects:s.projects.slice(0,5).map(projRow),recentTasks:s.tasks.slice(0,4).map(taskRow),pendingApprovals:pendA.map(aprRow),noPending:pendA.length===0,usageRows,knPendingCount:knPend.length,knPendingRows:knPend.slice(0,3).map(k=>({type:k.type,title:k.title,score:k.score,scoreColor:scoreColor(k.score)})),goProjects:()=>this.go('projects'),goTasks:()=>this.go('tasks'),goObs:()=>this.go('observability'),goKnowledge:()=>this.go('knowledge'),
+      messages,typing:s.typing,chatInput:s.chatInput,setChatInput:e=>this.setState({chatInput:e.target.value}),chatKey:e=>{if(e.key==='Enter')this.send();},sendChat:()=>this.send(),quickPrompts,chatSteps,chatModel:(s.router[0]||{}).model||'DeepSeek-V3',resetChat:()=>this.setState({chat:D.seed().chat}),
+      projChips,projectRows:filtered.map(projRow),noProjects:filtered.length===0,hasProject:!!proj,proj:proj||{},openNewProject:()=>{if(!this.can('create'))return this.deny('create','Project作成');this.setState({modal:'new'});},
+      taskChips,taskRows:tks.map(taskRow),hasTask:!!task,task:task||{},
+      approvalRows:s.approvals.filter(a=>!q||(a.id+a.title+a.pk).toLowerCase().includes(q)).map(aprRow),hasApproval:!!apr,apr:apr||{},reason:s.reason,setReason:e=>this.setState({reason:e.target.value}),
+      knChips,knRows,curatorName:(s.users.find(u=>u.role==='Knowledge Curator')||{name:'—'}).name,
+      auditType:s.auditType,setAuditType:e=>this.setState({auditType:e.target.value}),auditTypes:[{v:'all',label:'すべての Event'}].concat(types.map(t=>({v:t,label:t}))),auditQ:s.auditQ,setAuditQ:e=>this.setState({auditQ:e.target.value}),auditRows,auditCount:auditList.length,
+      integRows,webhookRows,rangeChips,obsKpis,runDist,riskDist,deniedCount:denied,
+      agentRows,routerRows,models:D.MODELS,skillRows,agentPolicyNote:canA?'変更は Audit に記録されます':'閲覧のみ（Administrator / Developer が変更可）',routerWarn:same?'警告: 実装モデルと Review モデルが同系列です。Independence 評価により分離を推奨（FR-205）':'OK: 実装モデルと Review モデルは分離されています（FR-205）',routerWarnColor:same?'var(--red)':'var(--green)',
+      roleCards,userRows,resetAll:()=>{try{localStorage.removeItem(D.KEY);}catch(e){}this.setState(Object.assign({},D.seed(),{ready:true}));this.toast('デモデータを初期化しました','accent');},
+      modalNew:s.modal==='new',closeModal:()=>this.setState({modal:null}),stop:e=>e.stopPropagation(),np:s.np,npTitle:e=>this.setState(st=>({np:Object.assign({},st.np,{title:e.target.value})})),npSummary:e=>this.setState(st=>({np:Object.assign({},st.np,{summary:e.target.value})})),npOwner:e=>this.setState(st=>({np:Object.assign({},st.np,{owner:e.target.value})})),npRisk:e=>this.setState(st=>({np:Object.assign({},st.np,{risk:e.target.value})})),createProject:()=>this.createProject(),
+      toasts:s.toasts.map(t=>({text:t.text,color:`var(--${t.color==='accent'?'accent':t.color+'-2'})`,close:()=>this.setState(st=>({toasts:st.toasts.filter(x=>x.id!==t.id)}))}))};
   }
 }
-
-async function loadRequests() {
-  const { requests } = await api('/api/requests');
-  const tbody = document.querySelector('#request-table tbody');
-  tbody.innerHTML = requests.map((r) => `
-    <tr>
-      <td>${escapeHtml(r.request_code)}</td>
-      <td>${escapeHtml(r.title)}</td>
-      <td>${escapeHtml(r.status)}</td>
-      <td>${escapeHtml(r.requester_name)}</td>
-      <td>${r.status === 'submitted' ? `<button data-promote="${r.id}">Project昇格</button>` : ''}</td>
-    </tr>`).join('');
-  tbody.querySelectorAll('[data-promote]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      try {
-        await api(`/api/requests/${btn.dataset.promote}/promote`, { method: 'POST' });
-        await refreshAll();
-      } catch (err) {
-        document.getElementById('request-msg').textContent = err.message;
-        document.getElementById('request-msg').className = 'msg error';
-      }
-    });
-  });
-}
-
-async function loadProjects() {
-  const { projects } = await api('/api/projects');
-  document.querySelector('#project-table tbody').innerHTML = projects.map((p) => `
-    <tr><td>${escapeHtml(p.project_code)}</td><td>${escapeHtml(p.title)}</td><td>${escapeHtml(p.status)}</td></tr>
-  `).join('');
-}
-
-async function loadApprovals() {
-  const { approvals } = await api('/api/approvals');
-  const tbody = document.querySelector('#approval-table tbody');
-  tbody.innerHTML = approvals.map((a) => `
-    <tr>
-      <td>${escapeHtml(a.project_code)}</td>
-      <td>${escapeHtml(a.title)}</td>
-      <td>
-        <button data-decide="${a.id}" data-decision="approved">承認</button>
-        <button data-decide="${a.id}" data-decision="rejected">却下</button>
-      </td>
-    </tr>`).join('');
-  tbody.querySelectorAll('[data-decide]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      try {
-        await api(`/api/approvals/${btn.dataset.decide}/decide`, {
-          method: 'POST',
-          body: { decision: btn.dataset.decision },
-        });
-        await refreshAll();
-      } catch (err) {
-        document.getElementById('approval-msg').textContent = err.message;
-        document.getElementById('approval-msg').className = 'msg error';
-      }
-    });
-  });
-}
-
-async function refreshAll() {
-  await Promise.all([loadRequests(), loadProjects(), loadApprovals()]);
-}
-
-document.getElementById('request-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const title = document.getElementById('title').value;
-  const description = document.getElementById('description').value;
-  const msg = document.getElementById('request-msg');
-  try {
-    await api('/api/requests', { method: 'POST', body: { title, description } });
-    e.target.reset();
-    msg.textContent = '登録しました';
-    msg.className = 'msg ok';
-    await refreshAll();
-  } catch (err) {
-    msg.textContent = err.message;
-    msg.className = 'msg error';
-  }
-});
-
-requireLogin().then(refreshAll);
 </script>
 </body>
 </html>
