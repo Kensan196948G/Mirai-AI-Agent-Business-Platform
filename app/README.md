@@ -228,6 +228,16 @@ curl -X POST http://127.0.0.1:<PORT>/api/agent-runs \
 
 P1 の 3 Agent は A0〜A1（外部書き込みなし）のため既定ではゲートを設定していない。P2/P3 で外部への確定書き込み（A2）を追加する Skill に `approval_gate` を付ける。正式な業務承認（desknet's NEO）とは別のアプリ内承認である（ADR-001）。
 
+## 🧾 成果物の差分・履歴・版固定（C-15）
+
+| 仕組み | 内容 |
+|---|---|
+| 系譜 | 同じ Agent・種別・入力（`input_hash`）の成果物は前回 → 今回と結ばれ（`previous_artifact_id`, `lineage_version`）、Run 詳細の成果物カードに前回との差分（確認できた事実 / 不明点 / 仮定 / 根拠の追加・削除）を表示する |
+| 再実行 | Run 詳細の「同じ入力で再実行」（`POST /api/agent-runs/:id/rerun`）。終了した Run のみ。作成の検証・上限・監査は通常の作成と同じで、`rerun_of_run_id` に元 Run を残す |
+| 書き直し履歴 | 同一 Run 内で草案が書き直されると（Step の再試行等）、直前の内容を `artifact_revisions` に残す。`GET /api/artifacts/:id/history` で系譜と履歴を取得 |
+| 版固定 | レビュー済みにした時点の内容ハッシュを `reviewed_content_hash` に固定。以後の書き込みは拒否され、内容が変わっていれば `integrity=false`（画面に ⚠）で検出する |
+| 差分 API | `GET /api/artifacts/:id/diff[?against=<id>]`（既定は系譜の直前） |
+
 ## 🔀 並行実行制御（C-14）
 
 | 制御 | 内容 |

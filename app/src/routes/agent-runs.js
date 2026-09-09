@@ -40,8 +40,10 @@ router.get('/:id', requireAuth, async (req, res) => {
   if (!Number.isInteger(id)) return res.status(400).json({ error: '不正な id' });
   const { rows } = await getPool().query(
     `SELECT ar.*, u.name AS requested_by_name, p.project_code
+     , ro.run_code AS rerun_of_run_code
      FROM agent_runs ar JOIN users u ON u.id = ar.requested_by
      LEFT JOIN projects p ON p.id = ar.project_id
+     LEFT JOIN agent_runs ro ON ro.id = ar.rerun_of_run_id
      WHERE ar.id = $1`,
     [id],
   );
@@ -94,6 +96,32 @@ router.post('/:id/cancel', requireAuth, async (req, res) => {
     });
     res.json(result);
   } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+// 同じ入力で再実行する（系譜: rerun_of_run_id）。作成の検証・上限・監査は通常の作成と同じ。
+router.post('/:id/rerun', requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: '不正な id' });
+  try {
+    const result = await withTransaction(async (client) => {
+      const { rows } = await client.query(`SELECT id, run_code, agent_id, project_id, input_json, status FROM agent_runs WHERE id = $1`, [id]);
+      if (rows.length === 0) throw Object.assign(new Error('run が見つかりません'), { status: 404 });
+      if (!['completed', 'failed', 'cancelled'].includes(rows[0].status)) {
+        throw Object.assign(new Error(`終了した Run のみ再実行できます（現在: ${rows[0].status}）`), { status: 409 });
+      }
+      const run = await createRunForUser(client, { user: req.user, agentId: rows[0].agent_id, projectId: rows[0].project_id, input: rows[0].input_json, via: 'rerun' });
+      await client.query(`UPDATE agent_runs SET rerun_of_run_id = $1 WHERE id = $2`, [id, run.id]);
+      await recordAudit(client, {
+        actorId: req.user.id, actorType: 'user', actorName: req.user.name,
+        action: 'agent_run.rerun', resourceType: 'agent_run', resourceId: run.id, detail: { rerunOf: rows[0].run_code, runCode: run.run_code },
+      });
+      return { ...run, rerun_of_run_id: id };
+    });
+    res.status(201).json({ run: result });
+  } catch (err) {
+    if (err instanceof PolicyDeniedError) return res.status(err.code === 'concurrency' ? 409 : 403).json({ error: err.message });
     res.status(err.status || 500).json({ error: err.message });
   }
 });

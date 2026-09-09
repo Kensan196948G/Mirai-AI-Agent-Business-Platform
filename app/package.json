@@ -17,7 +17,7 @@
     "manage-sources": "node manage-sources.mjs",
     "start": "node src/server.js",
     "worker": "node src/agent-runtime/worker.js",
-    "test:unit": "node --test test/unit.test.mjs test/workflow.test.mjs test/audit.test.mjs test/llm.test.mjs test/skill-loader.test.mjs test/policy-engine.test.mjs test/agent-contract-chain.test.mjs test/skill-handlers.test.mjs test/source-ingest.test.mjs",
+    "test:unit": "node --test test/unit.test.mjs test/workflow.test.mjs test/audit.test.mjs test/llm.test.mjs test/skill-loader.test.mjs test/policy-engine.test.mjs test/agent-contract-chain.test.mjs test/skill-handlers.test.mjs test/source-ingest.test.mjs test/artifact-lineage.test.mjs",
     "test:e2e": "LLM_PROVIDER= LLM_API_KEY= AGENT_RUN_MAX_ACTIVE_PER_USER=100 AGENT_RUN_MAX_ACTIVE_TOTAL=100 node --test --test-concurrency=1 test/e2e.test.mjs test/agent-runtime.e2e.test.mjs",
     "test": "npm run test:unit"
   },

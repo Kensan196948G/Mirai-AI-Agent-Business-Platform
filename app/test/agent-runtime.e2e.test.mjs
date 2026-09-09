@@ -36,7 +36,7 @@ if (!/test/.test(process.env.DATABASE_URL)) {
 }
 
 const ALL_TABLES = [
-  'worker_heartbeats', 'artifact_citations', 'artifacts', 'effect_ledger', 'budget_reservations', 'run_events', 'agent_runs',
+  'artifact_revisions', 'worker_heartbeats', 'artifact_citations', 'artifacts', 'effect_ledger', 'budget_reservations', 'run_events', 'agent_runs',
   'source_records', 'agent_skill_bindings', 'skill_versions', 'agent_versions',
   'chat_messages', 'chat_conversations', 'task_tool_calls', 'tasks', 'knowledge_candidates',
   'approval_steps', 'approval_requests', 'project_kpis', 'projects', 'requests',
@@ -779,4 +779,71 @@ test('Lease 競合（C-14）: 2 つの Worker は同じ Run を取らず、期�
   const ok = await executeNextStep(c1.id, { workerId: 'wC' });
   assert.equal(ok.run.current_step, 1);
   await pool.query(`UPDATE agent_runs SET status = 'cancelled', finished_at = now() WHERE id = ANY($1::bigint[])`, [[c1.id, c2.id]]);
+});
+
+test('成果物の差分・履歴（C-15）: 再実行で系譜が結ばれ差分が出る。書き直しは履歴に残り、レビューで版が固定される', async () => {
+  const { callTool } = await import('../src/agent-runtime/tool-gateway.js');
+  const { rows: sv } = await pool.query(`SELECT * FROM skill_versions WHERE skill_id = 'evidence-backed-draft' LIMIT 1`);
+  const body = { agentId: 'technology-selection', input: { query: '系譜テスト' } };
+  const mk = async () => {
+    const c = await call('/api/agent-runs', { method: 'POST', cookie: adminCookie, body });
+    assert.equal(c.status, 201);
+    return (await pool.query(`SELECT * FROM agent_runs WHERE id = $1`, [c.data.run.id])).rows[0];
+  };
+  const write = (run, content, title = 't') => withTransaction((client) => callTool(client, { run, skillVersion: sv[0], toolName: 'artifact.write-draft', args: { kind: 'evidence_backed_draft', title, content } }));
+  const base = { findings: ['A', 'B'], sources: [{ source_record_id: 1 }], unknowns: ['u'], assumptions: [], requires_human_review: true };
+
+  // 1. 1 回目: 系譜 v1。同じ Run 内の書き直しは履歴（revision）に残る
+  const run1 = await mk();
+  const a1 = await write(run1, base);
+  assert.equal(a1.artifact.lineage_version, 1);
+  assert.equal(a1.artifact.previous_artifact_id, null);
+  await write(run1, { ...base, findings: ['A', 'B', 'B2'] }, 't-rewrite');
+  const h1 = await call(`/api/artifacts/${a1.artifact.id}/history`, { cookie: adminCookie });
+  assert.equal(h1.data.revisions.length, 1);
+  assert.deepEqual(h1.data.lineage.map((x) => x.lineage_version), [1]);
+
+  // 2. 同じ入力の別 Run（再実行）: v2、前回との差分
+  await pool.query(`UPDATE agent_runs SET status = 'completed', finished_at = now() WHERE id = $1`, [run1.id]);
+  const rerun = await call(`/api/agent-runs/${run1.id}/rerun`, { method: 'POST', cookie: adminCookie });
+  assert.equal(rerun.status, 201);
+  assert.equal(Number(rerun.data.run.rerun_of_run_id), Number(run1.id));
+  assert.deepEqual(rerun.data.run.input_json, run1.input_json);
+  const run2 = (await pool.query(`SELECT * FROM agent_runs WHERE id = $1`, [rerun.data.run.id])).rows[0];
+  const a2 = await write(run2, { ...base, findings: ['B', 'C'], sources: [{ source_record_id: 2 }] });
+  assert.equal(a2.artifact.lineage_version, 2);
+  assert.equal(Number(a2.artifact.previous_artifact_id), Number(a1.artifact.id));
+  const detail = await call(`/api/artifacts/${a2.artifact.id}`, { cookie: adminCookie });
+  assert.equal(detail.data.previous.artifact_code, a1.artifact.artifact_code);
+  assert.deepEqual(detail.data.diff.findings.added, ['C']);
+  assert.deepEqual(detail.data.diff.findings.removed, ['A', 'B2']);
+  assert.deepEqual(detail.data.diff.sources, { added: ['2'], removed: ['1'], unchanged: 0 });
+  const h2 = await call(`/api/artifacts/${a2.artifact.id}/history`, { cookie: adminCookie });
+  assert.deepEqual(h2.data.lineage.map((x) => x.lineage_version), [1, 2]);
+  const explicit = await call(`/api/artifacts/${a2.artifact.id}/diff?against=${a1.artifact.id}`, { cookie: adminCookie });
+  assert.equal(explicit.data.diff.changed, true);
+  const runDetail = await call(`/api/agent-runs/${run2.id}`, { cookie: adminCookie });
+  assert.equal(runDetail.data.run.rerun_of_run_code, run1.run_code);
+
+  // 3. 入力が違う Run は系譜に入らない
+  const other = await call('/api/agent-runs', { method: 'POST', cookie: adminCookie, body: { agentId: 'technology-selection', input: { query: '別の相談' } } });
+  const run3 = (await pool.query(`SELECT * FROM agent_runs WHERE id = $1`, [other.data.run.id])).rows[0];
+  const a3 = await write(run3, base);
+  assert.equal(a3.artifact.lineage_version, 1);
+  assert.equal(a3.artifact.previous_artifact_id, null);
+
+  // 4. レビューで版固定: reviewed_content_hash が入り integrity=true。以後の write-draft は拒否、改変は integrity=false で検出
+  const rev = await call(`/api/artifacts/${a2.artifact.id}/review`, { method: 'POST', cookie: adminCookie, body: { note: 'ok' } });
+  assert.equal(rev.status, 200);
+  assert.ok(rev.data.artifact.reviewed_content_hash);
+  assert.equal((await call(`/api/artifacts/${a2.artifact.id}`, { cookie: adminCookie })).data.integrity, true);
+  await assert.rejects(write(run2, { ...base, findings: ['X'] }), /レビュー済みのため上書きできません/);
+  await pool.query(`UPDATE artifacts SET content = content || '{"findings":["改変"]}'::jsonb WHERE id = $1`, [a2.artifact.id]);
+  assert.equal((await call(`/api/artifacts/${a2.artifact.id}`, { cookie: adminCookie })).data.integrity, false);
+
+  // 5. 再実行は終了した Run のみ、Viewer は不可
+  assert.equal((await call(`/api/agent-runs/${run2.id}/rerun`, { method: 'POST', cookie: adminCookie })).status, 409);
+  const viewerCookie = await loginAs('e2e-viewer-agent@example.com', 'viewer-password'); // doc003-allow: 使い捨てテストDB専用の固定値
+  assert.equal((await call(`/api/agent-runs/${run1.id}/rerun`, { method: 'POST', cookie: viewerCookie })).status, 403);
+  await pool.query(`UPDATE agent_runs SET status = 'cancelled', finished_at = now() WHERE id = ANY($1::bigint[]) AND status IN ('queued','running')`, [[run2.id, run3.id]]);
 });

@@ -365,15 +365,16 @@ input::placeholder,textarea::placeholder{color:var(--muted)}
           </section>
           <sc-if value="{{ arHasRun }}" hint-placeholder-val="{{ true }}">
             <aside style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden">
-              <div style="padding:16px 18px;border-bottom:1px solid var(--line-2)"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="font-family:var(--mono);font-size:11.5px;color:var(--muted)">{{ arRun.code }}</span><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:{{ arRun.fg }};background:{{ arRun.bg }}">{{ arRun.st }}</span><span style="flex:1"></span><button onClick="{{ arRun.refresh }}" style="border:1px solid var(--line);background:var(--surface);color:var(--ink-2);padding:4px 9px;border-radius:7px;font-size:11.5px;font-weight:600;cursor:pointer" style-hover="background:var(--subtle)">更新</button></div><div style="font-size:15px;font-weight:600;line-height:1.35">{{ arRun.agent }}</div><div style="font-size:12px;color:var(--muted);margin-top:4px">Step {{ arRun.step }} · {{ arRun.by }} · {{ arRun.at }}</div></div>
+              <div style="padding:16px 18px;border-bottom:1px solid var(--line-2)"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="font-family:var(--mono);font-size:11.5px;color:var(--muted)">{{ arRun.code }}</span><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:{{ arRun.fg }};background:{{ arRun.bg }}">{{ arRun.st }}</span><span style="flex:1"></span><button onClick="{{ arRun.refresh }}" style="border:1px solid var(--line);background:var(--surface);color:var(--ink-2);padding:4px 9px;border-radius:7px;font-size:11.5px;font-weight:600;cursor:pointer" style-hover="background:var(--subtle)">更新</button></div><div style="font-size:15px;font-weight:600;line-height:1.35">{{ arRun.agent }} <span style="font-size:11.5px;font-weight:500;color:var(--muted)">{{ arRun.rerunOf }}</span></div><div style="font-size:12px;color:var(--muted);margin-top:4px">Step {{ arRun.step }} · {{ arRun.by }} · {{ arRun.at }}</div></div>
               <div style="padding:16px 18px;display:flex;flex-direction:column;gap:16px">
                 <sc-if value="{{ arRun.hasErr }}" hint-placeholder-val="{{ false }}"><div style="padding:10px 12px;border-radius:8px;background:var(--red-bg);color:var(--red);font-size:12.5px">{{ arRun.err }}</div></sc-if>
                 <sc-if value="{{ arRun.isWaiting }}" hint-placeholder-val="{{ false }}"><div style="padding:10px 12px;border-radius:8px;background:var(--amber-bg);color:var(--amber);font-size:12.5px;line-height:1.5">{{ arRun.waitText }}</div></sc-if>
                 <sc-if value="{{ arRun.hasApproval }}" hint-placeholder-val="{{ false }}"><button onClick="{{ arRun.openApproval }}" style="padding:9px 12px;border-radius:8px;border:1px solid var(--line);background:var(--surface);font-size:12.5px;text-align:left;cursor:pointer;color:var(--ink)" style-hover="background:var(--subtle)">承認申請: {{ arRun.approvalText }}（クリックで承認画面へ）</button></sc-if>
                 <div><div style="font-size:11.5px;font-weight:600;color:var(--ink-2);margin-bottom:8px">入力</div><div style="font-size:12.5px;background:var(--subtle);border-radius:7px;padding:8px 10px;white-space:pre-wrap">{{ arRun.input }}</div></div>
                 <div><div style="font-size:11.5px;font-weight:600;color:var(--ink-2);margin-bottom:8px">実行イベント（Step / Tool / Policy）</div><div style="display:flex;flex-direction:column;gap:6px"><sc-for list="{{ arRun.events }}" as="e" hint-placeholder-count="3"><div style="display:flex;align-items:flex-start;gap:8px;font-size:12px;background:var(--subtle);border-radius:7px;padding:7px 10px"><span style="font-family:var(--mono);font-size:11px;color:var(--muted);flex-shrink:0">#{{ e.seq }}</span><span style="font-family:var(--mono);font-size:11px;padding:1px 7px;border-radius:5px;font-weight:600;color:{{ e.fg }};background:{{ e.bg }};flex-shrink:0">{{ e.type }}</span><span style="flex:1;min-width:0;word-break:break-word">{{ e.text }}</span></div></sc-for></div></div>
-                <div><div style="font-size:11.5px;font-weight:600;color:var(--ink-2);margin-bottom:8px">成果物（草案）</div><div style="display:flex;flex-direction:column;gap:6px"><sc-for list="{{ arRun.artifacts }}" as="ar" hint-placeholder-count="1"><div style="border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:8px"><span style="font-family:var(--mono);font-size:11px;color:var(--muted)">{{ ar.code }}</span><span style="flex:1;font-size:12.5px;font-weight:600">{{ ar.title }}</span><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:{{ ar.fg }};background:{{ ar.bg }}">{{ ar.st }}</span></div><div style="font-size:12px;white-space:pre-wrap;line-height:1.55">{{ ar.body }}</div><sc-if value="{{ ar.canReview }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:8px;align-items:center"><input value="{{ ar.note }}" onChange="{{ ar.setNote }}" placeholder="レビューコメント（Auditに記録）" style="flex:1;font-size:12px"><button onClick="{{ ar.review }}" style="background:var(--green);color:#fff;border:1px solid var(--green);padding:6px 11px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">レビュー済みにする</button></div></sc-if></div></sc-for><sc-if value="{{ arRun.noArtifacts }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px;color:var(--muted)">成果物はまだありません（最終Stepの完了後に作成されます）</div></sc-if></div></div>
+                <div><div style="font-size:11.5px;font-weight:600;color:var(--ink-2);margin-bottom:8px">成果物（草案）</div><div style="display:flex;flex-direction:column;gap:6px"><sc-for list="{{ arRun.artifacts }}" as="ar" hint-placeholder-count="1"><div style="border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:8px"><span style="font-family:var(--mono);font-size:11px;color:var(--muted)">{{ ar.code }}</span><span style="flex:1;font-size:12.5px;font-weight:600">{{ ar.title }}</span><span style="font-family:var(--mono);font-size:10.5px;color:var(--muted)">{{ ar.ver }}</span><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:{{ ar.fg }};background:{{ ar.bg }}">{{ ar.st }}</span></div><sc-if value="{{ ar.pinned }}" hint-placeholder-val="{{ false }}"><div style="font-family:var(--mono);font-size:10.5px;color:var(--muted)">{{ ar.pinned }}</div></sc-if><div style="font-size:12px;white-space:pre-wrap;line-height:1.55">{{ ar.body }}</div><sc-if value="{{ ar.hasDiff }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;white-space:pre-wrap;line-height:1.55;background:var(--subtle);border-radius:7px;padding:8px 10px">{{ ar.diffText }}</div></sc-if><sc-if value="{{ ar.canReview }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:8px;align-items:center"><input value="{{ ar.note }}" onChange="{{ ar.setNote }}" placeholder="レビューコメント（Auditに記録）" style="flex:1;font-size:12px"><button onClick="{{ ar.review }}" style="background:var(--green);color:#fff;border:1px solid var(--green);padding:6px 11px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">レビュー済みにする</button></div></sc-if></div></sc-for><sc-if value="{{ arRun.noArtifacts }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px;color:var(--muted)">成果物はまだありません（最終Stepの完了後に作成されます）</div></sc-if></div></div>
               </div>
+              <sc-if value="{{ arRun.canRerun }}" hint-placeholder-val="{{ false }}"><div style="padding:13px 18px;border-top:1px solid var(--line-2);display:flex;gap:8px"><button onClick="{{ arRun.rerun }}" style="border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:7px 12px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--subtle)">同じ入力で再実行（前回との差分を表示）</button></div></sc-if>
               <sc-if value="{{ arRun.canCancel }}" hint-placeholder-val="{{ false }}"><div style="padding:13px 18px;border-top:1px solid var(--line-2);display:flex;gap:8px;flex-wrap:wrap"><sc-if value="{{ arRun.canPause }}" hint-placeholder-val="{{ false }}"><button onClick="{{ arRun.pause }}" style="border:1px solid var(--line);background:var(--surface);color:var(--amber);padding:7px 12px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--amber-bg)">一時停止</button></sc-if><sc-if value="{{ arRun.canResume }}" hint-placeholder-val="{{ false }}"><button onClick="{{ arRun.resume }}" style="border:1px solid var(--line);background:var(--surface);color:var(--green);padding:7px 12px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--green-bg)">再開</button></sc-if><button onClick="{{ arRun.cancel }}" style="border:1px solid var(--line);background:var(--surface);color:var(--red);padding:7px 12px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--red-bg)">Cancel（中断要求）</button></div></sc-if>
             </aside>
           </sc-if>
@@ -803,7 +804,7 @@ class Component extends DCLogic {
     this.arPatch({ selRun: id, detail: null });
     this.guarded('agent-run-detail', async () => {
       const [d, ev] = await Promise.all([this.api(`/api/agent-runs/${id}`), this.api(`/api/agent-runs/${id}/events`)]);
-      const artifacts = await Promise.all((d.artifacts || []).map((a) => this.api(`/api/artifacts/${a.id}`).then((r) => r.artifact)));
+      const artifacts = await Promise.all((d.artifacts || []).map((a) => this.api(`/api/artifacts/${a.id}`).then((r) => Object.assign({}, r.artifact, { citations: r.citations, previous: r.previous, diff: r.diff, revisions: r.revisions, integrity: r.integrity }))));
       this.arPatch({ selRun: id, detail: { run: d.run, events: ev.events || [], artifacts, approval: d.approval || null } });
     });
   }
@@ -821,6 +822,14 @@ class Component extends DCLogic {
       await this.refreshAll();
       this.arOpenRun(id);
       this.toast('再開しました（権限・承認済み版を再検証してキューへ戻しました）', 'green');
+    });
+  }
+  arRerun(id) {
+    this.guarded('agent-run-rerun', async () => {
+      const r = await this.api(`/api/agent-runs/${id}/rerun`, { method: 'POST' });
+      await this.refreshAll();
+      this.arOpenRun(r.run.id);
+      this.toast(`同じ入力で ${r.run.run_code} を開始しました。完了後に前回との差分を表示します`, 'green');
     });
   }
   arCancel(id) {
@@ -1233,6 +1242,13 @@ class Component extends DCLogic {
       if (a.citations && a.citations.length) lines.push(a.citations.map((x) => `  - ${x.title}（${x.evidence_type}）${x.canonical_url ? ' ' + x.canonical_url : ''}`).join('\n'));
       return lines.join('\n\n') || '（内容なし）';
     };
+    const diffBody = (a) => {
+      const d = a.diff; if (!d || !a.previous) return '';
+      if (!d.changed) return `前回（${a.previous.artifact_code} / ${a.previous.run_code}）と内容の差分はありません`;
+      const sec = (label, x) => (x.added.length || x.removed.length) ? `${label}: +${x.added.length} / -${x.removed.length}\n` + x.added.map((s) => '  ＋ ' + s).concat(x.removed.map((s) => '  － ' + s)).join('\n') : '';
+      return [`前回 ${a.previous.artifact_code}（${a.previous.run_code}）との差分`,
+        sec('確認できた事実', d.findings), sec('不明点', d.unknowns), sec('仮定', d.assumptions), sec('根拠 source_record', d.sources)].filter(Boolean).join('\n');
+    };
     const arRun = d ? Object.assign({
       id: d.run.id, code: d.run.run_code, agent: d.run.agent_id, step: `${d.run.current_step}/${d.run.max_steps}`,
       by: d.run.requested_by_name || '', at: d.run.created_at ? fmtDate(d.run.created_at) : '',
@@ -1241,6 +1257,9 @@ class Component extends DCLogic {
       events: (d.events || []).map((e) => Object.assign({ seq: e.seq, type: e.type, text: evText(e) }, this.tone(EV_TONE[e.type] || 'muted'))),
       artifacts: (d.artifacts || []).map((a) => Object.assign({
         id: a.id, code: a.artifact_code, title: a.title, body: artifactBody(a),
+        ver: `v${a.lineage_version || 1}${a.revisions ? `（書き直し ${a.revisions} 回）` : ''}`,
+        hasDiff: !!(a.diff && a.previous), diffText: diffBody(a),
+        pinned: a.review_state === 'reviewed' && a.reviewed_content_hash ? `版固定 ${String(a.reviewed_content_hash).slice(0, 12)}${a.integrity === false ? ' ⚠ 内容がレビュー時から変わっています' : ''}` : '',
         canReview: a.review_state === 'draft' && this.can('review'),
         note: (ar.notes || {})[a.id] || '',
         setNote: (e) => this.arPatch({ notes: Object.assign({}, ar.notes, { [a.id]: e.target.value }) }),
@@ -1248,6 +1267,9 @@ class Component extends DCLogic {
       }, a.review_state === 'reviewed' ? { st: 'レビュー済', fg: 'var(--green)', bg: 'var(--green-bg)' } : { st: '草案', fg: 'var(--amber)', bg: 'var(--amber-bg)' })),
       noArtifacts: (d.artifacts || []).length === 0,
       canCancel: ['queued', 'running', 'waiting_approval', 'paused'].includes(d.run.status),
+      canRerun: ['completed', 'failed', 'cancelled'].includes(d.run.status) && this.can('create'),
+      rerunOf: d.run.rerun_of_run_code ? `（${d.run.rerun_of_run_code} の再実行）` : '',
+      rerun: () => this.arRerun(d.run.id),
       canPause: ['queued', 'running'].includes(d.run.status),
       canResume: d.run.status === 'paused' || (d.run.status === 'waiting_approval' && d.approval && d.approval.status === 'approved'),
       isWaiting: ['waiting_approval', 'paused'].includes(d.run.status),
