@@ -485,7 +485,7 @@ input::placeholder,textarea::placeholder{color:var(--muted)}
   </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;comfortable&quot;,&quot;compact&quot;],&quot;default&quot;:&quot;comfortable&quot;,&quot;tsType&quot;:&quot;'comfortable' | 'compact'&quot;,&quot;section&quot;:&quot;表示&quot;},&quot;currency&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;USD&quot;,&quot;JPY&quot;],&quot;default&quot;:&quot;USD&quot;,&quot;tsType&quot;:&quot;'USD' | 'JPY'&quot;,&quot;section&quot;:&quot;表示&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;comfortable&quot;,&quot;compact&quot;],&quot;default&quot;:&quot;comfortable&quot;,&quot;tsType&quot;:&quot;'comfortable' | 'compact'&quot;,&quot;section&quot;:&quot;表示&quot;},&quot;currency&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;JPY&quot;,&quot;USD&quot;],&quot;default&quot;:&quot;JPY&quot;,&quot;tsType&quot;:&quot;'USD' | 'JPY'&quot;,&quot;section&quot;:&quot;表示&quot;}}">
 class Component extends DCLogic {
   constructor(p) {
     super(p);
@@ -584,6 +584,7 @@ class Component extends DCLogic {
       router: router.router.map(mapRouterRow),
       usage: usage.usage.map(mapUsage),
       llm: usage.llm || { configured: false, monthlySpent: 0, monthlyCap: 0 },
+      fx: usage.fx || { usd_jpy: 150, source: '既定' },
       arCatalog: arCatalog.agents || [],
       arRuns: arRuns.runs || [],
       arVersions: { skills: arVersions.skills || [], agents: arVersions.agents || [] },
@@ -646,8 +647,18 @@ class Component extends DCLogic {
   go(screen) {
     this.setState({ screen });
   }
-  fmtCost(c) {
-    return (this.props.currency ?? 'USD') === 'JPY' ? '¥' + Math.round(c * 150).toLocaleString() : '$' + c.toFixed(2);
+  fmtCost(c, opts) {
+    // 費用は USD 建てで記録し、画面はサーバの固定レート（USD_JPY_RATE、/api/usage の fx）で円換算して表示する
+    const usd = Number(c) || 0;
+    if ((this.props.currency ?? 'JPY') === 'USD') return '$' + usd.toFixed(2);
+    const rate = (this.state && this.state.fx && Number(this.state.fx.usd_jpy)) || 150;
+    const jpy = usd * rate;
+    const yen = '¥' + (jpy > 0 && jpy < 10 ? jpy.toFixed(1) : Math.round(jpy).toLocaleString());
+    return opts && opts.withUsd === false ? yen : `${yen}（$${usd.toFixed(usd > 0 && usd < 0.1 ? 4 : 2)}）`;
+  }
+  fxNote() {
+    const rate = (this.state && this.state.fx && Number(this.state.fx.usd_jpy)) || 150;
+    return `1 USD = ${rate} 円（固定レート、目安）`;
   }
   fmtTok(n) {
     return n >= 1e6 ? (n / 1e6).toFixed(2) + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'k' : String(n);
@@ -1041,7 +1052,7 @@ class Component extends DCLogic {
       { label: '進行中案件', value: active, sub: `全 ${s.projects.length} 件 · 本番 ${s.projects.filter((p) => p.status === 'production').length}`, subColor: 'var(--muted)', color: 'var(--blue-2)', go: () => this.go('projects') },
       { label: '承認待ち', value: pendA.length, sub: pendA.some((a) => a.risk === 'R4') ? 'R4 本番リリース含む' : '高リスクなし', subColor: pendA.some((a) => a.risk === 'R4') ? 'var(--red)' : 'var(--green)', color: 'var(--red-2)', go: () => this.go('approvals') },
       { label: '実行中 Agent Run', value: running, sub: `Blocked ${s.tasks.filter((t) => t.status === 'blocked').length} · Failed ${s.tasks.filter((t) => t.status === 'failed').length}`, subColor: 'var(--muted)', color: 'var(--purple)', go: () => this.go('tasks') },
-      { label: 'AIコスト（今月）', value: this.fmtCost(cost), sub: `${this.fmtTok(s.usage.reduce((a, u) => a + u.tok, 0))} tokens · ${s.usage.length} providers`, subColor: 'var(--muted)', color: 'var(--accent)', go: () => this.go('observability') },
+      { label: 'AIコスト（今月）', value: this.fmtCost(cost, { withUsd: false }), sub: `$${(Number(cost) || 0).toFixed(2)} · ${this.fxNote()} · ${this.fmtTok(s.usage.reduce((a, u) => a + u.tok, 0))} tokens`, subColor: 'var(--muted)', color: 'var(--accent)', go: () => this.go('observability') },
     ];
     const order = ['idea', 'proposed', 'approved', 'active', 'staging', 'production', 'suspended', 'closed', 'archived'];
     const pipeline = order.map((k) => ({ k, n: s.projects.filter((p) => p.status === k).length })).filter((x) => x.n)
@@ -1254,7 +1265,7 @@ class Component extends DCLogic {
       { label: '業務Agent Run', value: mx.totals.total, metric: 'agent_runs（期間内）', color: 'var(--purple)' },
       { label: '完走率', value: pctText(mx.totals.completion_rate), metric: 'completed / total', color: 'var(--green-2)' },
       { label: '実行中 / 待ち', value: `${mx.totals.active} / ${mx.totals.waiting}`, metric: 'queued+running / waiting_approval+paused', color: 'var(--blue-2)' },
-      { label: 'AI 費用（期間内）', value: this.fmtCost(mx.totals.ai_cost || 0), metric: 'Run + AI相談の実測', color: 'var(--accent)' },
+      { label: 'AI 費用（期間内）', value: this.fmtCost(mx.totals.ai_cost || 0, { withUsd: false }), metric: `Run + AI相談の実測 · $${Number(mx.totals.ai_cost || 0).toFixed(2)} · ${this.fxNote()}`, color: 'var(--accent)' },
       { label: '草案レビュー率', value: pctText(mx.totals.review_rate), metric: 'reviewed / artifacts', color: 'var(--amber)' },
     ];
     const rdef = [['completed', 'green'], ['running', 'purple'], ['queued', 'blue'], ['waiting_approval', 'amber'], ['paused', 'amber'], ['failed', 'red'], ['cancelled', 'muted']];
@@ -1515,7 +1526,7 @@ class Component extends DCLogic {
       };
     });
     const cstep = s.chat.step;
-    const chatSteps = ['相談を入力', 'AIが追加質問で整理', 'Idea構造化（Notion記録）', '正式案件化（Project ID発番）', '企画審査Gateで承認'].map((label, i) => {
+    const chatSteps = ['相談を入力', 'AIが追加質問で整理', 'Idea構造化（DBに記録）', '正式案件化（Project ID発番）', '企画審査Gateで承認'].map((label, i) => {
       const done = i < Math.min(cstep, 2) || (i === 2 && cstep >= 2);
       const now = i === Math.min(cstep, 2) && !done;
       return { n: i + 1, label, fg: done || now ? 'var(--ink)' : 'var(--muted)', bg: done ? 'var(--green-2)' : now ? 'var(--accent)' : 'var(--subtle)', numFg: done || now ? '#fff' : 'var(--muted)' };

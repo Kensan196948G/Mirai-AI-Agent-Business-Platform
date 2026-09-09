@@ -1566,3 +1566,11 @@ test('第 5 段 是正: pagination（S-015）、司令塔と Run のタイムア
   assert.equal((await call(`/api/agent-runs/${own.data.run.id}`, { cookie: reviewerCookie })).status, 200, 'Reviewer は全件見える');
   await pool.query(`UPDATE agent_runs SET status = 'cancelled', finished_at = now() WHERE status IN ('queued','running')`);
 });
+
+test('費用の円表示: /api/usage は固定為替レート（USD_JPY_RATE）を fx として返し、既定は 150', async () => {
+  const u = await call('/api/usage', { cookie: adminCookie });
+  assert.equal(u.status, 200);
+  assert.equal(u.data.fx.display_currency, 'JPY');
+  assert.equal(u.data.fx.usd_jpy, Number(process.env.USD_JPY_RATE || '150'));
+  assert.ok(typeof u.data.llm.monthlySpent === 'number', '費用そのものは USD 建てのまま');
+});

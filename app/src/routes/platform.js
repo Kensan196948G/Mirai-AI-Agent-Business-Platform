@@ -120,6 +120,8 @@ router.get('/usage', requireAuth, async (_req, res) => {
   res.json({
     usage: rows,
     llm: { configured: llm.isConfigured(), monthlySpent: llmSpent, monthlyCap: llm.monthlyCapUsd(), defaultProvider: llm.defaultProvider() || null, providers: llm.configuredProviders() },
+    // 費用は Provider の USD 建て。画面は固定レート（USD_JPY_RATE）で円換算して表示する（目安。実請求は各社の明細で確認）
+    fx: { usd_jpy: llm.usdJpyRate(), source: 'USD_JPY_RATE（固定レート）', display_currency: 'JPY' },
   });
 });
 

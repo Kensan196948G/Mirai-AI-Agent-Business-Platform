@@ -101,6 +101,12 @@ export async function withinMonthlyBudget(client) {
   return spent < MONTHLY_CAP_USD;
 }
 
+/** 表示用の為替レート（1 USD あたりの円）。`USD_JPY_RATE` で固定指定。請求は各 Provider の USD 建てで、円表示は目安。 */
+export function usdJpyRate() {
+  const n = Number(process.env.USD_JPY_RATE || '150');
+  return Number.isFinite(n) && n > 0 ? n : 150;
+}
+
 export function monthlyCapUsd() {
   return MONTHLY_CAP_USD;
 }
