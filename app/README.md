@@ -246,7 +246,7 @@ P1 の 3 Agent は A0〜A1（外部書き込みなし）のため既定ではゲ
 | F-30 | 監査ログの SHA-256 化と日次アンカー | 新規行は `hash_version=2`（SHA-256）で連結し、旧行（32bit 簡易ハッシュ）は再署名せず版付きで検証する。並行追記は advisory lock で直列化。`audit-anchor.mjs`（`systemd/mira-agent-os-audit-anchor.timer`、毎日 03:30）が直前アンカー以降のチェーンを検証し、末尾を `audit_anchors` と DB 外の追記専用ファイル（`AUDIT_ANCHOR_DIR`）に固定する。`GET /api/audit/verify` はチェーンとアンカーの両方を検証し、改変・削除を検出する |
 | F-31 | CSRF 対策 | 更新系 API（POST / PATCH / PUT / DELETE）で Origin（または Sec-Fetch-Site）を自ホスト（`x-forwarded-host` 対応）と照合し、不一致は 403。Cookie は SameSite=Lax。Origin の無い非ブラウザ要求（CLI / テスト）は Cookie が付かないため対象外 |
 | F-32 | レート制限 | ログイン: IP あたり 30 回 / 10 分、email あたり失敗 5 回 / 15 分で一時ロック（正しいパスワードでも 429）。Run 作成: 利用者あたり日次 50 件（`AGENT_RUN_MAX_PER_USER_PER_DAY`）に加え、同時実行上限（C-14） |
-| F-33 | 依存関係の定期監査 | CI の `npm audit --audit-level=high` に加え、`.github/dependabot.yml` で週次の更新 PR。更新 PR も通常の品質ゲート（CI + Y/N）を通す。緊急の脆弱性は Critical / High ゼロを満たすまでマージしない |
+| F-33 | 依存関係の定期監査 | CI の `npm audit --audit-level=high` に加え、`.github/dependabot.yml` で週次の更新 PR。更新 PR も通常の品質ゲート（CI + Y/N）を通す。緊急の脆弱性は Critical / High ゼロを満たすまでマージしない。メジャー更新（express / js-yaml / pg / ajv）は自動 PR の対象外とし、別タスクで移行する（2026-09-09: express 5 と js-yaml 5 は互換性のため見送り） |
 | F-34 | テスト DB ガード | E2E は DB 名 `mira_agent_os_test[_suffix]` かつロール `mira_agent_os_test_app` のみで起動し、本番 / MVP の DB 名は明示的に拒否する（`src/lib/test-db-guard.js`） |
 
 監査ログは「暗号学的に改ざん不能」ではなく「改変・削除・後追い書き換えを検出できる」仕組みである。アンカーファイルはバックアップ先と同じディレクトリに置き、日次バックアップに含まれる。
