@@ -8,7 +8,7 @@ import * as jobStore from './job-store.js';
 import * as registry from './registry.js';
 import { loadSkillDefinition } from './skill-loader.js';
 import { callTool } from './tool-gateway.js';
-import { structuredComplete, ProviderNotConfiguredError } from './provider-adapter.js';
+import { structuredComplete, ProviderNotConfiguredError, CircuitOpenError } from './provider-adapter.js';
 import { withinMonthlyBudget, monthlyCapUsd } from '../lib/llm.js';
 import { validateCitations } from './evidence-validator.js';
 import { authorizeBudget, PolicyDeniedError } from './policy-engine.js';
@@ -167,6 +167,15 @@ export async function executeNextStep(runId, { workerId }) {
           detail: { error: err.message },
         });
         await jobStore.finishRun(client, run.id, { status: 'failed', errorMessage: err.message });
+        return { done: true, run: await jobStore.getRun(client, run.id) };
+      }
+      if (err instanceof CircuitOpenError) {
+        // H-017: Provider の連続失敗で circuit open。縮退の偽成功にせず、理由と再開見込みを残して明示的に失敗させる
+        await jobStore.appendEvent(client, run.id, {
+          type: 'circuit_open', skillId: skillDef.skillId, skillVersion: freshSkillVersion.version, status: 'error',
+          detail: { provider: err.provider, until: err.until ? err.until.toISOString() : null, error: err.message },
+        });
+        await jobStore.finishRun(client, run.id, { status: 'failed', errorMessage: `${err.message}。復旧後に再実行してください` });
         return { done: true, run: await jobStore.getRun(client, run.id) };
       }
       return handleStepFailure(client, run, `Step実行エラー（${skillDef.skillId}）: ${err.message}`);

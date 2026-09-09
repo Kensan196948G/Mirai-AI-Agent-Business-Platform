@@ -58,3 +58,26 @@ test('structuredComplete: schema に無いフィールド（例: 権限昇格の
     assert.match(r.degradedReason, /additional properties/);
   } finally { globalThis.fetch = saved; }
 });
+
+test('H-017 Circuit Breaker: API 失敗が閾値に達すると CircuitOpenError で明示的に止まり、schema 違反は失敗回数に数えない', async () => {
+  const cb = await import('../src/agent-runtime/circuit-breaker.js');
+  cb.resetCircuits(); process.env.LLM_CIRCUIT_FAILURES = '3';
+  const saved = globalThis.fetch;
+  try {
+    // schema 違反（API は成功）→ degraded になるが circuit には数えない
+    mockFetch(['{"nope":1}']);
+    const d = await adapter.structuredComplete({ instructions: 'I', schema: SCHEMA, fallbackData: { gaps: [], unknowns: ['x'] }, input: {}, maxAttempts: 2 });
+    assert.equal(d.degraded, true);
+    assert.equal(cb.circuitStatus().providers.deepseek?.failures ?? 0, 0);
+    // API 失敗（HTTP 503）× 3 → open
+    globalThis.fetch = async () => ({ ok: false, status: 503, text: async () => 'unavailable', json: async () => ({}) });
+    const r1 = await adapter.structuredComplete({ instructions: 'I', schema: SCHEMA, fallbackData: { gaps: [], unknowns: ['x'] }, input: {}, maxAttempts: 2 });
+    assert.equal(r1.degraded, true, '閾値未満は従来どおり縮退（2 回失敗）');
+    await assert.rejects(() => adapter.structuredComplete({ instructions: 'I', schema: SCHEMA, fallbackData: { gaps: [], unknowns: ['x'] }, input: {}, maxAttempts: 2 }), cb.CircuitOpenError, '3 回目で open になり例外');
+    assert.deepEqual(cb.circuitStatus().open, ['deepseek']);
+    // open の間は fetch を呼ばずに即例外
+    let called = 0; globalThis.fetch = async () => { called++; return { ok: true, json: async () => ({}) }; };
+    await assert.rejects(() => adapter.structuredComplete({ instructions: 'I', schema: SCHEMA, fallbackData: {}, input: {} }), cb.CircuitOpenError);
+    assert.equal(called, 0);
+  } finally { globalThis.fetch = saved; cb.resetCircuits(); delete process.env.LLM_CIRCUIT_FAILURES; }
+});

@@ -1,3 +1,4 @@
+import { circuitStatus } from '../agent-runtime/circuit-breaker.js';
 /**
  * 稼働監視用の集約（A-5）。/api/health と watchdog.mjs が共用する。
  * - worker.alive: いずれかの Worker の last_seen_at が閾値以内
@@ -33,6 +34,7 @@ export async function collectHealth(client) {
     },
     queue: { queued: q[0].queued, oldest_queued_age_s: q[0].oldest_queued_age_s, backlog, backlog_after_s: QUEUE_BACKLOG_SECONDS },
     runs: { running: r[0].running, lease_expired: r[0].lease_expired },
+    llm_circuit: circuitStatus(),
   };
 }
 
@@ -42,5 +44,6 @@ export function evaluateHealth(h) {
   if (!h.worker.alive) problems.push(`Worker が ${h.worker.stale_after_s}s 以上ハートビートを送っていません`);
   if (h.queue.backlog) problems.push(`queued の Run が ${h.queue.oldest_queued_age_s}s 滞留しています（閾値 ${h.queue.backlog_after_s}s）`);
   if (h.runs.lease_expired > 0) problems.push(`Lease 期限切れの running Run が ${h.runs.lease_expired} 件あります`);
+  for (const p of (h.llm_circuit && h.llm_circuit.open) || []) problems.push(`LLM Provider「${p}」は連続失敗のため circuit open（${h.llm_circuit.providers[p].opened_until} まで）`);
   return problems;
 }
