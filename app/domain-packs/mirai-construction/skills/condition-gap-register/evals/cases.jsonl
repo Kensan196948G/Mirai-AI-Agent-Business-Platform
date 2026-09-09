@@ -1,0 +1,1 @@
+{"case_id": "CG-01", "input": {"query": "軟弱地盤で N値 3、土質は粘性土。地下水位は不明", "required_conditions": ["N値", "土質", "地下水位", "層厚"]}, "expect": {"present_conditions_min": 2, "missing_conditions_min": 1, "unknowns_min": 1, "notes": "書かれていない条件は未確定として登録し推測しない"}}

@@ -230,7 +230,7 @@ P1 の 3 Agent は A0〜A1（外部書き込みなし）のため既定ではゲ
 
 ## 🏢 組織責務 Agent 01〜09（第 2 段）
 
-`org-map.yaml` の 9 組織それぞれに実行可能な Agent（`agents/*.yaml`、layer=organization、技術リスク T2〜T4）を定義し、共通 Skill 9 種を Agent 契約の `params` で再利用する。P1 の 3 Agent と合わせて 12 Agent が Registry で承認・実行可能。
+`org-map.yaml` の 9 組織それぞれに実行可能な Agent（`agents/*.yaml`、layer=organization、技術リスク T2〜T4）を定義し、共通 Skill 9 種を Agent 契約の `params` で再利用する。P1 の 3 Agent、土木専門 Agent 9 種（第 3 段）と合わせて 21 Agent が Registry で承認・実行可能。
 
 | 組織 | Agent | Skill（順に実行） | 主な入力 |
 |---|---|---|---|
@@ -253,11 +253,33 @@ P1 の 3 Agent は A0〜A1（外部書き込みなし）のため既定ではゲ
 | 入口 | 業務Agent 画面「司令塔に依頼」または `POST /api/orchestrations {request}`。ロール・同時実行・日次上限は Run 作成と同じ |
 | 計画 | LLM が要求文とカタログから意図・リスク・必要な Agent・順序（依存）・各 Agent への相談文を JSON Schema 付きで作る（`src/agent-runtime/orchestrator.js`）。LLM 未設定時はルールベース（語の一致）。**選べるのは Registry で承認済み・実行可能な Agent だけ**で、候補（P2/P3）・未承認・カタログに無い提案は理由付きで却下し、勝手に別経路へ迂回しない。合う Agent が無ければ `blocked` で止まり人間の判断に渡す |
 | 実行 | 依存が満たされた Step から Run を作り（Worker のポーリングと詳細 API で前進）、先行 Step の findings / unknowns を `prior_context` として渡す。各 Run の Policy / 承認待ち / 予算はそのまま効き、司令塔は上書きしない |
-| 上限 | Step 数 `ORCHESTRATION_MAX_STEPS`（4）、費用 `ORCHESTRATION_BUDGET_USD`（2.0、配下 Run の合計）。超過時は未着手 Step を blocked にして `partial` で止める |
+| 上限 | Step 数 `ORCHESTRATION_MAX_STEPS`（6）、費用 `ORCHESTRATION_BUDGET_USD`（2.0、配下 Run の合計）。超過時は未着手 Step を blocked にして `partial` で止める |
 | 統合 | 全 Step 終了後、Agent ごとの帰属付きで事実・不明点・根拠を 1 つの統合草案（`orchestration_summary`、人間レビュー必須）にまとめる。失敗した Agent の結果は「結果なし」として不足を明示し、成功扱いしない。部分成功は `partial` |
 | 記録 | 計画（選択理由・却下理由）と終了を監査ログに残し、Run / 成果物は `orchestration_id` で追跡できる |
 
+土木専門 Agent（layer=civil_expert）は、選ばれた組織責務 Agent の `delegates_to` に含まれ、かつ要求文が専門 Agent の `keywords` に一致する場合だけ、その組織 Agent の後段（`depends_on`）として起動する（B-005）。専門 Agent を先頭に置く LLM 提案は却下理由付きで不採用。Step 上限の既定は 6。統合草案には配下 Step の最大技術リスク（`technical_risk_class`）と専門技術者レビューの要否が付く。
+
 Cross Review（横断レビュー）は次段で司令塔の最終 Step として組み込む。
+
+## 🏗️ 土木専門 Agent 9 種（第 3 段）
+
+`org-map.yaml` の `civil_experts` に列挙した横断層。部署に属さず、組織責務 Agent から委譲される。各 Agent は `technical_risk_class`（T1〜T6）、`required_conditions`（推測で補完してはならない条件）、`keywords`（司令塔のルーティング語）、`input_contract` を契約として持つ。
+
+| Agent | T | 必要条件（無ければ「未確定」として登録） | Skill（順に実行） |
+|---|---|---|---|
+| port-marine-expert 港湾・海上 | T4 | 設計波・潮位・水深・地盤条件・施工時期 | condition-gap-register → standard-reference-check → knowledge-brief → applicability-gap-check → technology-comparison → engineering-consistency-check → evidence-backed-draft |
+| geotechnical-expert 地盤 | T4 | N値・土質・地下水位・層厚・対象構造物 | 同上 |
+| structural-expert 構造 | **T5** | 構造形式・荷重条件・材料・基準の版・地盤条件 | condition-gap-register → standard-reference-check → knowledge-brief → engineering-consistency-check → planning-brief（structural_review_points） |
+| construction-planning-expert 施工計画 | T3 | 工種・数量・工期・施工条件・使用機材 | condition-gap-register → knowledge-brief → quantity-consistency-check → planning-brief（construction_sequence）→ risk-assessment（safety） |
+| bim-cim-cad-gis-expert BIM/CIM・CAD・GIS | T2 | 座標系・基準面・単位・データ形式・対象範囲 | condition-gap-register → engineering-consistency-check → knowledge-brief → planning-brief（data_integration） |
+| environmental-expert 環境 | T3 | 環境項目・対象地域・工種・施工時期・規制値 | condition-gap-register → standard-reference-check → knowledge-brief → applicability-gap-check → risk-assessment → evidence-backed-draft |
+| maintenance-expert 維持管理 | T3 | 構造物種別・点検結果・劣化状況・供用条件・補修履歴 | condition-gap-register → knowledge-brief → applicability-gap-check → technology-comparison → evidence-backed-draft |
+| quantity-cost-expert 数量・コスト | T3 | 数量表・単位・工種・単価の出典 | condition-gap-register → quantity-consistency-check → engineering-consistency-check → planning-brief（quantity_review） |
+| civil-review-expert 土木レビュー | T4 | 対象成果物・前提条件 | engineering-consistency-check → standard-reference-check → document-review（数値・前提・出典・未確認事項） |
+
+技術リスクの強制（`technicalRiskPolicy`）: Run 作成時に Agent 契約の T を `agent_runs.technical_risk_class` に固定し、その Run の全成果物に `expert_review_required`（T3 以上）と `ai_completion_prohibited`（T5/T6）を付ける。`POST /api/artifacts/:id/review` は T3 以上で `expert_confirmed: true`（Reviewer / Administrator のみ）を要求し、T5/T6 ではさらに `expert_note`（専門技術者の所見、10 文字以上）が無いとレビュー済みにできない。確認内容は監査ログに残る。
+
+専門 Skill 3 種（決定的、推測しない）: condition-gap-register（必要条件の記載有無を照合。「不明」と併記された条件も未確定）/ engineering-consistency-check（SI とヤード・ポンド法、kN と tf、JGD2011 と JGD2000、T.P. と D.L. の混在を検出）/ standard-reference-check（承認済み出典の版・発行日・有効期限を追跡し、同一タイトルの複数版と社内基準の未登録を明示）。
 
 ## 💬 AI相談の IDEA 構造化と部署別カタログの照合
 

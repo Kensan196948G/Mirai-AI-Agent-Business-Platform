@@ -1,0 +1,1 @@
+{"case_id": "SR-01", "input": {"query": "防波堤 ケーソン 設計基準"}, "expect": {"unknowns_min": 1, "notes": "社内基準（standard）が未登録なら明示する"}}

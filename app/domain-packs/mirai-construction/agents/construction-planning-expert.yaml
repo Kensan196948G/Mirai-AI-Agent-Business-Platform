@@ -1,0 +1,78 @@
+schema_version: mirai.agent-definition/v1
+agent_id: construction-planning-expert
+version: 1.0.0
+domain_pack: mirai-construction
+title: 施工計画 専門Agent
+owner_role: 施工技術（施工本部）
+layer: civil_expert
+technical_risk_class: T3
+purpose: 施工手順・工程制約・仮設・機材の論点を承認済み資料と数量の整合から整理する。
+does_not: 施工可否・工程の確定、現場への指示。
+max_autonomy_level: A1
+input_contract:
+  type: object
+  properties:
+    query:
+      type: string
+      minLength: 1
+      maxLength: 4000
+    technical_text:
+      type: string
+      maxLength: 60000
+    quantities_text:
+      type: string
+      maxLength: 60000
+    document_text:
+      type: string
+      maxLength: 60000
+required_conditions:
+- 工種
+- 数量
+- 工期
+- 施工条件
+- 使用機材
+keywords:
+- 施工計画
+- 工程
+- 仮設
+- 施工手順
+- 機材
+- 段取り
+- 作業船
+- クレーン
+timeout_seconds: 900
+budget_usd: 0.5
+model_category: Research / Classification
+skills:
+- skill_id: condition-gap-register
+  version: 1.0.0
+  params:
+    required_conditions:
+    - 工種
+    - 数量
+    - 工期
+    - 施工条件
+    - 使用機材
+- skill_id: knowledge-brief
+  version: 1.0.0
+  params:
+    source_types:
+    - project_case
+    - technology_catalog
+- skill_id: quantity-consistency-check
+  version: 1.0.0
+- skill_id: planning-brief
+  version: 1.0.0
+  params:
+    plan_type: construction_sequence
+    criteria:
+    - 施工手順
+    - 工程制約
+    - 仮設
+    - 機材
+    - 安全
+- skill_id: risk-assessment
+  version: 1.0.0
+  params:
+    domain: safety
+output: 根拠付きの技術論点草案（review_state=draft、T3 以上は専門技術者レビュー必須、T5/T6 は AI 単独完了不可）

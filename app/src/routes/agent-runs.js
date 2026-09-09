@@ -112,7 +112,7 @@ router.get('/:id', requireAuth, async (req, res) => {
   );
   if (rows.length === 0) return res.status(404).json({ error: 'run が見つかりません' });
   const { rows: artifacts } = await getPool().query(
-    `SELECT id, artifact_code, kind, title, review_state, created_at FROM artifacts WHERE run_id = $1 ORDER BY id`,
+    `SELECT id, artifact_code, kind, title, review_state, created_at, expert_review_required, ai_completion_prohibited FROM artifacts WHERE run_id = $1 ORDER BY id`,
     [id],
   );
   let approval = null;

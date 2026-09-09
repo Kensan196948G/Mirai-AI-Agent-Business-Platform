@@ -21,6 +21,9 @@ input_contract:
       type: string
       maxLength: 40
 delegates_to:
+- geotechnical-expert
+- maintenance-expert
+- port-marine-expert
 - project-case-research
 - technology-selection
 timeout_seconds: 600

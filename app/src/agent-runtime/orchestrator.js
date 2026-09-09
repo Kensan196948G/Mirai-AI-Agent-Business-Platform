@@ -12,6 +12,7 @@
  */
 import { structuredComplete, isConfigured } from './provider-adapter.js';
 import { catalogForPrompt, catalogWithRuntime, matchByKeywords, findAgent } from './catalog.js';
+import { technicalRiskPolicy } from './skill-loader.js';
 import { createRunForUser, inputKeysFor } from './run-create.js';
 import * as llm from '../lib/llm.js';
 import { recordAudit } from '../lib/audit.js';
@@ -19,7 +20,7 @@ import { enforceOutputPolicy } from './prompt-guard.js';
 import { nextArtifactCode } from '../lib/codes.js';
 import { contentHash } from '../lib/artifact-lineage.js';
 
-export const ORCHESTRATION_MAX_STEPS = () => Number(process.env.ORCHESTRATION_MAX_STEPS || '4');
+export const ORCHESTRATION_MAX_STEPS = () => Number(process.env.ORCHESTRATION_MAX_STEPS || '6');
 export const ORCHESTRATION_BUDGET_USD = () => Number(process.env.ORCHESTRATION_BUDGET_USD || '2.0');
 
 const PLAN_SCHEMA = {
@@ -29,7 +30,7 @@ const PLAN_SCHEMA = {
     risk: { type: 'string', enum: ['R0', 'R1', 'R2', 'R3', 'R4', 'R5'] },
     summary: { type: 'string', maxLength: 300 },
     steps: {
-      type: 'array', maxItems: 6,
+      type: 'array', maxItems: 8,
       items: { type: 'object', required: ['agent_id', 'reason', 'query', 'depends_on'], additionalProperties: false, properties: {
         agent_id: { type: 'string', maxLength: 80 }, reason: { type: 'string', maxLength: 200 }, query: { type: 'string', maxLength: 600 },
         depends_on: { type: 'array', items: { type: 'integer', minimum: 1 }, maxItems: 5 },
@@ -44,7 +45,9 @@ const PLAN_INSTRUCTIONS =
   '実行順序（depends_on は先行 step の番号、独立なら空）と、各 Agent へ渡す具体的な相談文（query）を決めてください。' +
   '選ぶのは executable=true の Agent だけです。候補（executable=false）は steps に入れず rejected に理由付きで挙げます。' +
   '要求に関係しない Agent は選びません。技術判断・施工可否・最終決定は Agent ではなく人間が行うため、summary にその旨を含めます。' +
-  'risk は外部影響の大きさで R0〜R5。書かれていないことは推測せず、不足は summary に明記します。';
+  'risk は外部影響の大きさで R0〜R5。書かれていないことは推測せず、不足は summary に明記します。' +
+  'layer=civil_expert の Agent（土木専門）は、組織責務 Agent（layer=organization）の delegates_to に含まれ、かつ要求が専門的な技術条件（地盤・港湾・構造・施工・環境・維持管理・数量・データ）に触れる場合だけ、' +
+  'その組織責務 Agent の後段（depends_on に組織 Agent の番号）として選びます。専門 Agent を単独で先頭に置きません。technical_risk_class が T5/T6 の Agent の結果は AI 単独では完了できず専門技術者の確認が必須です。';
 
 async function nextOrchestrationCode(client) {
   const { rows } = await client.query(`SELECT MAX(substring(orchestration_code FROM '^ORC-(\\d+)$')::int) AS n FROM orchestrations`);
@@ -63,7 +66,26 @@ export function scriptedPlan(requestText, runtimeCatalog) {
     if (agent_id === 'knowledge-quality') { rejected.push({ agent_id, reason: 'Knowledge 候補の指定が必要なため司令塔からは起動しない' }); continue; }
     steps.push({ agent_id, reason: '要求文の語が Agent の用途と一致', query: requestText, depends_on: [] });
   }
-  return { source: 'scripted', intent: '相談 / 未分類', risk: 'R1', summary: steps.length ? '語の一致で Agent を選択。最終判断は人間が行う' : '要求に合う実行可能な Agent が無い（候補は rejected を参照）', steps: steps.slice(0, ORCHESTRATION_MAX_STEPS()), rejected };
+  // B-005: 組織責務 Agent の delegates_to にある土木専門 Agent のうち、要求文が専門用語（Agent の keywords）に一致するものを後段に委譲する
+  const orgSteps = steps.slice(0, ORCHESTRATION_MAX_STEPS());
+  const expertSteps = [];
+  for (const { agent_id } of kw.experts || []) {
+    const delegator = orgSteps.find((s) => (findAgent(s.agent_id)?.delegates_to || []).includes(agent_id));
+    if (!delegator) { rejected.push({ agent_id, reason: '専門用語は一致したが、選ばれた組織責務 Agent の委譲先に無いため起動しない' }); continue; }
+    const a = runtimeCatalog.agents.find((x) => x.agent_id === agent_id);
+    if (!a || !executable.has(agent_id)) { rejected.push({ agent_id, reason: 'Registry で未承認のため利用不可' }); continue; }
+    if (orgSteps.length + expertSteps.length >= ORCHESTRATION_MAX_STEPS()) { rejected.push({ agent_id, reason: '司令塔の Step 上限に達したため起動しない' }); continue; }
+    expertSteps.push({ agent_id, reason: `${delegator.agent_id} からの委譲（専門用語が一致、${a.technical_risk_class || 'T?'}）`, query: requestText, depends_on: [orgSteps.indexOf(delegator) + 1] });
+  }
+  const all = [...orgSteps, ...expertSteps];
+  const maxRisk = maxTechnicalRisk(all.map((s) => findAgent(s.agent_id)?.technical_risk_class));
+  return { source: 'scripted', intent: '相談 / 未分類', risk: 'R1', summary: all.length ? `語の一致で Agent を選択${expertSteps.length ? `（土木専門 ${expertSteps.length} 件へ委譲、最大技術リスク ${maxRisk}）` : ''}。最終判断は人間が行う` : '要求に合う実行可能な Agent が無い（候補は rejected を参照）', steps: all, rejected };
+}
+
+/** T1〜T6 の最大値（無ければ null）。 */
+export function maxTechnicalRisk(classes) {
+  const levels = classes.map((c) => technicalRiskPolicy(c).level).filter((n) => n !== null);
+  return levels.length ? `T${Math.max(...levels)}` : null;
 }
 
 /** LLM で計画し、カタログ・承認状態で検証する。 */
@@ -92,7 +114,13 @@ export async function planOrchestration(client, { requestText, llmAllowed = true
     if (!runnable.has(s.agent_id)) { rejected.push({ agent_id: s.agent_id, reason: a.executable ? 'Registry で未承認のため利用不可' : `${a.stage} の候補（未実装）のため利用不可` }); continue; }
     if (s.agent_id === 'knowledge-quality') { rejected.push({ agent_id: s.agent_id, reason: 'Knowledge 候補の指定が必要なため司令塔からは起動しない' }); continue; }
     if (steps.some((x) => x.agent_id === s.agent_id)) continue;
-    steps.push({ agent_id: s.agent_id, reason: s.reason, query: s.query || requestText, depends_on: s.depends_on.filter((n) => n >= 1 && n <= steps.length) });
+    const depends = s.depends_on.filter((n) => n >= 1 && n <= steps.length);
+    if (a.layer === 'civil_expert') {
+      // 専門 Agent は委譲元の組織責務 Agent の後段としてのみ採用する（先頭や無関係な組織 Agent からの起動は不採用）
+      const delegatorSeq = depends.find((n) => (findAgent(steps[n - 1].agent_id)?.delegates_to || []).includes(s.agent_id));
+      if (!delegatorSeq) { rejected.push({ agent_id: s.agent_id, reason: '土木専門 Agent は委譲元の組織責務 Agent の後段としてのみ起動できる（LLM の提案を不採用）' }); continue; }
+    }
+    steps.push({ agent_id: s.agent_id, reason: s.reason, query: s.query || requestText, depends_on: depends });
   }
   return { source: 'llm', intent: d.intent, risk: d.risk, summary: d.summary, steps, rejected, cost: result.cost || 0, tokensIn: result.tokensIn || 0, tokensOut: result.tokensOut || 0, provider: result.provider, model: result.model };
 }
@@ -222,16 +250,20 @@ async function finalizeOrchestration(client, orch, steps, status) {
       unknowns.push(`[${s.agent_id}] 結果なし（${s.status}${s.error_message ? ': ' + s.error_message : ''}）`);
     }
   }
+  const maxRisk = maxTechnicalRisk(steps.map((s) => findAgent(s.agent_id)?.technical_risk_class));
+  const riskPolicy = technicalRiskPolicy(maxRisk);
   const content = enforceOutputPolicy({
     findings: sections.flatMap((x) => x.findings.map((f) => `[${x.agent_id}] ${f}`)), unknowns, assumptions: sections.flatMap((x) => x.assumptions),
     sources: [...sources.values()], sections, orchestration_status: status, requires_human_review: true,
-    summary: `${steps.length} Agent 中 ${sections.length} 件の成果を統合。事実 ${findingsCount} 件、不明点 ${unknowns.length} 件。採用・施工可否・最終決定は人間が行う`,
+    technical_risk_class: maxRisk, expert_review_required: riskPolicy.expert_review_required, ai_completion_prohibited: riskPolicy.ai_completion_prohibited,
+    summary: `${steps.length} Agent 中 ${sections.length} 件の成果を統合。事実 ${findingsCount} 件、不明点 ${unknowns.length} 件。採用・施工可否・最終決定は人間が行う` +
+      (riskPolicy.ai_completion_prohibited ? `。最大技術リスク ${maxRisk}: AI 単独では完了できず、専門技術者の確認記録が必須` : riskPolicy.expert_review_required ? `。最大技術リスク ${maxRisk}: 専門技術者レビュー必須` : ''),
   }, { requireHumanReview: true }).output;
   const code = await nextArtifactCode(client);
   const { rows } = await client.query(
-    `INSERT INTO artifacts (artifact_code, run_id, kind, title, content, review_state, content_hash, orchestration_id)
-     VALUES ($1, $2, 'orchestration_summary', $3, $4, 'draft', $5, $6) RETURNING id`,
-    [code, steps.find((s) => s.run_id)?.run_id || null, `司令塔 ${orch.orchestration_code} 統合草案`, JSON.stringify(content), contentHash(content), orch.id],
+    `INSERT INTO artifacts (artifact_code, run_id, kind, title, content, review_state, content_hash, orchestration_id, expert_review_required, ai_completion_prohibited)
+     VALUES ($1, $2, 'orchestration_summary', $3, $4, 'draft', $5, $6, $7, $8) RETURNING id`,
+    [code, steps.find((s) => s.run_id)?.run_id || null, `司令塔 ${orch.orchestration_code} 統合草案`, JSON.stringify(content), contentHash(content), orch.id, riskPolicy.expert_review_required, riskPolicy.ai_completion_prohibited],
   ).catch(async (err) => {
     // run_id が無い（全 Step が blocked 等）場合は統合草案を作らず、理由だけ残す
     await client.query(`UPDATE orchestrations SET error_message = COALESCE(error_message, $1) WHERE id = $2`, [`統合草案なし: ${err.message}`, orch.id]);

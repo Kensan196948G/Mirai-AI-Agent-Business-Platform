@@ -1,0 +1,68 @@
+schema_version: mirai.agent-definition/v1
+agent_id: quantity-cost-expert
+version: 1.0.0
+domain_pack: mirai-construction
+title: 数量・コスト 専門Agent
+owner_role: 積算
+layer: civil_expert
+technical_risk_class: T3
+purpose: 数量表・単価の整合（単位・合計・欠落）を機械的に確認し、論点を整理する。数量の算出や見積額の確定はしない。
+does_not: 数量の算出、見積額・単価の確定。
+max_autonomy_level: A1
+input_contract:
+  type: object
+  properties:
+    query:
+      type: string
+      minLength: 1
+      maxLength: 4000
+    technical_text:
+      type: string
+      maxLength: 60000
+    quantities_text:
+      type: string
+      maxLength: 60000
+    document_text:
+      type: string
+      maxLength: 60000
+required_conditions:
+- 数量表
+- 単位
+- 工種
+- 単価の出典
+keywords:
+- 数量
+- 積算
+- コスト
+- 単価
+- 見積
+- 歩掛
+- 原価
+- 拾い
+timeout_seconds: 900
+budget_usd: 0.5
+model_category: Research / Classification
+skills:
+- skill_id: condition-gap-register
+  version: 1.0.0
+  params:
+    required_conditions:
+    - 数量表
+    - 単位
+    - 工種
+    - 単価の出典
+- skill_id: quantity-consistency-check
+  version: 1.0.0
+- skill_id: engineering-consistency-check
+  version: 1.0.0
+- skill_id: planning-brief
+  version: 1.0.0
+  params:
+    plan_type: quantity_review
+    criteria:
+    - 数量の根拠
+    - 単位
+    - 漏れ
+    - 重複
+    - 単価の出典
+output: 根拠付きの技術論点草案（review_state=draft、T3 以上は専門技術者レビュー必須、T5/T6 は AI 単独完了不可）

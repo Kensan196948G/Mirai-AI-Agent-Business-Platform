@@ -21,3 +21,11 @@ skills:
   - skill_id: evidence-backed-draft
     version: "1.0.0"
 output: "出典付き技術候補比較表と、専門家確認事項付きの草案（review_state=draft）"
+# 第 3 段: 司令塔が要求の専門用語に応じて後段へ委譲できる土木専門 Agent（B-005）
+delegates_to:
+- bim-cim-cad-gis-expert
+- environmental-expert
+- geotechnical-expert
+- maintenance-expert
+- port-marine-expert
+- structural-expert

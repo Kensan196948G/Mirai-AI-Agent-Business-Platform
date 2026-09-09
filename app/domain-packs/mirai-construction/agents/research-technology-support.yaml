@@ -18,6 +18,10 @@ input_contract:
       minLength: 1
       maxLength: 4000
 delegates_to:
+- bim-cim-cad-gis-expert
+- geotechnical-expert
+- port-marine-expert
+- structural-expert
 - technology-selection
 timeout_seconds: 600
 budget_usd: 0.5

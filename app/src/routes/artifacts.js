@@ -120,24 +120,32 @@ router.get('/:id/diff', requireAuth, async (req, res) => {
 // アプリ内レビュー（人間が草案を確認したことを記録する）。正式なGate承認とは別物。
 router.post('/:id/review', requireAuth, requireRole('Administrator', 'Knowledge Curator', 'Reviewer'), async (req, res) => {
   const id = Number(req.params.id);
-  const { note } = req.body || {};
+  const { note, expert_confirmed: expertConfirmed, expert_note: expertNote } = req.body || {};
   if (!Number.isInteger(id)) return res.status(400).json({ error: '不正な id' });
   try {
     const result = await withTransaction(async (client) => {
       // レビュー時点の内容ハッシュを固定する（以後の上書きは write-draft が拒否し、改変は integrity で検出できる）
-      const { rows: cur } = await client.query(`SELECT content FROM artifacts WHERE id = $1 AND review_state = 'draft' FOR UPDATE`, [id]);
+      const { rows: cur } = await client.query(`SELECT content, expert_review_required, ai_completion_prohibited FROM artifacts WHERE id = $1 AND review_state = 'draft' FOR UPDATE`, [id]);
       if (cur.length === 0) throw Object.assign(new Error('artifact が見つからないか、既にレビュー済みです'), { status: 409 });
+      // 技術リスク T3 以上: 専門技術者の確認（expert_confirmed）が無ければレビュー済みにできない。Knowledge Curator は技術レビューの権限を持たない
+      if (cur[0].expert_review_required) {
+        if (!['Administrator', 'Reviewer'].includes(req.user.role)) throw Object.assign(new Error('専門技術者レビューが必要な成果物は Reviewer または Administrator だけがレビューできます'), { status: 403 });
+        if (expertConfirmed !== true) throw Object.assign(new Error('専門技術者レビューが必要な成果物です。expert_confirmed: true（専門技術者として内容を確認した）を付けてください'), { status: 422 });
+        // T5 / T6: AI 単独では完了できないため、確認した専門技術者の所見（expert_note）を必ず残す
+        if (cur[0].ai_completion_prohibited && !(typeof expertNote === 'string' && expertNote.trim().length >= 10)) throw Object.assign(new Error('T5/T6 の成果物は AI 単独では完了できません。専門技術者の所見（expert_note、10 文字以上）が必須です'), { status: 422 });
+      }
       const pinned = contentHash(cur[0].content);
       const { rows } = await client.query(
         `UPDATE artifacts SET review_state = 'reviewed', reviewed_by = $1, reviewed_at = now(), review_note = $2,
                               content_hash = COALESCE(content_hash, $4), reviewed_content_hash = $4, updated_at = now()
          WHERE id = $3 AND review_state = 'draft' RETURNING id, review_state, reviewed_content_hash`,
-        [req.user.id, note || null, id, pinned],
+        [req.user.id, [note, expertNote ? `専門技術者所見: ${expertNote}` : ''].filter(Boolean).join('\n') || null, id, pinned],
       );
       if (rows.length === 0) throw Object.assign(new Error('artifact が見つからないか、既にレビュー済みです'), { status: 409 });
       await recordAudit(client, {
         actorId: req.user.id, actorType: 'user', actorName: req.user.name,
-        action: 'artifact.review', resourceType: 'artifact', resourceId: id, detail: { note, reviewed_content_hash: pinned },
+        action: 'artifact.review', resourceType: 'artifact', resourceId: id,
+        detail: { note, reviewed_content_hash: pinned, expert_review_required: !!cur[0].expert_review_required, expert_confirmed: expertConfirmed === true, ai_completion_prohibited: !!cur[0].ai_completion_prohibited, expert_note: expertNote || null },
       });
       return rows[0];
     });

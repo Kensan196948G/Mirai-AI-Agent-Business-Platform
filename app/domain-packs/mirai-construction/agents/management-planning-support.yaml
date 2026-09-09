@@ -20,7 +20,8 @@ input_contract:
     quantities_text:
       type: string
       maxLength: 60000
-delegates_to: []
+delegates_to:
+- quantity-cost-expert
 timeout_seconds: 600
 budget_usd: 0.5
 model_category: Research / Classification

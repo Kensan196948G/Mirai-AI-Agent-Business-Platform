@@ -41,7 +41,7 @@ const INSTRUCTIONS =
 function resolveAgents(agentIds, reasons, packId) {
   return agentIds.map((id) => {
     const a = findAgent(id, packId);
-    return { agent_id: id, title: a?.title || id, stage: a?.stage || null, dept: a?.dept || null, org_code: a?.org_code || null, executable: !!a?.executable, reason: reasons[id] || '' };
+    return { agent_id: id, title: a?.title || id, stage: a?.stage || null, dept: a?.dept || null, org_code: a?.org_code || null, layer: a?.layer || 'organization', technical_risk_class: a?.technical_risk_class || null, executable: !!a?.executable, reason: reasons[id] || '' };
   });
 }
 
@@ -49,7 +49,8 @@ function resolveAgents(agentIds, reasons, packId) {
 export function scriptedIdea(text, packId) {
   const scenario = matchScenario(text);
   const kw = matchByKeywords(text, packId);
-  const agents = resolveAgents(kw.agents.map((a) => a.agent_id), {}, packId);
+  // 組織責務 Agent に続けて、専門用語が一致した土木専門 Agent も「近い Agent」として挙げる（司令塔では委譲元の後段として起動される）
+  const agents = resolveAgents([...kw.agents, ...(kw.experts || [])].map((a) => a.agent_id), Object.fromEntries((kw.experts || []).map((e) => [e.agent_id, '専門用語の一致（土木専門 Agent）'])), packId);
   const generic = scenario.match.source === '.';
   const fields = generic
     ? {

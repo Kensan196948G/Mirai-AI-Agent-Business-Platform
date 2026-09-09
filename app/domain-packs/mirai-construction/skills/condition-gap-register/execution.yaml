@@ -1,0 +1,19 @@
+schema_version: mirai.skill-execution/v1
+skill_id: condition-gap-register
+version: 1.0.0
+input_schema: schemas/input.schema.json
+output_schema: schemas/output.schema.json
+required_source_state: approved
+source_scope: authorized_project_and_public
+execution_mode: deterministic
+allowed_tools:
+  - artifact.write-draft
+forbidden_actions:
+  - equipment.control
+  - external.send
+  - formal-approval.decide
+  - knowledge.auto-promote
+result_class: intermediate
+require_domain_review: false
+on_missing_evidence: abstain
+max_attempts: 3
