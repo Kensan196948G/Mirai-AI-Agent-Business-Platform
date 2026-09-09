@@ -62,6 +62,9 @@ export function authorizeSourceAccess({ run, sourceRecord }) {
   if (sourceRecord.status !== 'approved') {
     throw new PolicyDeniedError(`source_record ${sourceRecord.id} は未承認です（status=${sourceRecord.status}）`);
   }
+  if (sourceRecord.effective_to && new Date(sourceRecord.effective_to) < startOfToday()) {
+    throw new PolicyDeniedError(`source_record ${sourceRecord.id} は有効期限切れです（effective_to=${toDateString(sourceRecord.effective_to)}）`);
+  }
   if (sourceRecord.classification === 'internal_project') {
     if (!run.project_id || Number(sourceRecord.project_scope) !== Number(run.project_id)) {
       throw new PolicyDeniedError(`source_record ${sourceRecord.id} は別案件の非公開情報のため参照できません`);
@@ -75,4 +78,12 @@ export function authorizeBudget({ reservation, additionalCost }) {
   if (spent + additionalCost > reserved) {
     throw new PolicyDeniedError(`予算上限（$${reserved}）を超過するため実行を保留します`);
   }
+}
+
+function startOfToday() {
+  const d = new Date();
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+function toDateString(v) {
+  return v instanceof Date ? v.toISOString().slice(0, 10) : String(v);
 }

@@ -4,32 +4,34 @@
  * run_events へ記録する。
  */
 import { authorizeToolCall, authorizeSourceAccess, PolicyDeniedError } from './policy-engine.js';
+import { extractSearchTokens } from '../lib/search-tokens.js';
 import { appendEvent } from './job-store.js';
 
 /**
- * 単純な部分一致検索。利用者の相談文はフレーズ全体が出典タイトルに一致することは稀なため、
- * 空白区切りの単語（英数字の技術名等）のいずれかがtitle/summaryに含まれればヒットとする。
- * 2文字未満の断片（助詞の断片化等によるノイズ）は無視する。
+ * 承認済み出典の検索（B-12）。
+ * 相談文から日本語対応の検索語を取り出し（lib/search-tokens.js）、title / summary / content_text への
+ * 部分一致（pg_trgm GIN index）で候補を集め、一致した語数と title の類似度で並べる。
+ * 有効期限切れ（effective_to < 今日）と未承認は除外する。
  */
 async function toolKnowledgeSearchApproved(client, { query, sourceType, projectId }) {
-  const tokens = String(query || '')
-    .trim()
-    .split(/\s+/)
-    .map((t) => t.replace(/[%_]/g, ''))
-    .filter((t) => t.length >= 2)
-    .slice(0, 10);
+  const tokens = extractSearchTokens(query);
   if (tokens.length === 0) return { candidates: [] };
 
-  const likeClauses = tokens.map((_, i) => `(title ILIKE $${i + 3} OR summary ILIKE $${i + 3})`).join(' OR ');
+  const params = [sourceType || null, projectId || null, String(query || ''), ...tokens.map((t) => `%${t}%`)];
+  const hitExprs = tokens.map((_, i) => `(CASE WHEN title ILIKE $${i + 4} THEN 3 WHEN summary ILIKE $${i + 4} THEN 2 WHEN content_text ILIKE $${i + 4} THEN 1 ELSE 0 END)`);
   const { rows } = await client.query(
-    `SELECT id, title, summary, evidence_type, source_type
+    `SELECT id, title, summary, evidence_type, source_type,
+            (${hitExprs.join(' + ')}) AS hit_score,
+            similarity(title, $3::text) AS title_sim
      FROM source_records
      WHERE status = 'approved'
+       AND (effective_to IS NULL OR effective_to >= CURRENT_DATE)
        AND (classification = 'public' OR ($2::bigint IS NOT NULL AND project_scope = $2))
        AND ($1::text IS NULL OR source_type = $1)
-       AND (${likeClauses})
-     ORDER BY id LIMIT 10`,
-    [sourceType || null, projectId || null, ...tokens.map((t) => `%${t}%`)],
+       AND (${tokens.map((_, i) => `title ILIKE $${i + 4} OR summary ILIKE $${i + 4} OR content_text ILIKE $${i + 4}`).join(' OR ')})
+     ORDER BY hit_score DESC, title_sim DESC, id
+     LIMIT 10`,
+    params,
   );
   // pg は BIGINT 列を文字列で返すため、JSON Schema（type: integer）検証に通るよう Number() で正規化する。
   return { candidates: rows.map((r) => ({ source_record_id: Number(r.id), title: r.title, summary: r.summary, evidence_type: r.evidence_type })) };
@@ -37,12 +39,7 @@ async function toolKnowledgeSearchApproved(client, { query, sourceType, projectI
 
 /** 既存の昇格済みKnowledge（knowledge_candidates.status='promoted'）を検索する。source_recordsとは別物。 */
 async function toolKnowledgeSearchPromoted(client, { query }) {
-  const tokens = String(query || '')
-    .trim()
-    .split(/\s+/)
-    .map((t) => t.replace(/[%_]/g, ''))
-    .filter((t) => t.length >= 2)
-    .slice(0, 10);
+  const tokens = extractSearchTokens(query);
   if (tokens.length === 0) return { candidates: [] };
 
   const likeClauses = tokens.map((_, i) => `(title ILIKE $${i + 1} OR summary ILIKE $${i + 1})`).join(' OR ');
