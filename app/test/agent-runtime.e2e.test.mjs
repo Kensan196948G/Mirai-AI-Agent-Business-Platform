@@ -1488,3 +1488,81 @@ test('Cross Review（第 4 段）: 司令塔の最終 Step として独立レビ
   assert.equal(od2.data.orchestration.status, 'failed');
   await pool.query(`UPDATE agent_runs SET status = 'cancelled', finished_at = now() WHERE status IN ('queued','running') AND requested_by = $1`, [adminId]);
 });
+
+test('第 5 段 是正: pagination（S-015）、司令塔と Run のタイムアウト（B-018）、IDOR スコープ（自分の Run / 成果物 / 司令塔だけ）', async () => {
+  await withTransaction(async (client) => {
+    const { loadUnifiedCatalog } = await import('../src/agent-runtime/catalog.js');
+    for (const a of loadUnifiedCatalog('mirai-construction').agents.filter((x) => x.executable)) await syncAgent(client, 'mirai-construction', a.agent_id, '1.0.0', { approvedByUserId: adminId, status: 'approved' });
+  });
+  // --- pagination ---
+  const p1 = await call('/api/agent-runs?limit=2&offset=0', { cookie: adminCookie });
+  assert.equal(p1.status, 200); assert.equal(p1.data.runs.length, 2); assert.equal(p1.data.page.limit, 2); assert.ok(p1.data.page.total >= 3 && p1.data.page.has_more === true, JSON.stringify(p1.data.page));
+  const p2 = await call('/api/agent-runs?limit=2&offset=2', { cookie: adminCookie });
+  assert.ok(p2.data.runs.length >= 1 && Number(p2.data.runs[0].id) !== Number(p1.data.runs[0].id));
+  assert.equal((await call('/api/agent-runs?limit=0', { cookie: adminCookie })).status, 400);
+  assert.equal((await call('/api/agent-runs?limit=5000', { cookie: adminCookie })).data.page.limit, 200, '上限 200');
+  const dflt = await call('/api/agent-runs', { cookie: adminCookie });
+  assert.equal(dflt.data.page.limit, 100, '既定は従来どおり 100 件');
+  const au = await call('/api/audit?limit=3', { cookie: adminCookie });
+  assert.equal(au.data.audit.length, 3); assert.ok(au.data.page.total > 3);
+  const so = await call('/api/sources?limit=1', { cookie: adminCookie });
+  assert.equal(so.status, 200); assert.ok(so.data.sources.length <= 1 && typeof so.data.page.total === 'number');
+  const oc = await call('/api/orchestrations?limit=1', { cookie: adminCookie });
+  assert.equal(oc.status, 200); assert.equal(oc.data.orchestrations.length, 1); assert.ok(oc.data.page.total >= 1);
+  // --- 司令塔タイムアウト ---
+  const orc = await call('/api/orchestrations', { method: 'POST', cookie: adminCookie, body: { request: '委員会向けに今月の KPI を整理し、港湾の岸壁改良の施工計画も確認したい' } });
+  assert.equal(orc.status, 201);
+  await pool.query(`UPDATE orchestrations SET created_at = now() - interval '2 hours' WHERE id = $1`, [orc.data.orchestration.id]);
+  let od = await call(`/api/orchestrations/${orc.data.orchestration.id}`, { cookie: adminCookie });
+  assert.ok(od.data.orchestration.cancel_requested === true && /タイムアウト/.test(od.data.orchestration.error_message), JSON.stringify(od.data.orchestration));
+  assert.ok(od.data.steps.filter((s) => s.layer !== 'organization').every((s) => s.status === 'blocked' && /タイムアウト/.test(s.error_message)), '未着手 Step は blocked（理由 timeout）');
+  // 実行中の Run は cancel_requested → Step 境界で cancelled → 全体 failed
+  const { rows: tr } = await pool.query(`SELECT id, cancel_requested FROM agent_runs WHERE orchestration_id = $1`, [orc.data.orchestration.id]);
+  assert.ok(tr.length >= 1 && tr.every((r) => r.cancel_requested === true));
+  for (const r of tr) await claimAndExecute(r.id);
+  od = await call(`/api/orchestrations/${orc.data.orchestration.id}`, { cookie: adminCookie });
+  assert.equal(od.data.orchestration.status, 'failed', JSON.stringify(od.data.steps.map((s) => [s.agent_id, s.status])));
+  const { rows: audT } = await pool.query(`SELECT detail FROM audit_log WHERE action = 'orchestration.timeout' AND resource_id = $1`, [orc.data.orchestration.id]);
+  assert.equal(audT.length, 1); assert.equal(audT[0].detail.timeout_s, 3600);
+  // --- Run タイムアウト（Agent 契約 timeout_seconds=600 の governance-support） ---
+  const g = await call('/api/agent-runs', { method: 'POST', cookie: adminCookie, body: { agentId: 'governance-support', input: { query: 'タイムアウト確認' } } });
+  assert.equal(g.status, 201);
+  await pool.query(`UPDATE agent_runs SET created_at = now() - interval '1 hour' WHERE id = $1`, [g.data.run.id]);
+  const gs = await claimAndExecute(g.data.run.id);
+  assert.equal(gs.run.status, 'cancelled'); assert.match(gs.run.error_message, /タイムアウト（600 秒）/);
+  // 承認後の再開からは数え直す（resumed イベントが基準）
+  const g2 = await call('/api/agent-runs', { method: 'POST', cookie: adminCookie, body: { agentId: 'governance-support', input: { query: 'タイムアウト確認 2' } } });
+  await pool.query(`UPDATE agent_runs SET created_at = now() - interval '1 hour' WHERE id = $1`, [g2.data.run.id]);
+  await pool.query(`INSERT INTO run_events (run_id, seq, type, status, detail) VALUES ($1, 1, 'resumed', 'ok', '{}')`, [g2.data.run.id]);
+  const gs2 = await claimAndExecute(g2.data.run.id);
+  assert.notEqual(gs2.run.status, 'cancelled', gs2.run.error_message || '');
+  await pool.query(`UPDATE agent_runs SET status = 'cancelled', finished_at = now() WHERE id = $1 AND status IN ('queued','running')`, [g2.data.run.id]);
+  // --- IDOR スコープ ---
+  await createUser('e2e-dev-scope@example.com', 'E2E Dev', 'Developer', 'dev-password'); // doc003-allow: 使い捨てテストDB専用の固定値
+  const devCookie = await loginAs('e2e-dev-scope@example.com', 'dev-password'); // doc003-allow: 使い捨てテストDB専用の固定値
+  const viewerCookie = await loginAs('e2e-viewer-agent@example.com', 'viewer-password'); // doc003-allow: 使い捨てテストDB専用の固定値
+  const adminRunId = g.data.run.id;
+  const { rows: adminArt } = await pool.query(`SELECT a.id FROM artifacts a JOIN agent_runs r ON r.id = a.run_id WHERE r.requested_by = $1 ORDER BY a.id DESC LIMIT 1`, [adminId]);
+  for (const cookie of [viewerCookie, devCookie]) {
+    assert.equal((await call(`/api/agent-runs/${adminRunId}`, { cookie })).status, 404, '他人の Run は 404');
+    assert.equal((await call(`/api/agent-runs/${adminRunId}/events`, { cookie })).status, 404);
+    assert.equal((await call(`/api/artifacts/${adminArt[0].id}`, { cookie })).status, 404, '他人の成果物は 404');
+    assert.equal((await call(`/api/artifacts/${adminArt[0].id}/history`, { cookie })).status, 404);
+    assert.equal((await call(`/api/artifacts/${adminArt[0].id}/diff`, { cookie })).status, 404);
+    assert.equal((await call(`/api/orchestrations/${orc.data.orchestration.id}`, { cookie })).status, 404, '他人の司令塔は 404');
+    const list = await call('/api/agent-runs', { cookie });
+    assert.equal(list.status, 200); assert.equal(list.data.runs.length, 0); assert.equal(list.data.page.total, 0, '一覧は自分の Run だけ');
+    assert.equal((await call('/api/orchestrations', { cookie })).data.orchestrations.length, 0);
+  }
+  assert.equal((await call(`/api/agent-runs/${adminRunId}/rerun`, { method: 'POST', cookie: devCookie })).status, 404, '他人の Run は再実行できない');
+  // Developer は自分の Run なら見える。Reviewer 等の監督系ロールは全件見える
+  const own = await call('/api/agent-runs', { method: 'POST', cookie: devCookie, body: { agentId: 'governance-support', input: { query: '自分の Run' } } });
+  assert.equal(own.status, 201);
+  const ownList = await call('/api/agent-runs', { cookie: devCookie });
+  assert.equal(ownList.data.runs.length, 1); assert.equal(Number(ownList.data.runs[0].id), Number(own.data.run.id));
+  assert.equal((await call(`/api/agent-runs/${own.data.run.id}`, { cookie: devCookie })).status, 200);
+  assert.equal((await call(`/api/agent-runs/${own.data.run.id}`, { cookie: adminCookie })).status, 200, 'Administrator は他人の Run も見える');
+  const reviewerCookie = await loginAs('e2e-other-admin@example.com', 'other-password'); // doc003-allow: 使い捨てテストDB専用の固定値（Reviewer）
+  assert.equal((await call(`/api/agent-runs/${own.data.run.id}`, { cookie: reviewerCookie })).status, 200, 'Reviewer は全件見える');
+  await pool.query(`UPDATE agent_runs SET status = 'cancelled', finished_at = now() WHERE status IN ('queued','running')`);
+});

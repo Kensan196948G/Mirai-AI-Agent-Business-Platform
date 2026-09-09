@@ -1,6 +1,6 @@
 import express from 'express';
 import { getPool, withTransaction } from '../lib/db.js';
-import { requireAuth, requireRole } from '../middleware/auth.js';
+import { requireAuth, requireRole, canViewAll } from '../middleware/auth.js';
 import { recordAudit } from '../lib/audit.js';
 import { diffArtifacts, lineageOf, integrityOf, contentHash } from '../lib/artifact-lineage.js';
 import { createHash } from 'node:crypto';
@@ -10,6 +10,13 @@ const CHECK_KINDS = new Set(['unknown', 'assumption', 'finding', 'flag']);
 const itemHash = (text) => createHash('sha256').update(String(text)).digest('hex');
 
 const router = express.Router();
+
+/** IDOR スコープ: 監督系ロール以外は自分が起案した Run の成果物だけ（他人のものは 404）。 */
+async function artifactVisible(client, artifactId, user) {
+  if (canViewAll(user)) return true;
+  const { rows } = await client.query(`SELECT ar.requested_by FROM artifacts a JOIN agent_runs ar ON ar.id = a.run_id WHERE a.id = $1`, [artifactId]);
+  return rows.length > 0 && Number(rows[0].requested_by) === Number(user.id);
+}
 
 router.get('/:id', requireAuth, async (req, res) => {
   const id = Number(req.params.id);
@@ -21,7 +28,7 @@ router.get('/:id', requireAuth, async (req, res) => {
      WHERE a.id = $1`,
     [id],
   );
-  if (rows.length === 0) return res.status(404).json({ error: 'artifact が見つかりません' });
+  if (rows.length === 0 || !(await artifactVisible(getPool(), id, req.user))) return res.status(404).json({ error: 'artifact が見つかりません' });
   const { rows: citations } = await getPool().query(
     `SELECT ac.locator, sr.id AS source_record_id, sr.title, sr.canonical_url, sr.evidence_type
      FROM artifact_citations ac JOIN source_records sr ON sr.id = ac.source_record_id
@@ -95,6 +102,7 @@ router.put('/:id/checks', requireAuth, requireRole(...REVIEW_ROLES), async (req,
 router.get('/:id/history', requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) return res.status(400).json({ error: '不正な id' });
+  if (!(await artifactVisible(getPool(), id, req.user))) return res.status(404).json({ error: 'artifact が見つかりません' });
   const lineage = await lineageOf(getPool(), id);
   if (lineage.length === 0) return res.status(404).json({ error: 'artifact が見つかりません' });
   const { rows: revisions } = await getPool().query(
@@ -109,7 +117,7 @@ router.get('/:id/diff', requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) return res.status(400).json({ error: '不正な id' });
   const { rows } = await getPool().query(`SELECT id, artifact_code, content, previous_artifact_id FROM artifacts WHERE id = $1`, [id]);
-  if (rows.length === 0) return res.status(404).json({ error: 'artifact が見つかりません' });
+  if (rows.length === 0 || !(await artifactVisible(getPool(), id, req.user))) return res.status(404).json({ error: 'artifact が見つかりません' });
   const againstId = req.query.against ? Number(req.query.against) : (rows[0].previous_artifact_id ? Number(rows[0].previous_artifact_id) : null);
   if (!Number.isInteger(againstId)) return res.json({ artifact_id: id, against: null, diff: null });
   const { rows: other } = await getPool().query(`SELECT id, artifact_code, content FROM artifacts WHERE id = $1`, [againstId]);

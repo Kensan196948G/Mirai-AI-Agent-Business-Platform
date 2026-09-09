@@ -6,7 +6,7 @@ import Ajv from 'ajv';
 import { getPool, withTransaction } from '../lib/db.js';
 import * as jobStore from './job-store.js';
 import * as registry from './registry.js';
-import { loadSkillDefinition } from './skill-loader.js';
+import { loadSkillDefinition, loadAgentDefinition, SkillLoaderError } from './skill-loader.js';
 import { callTool } from './tool-gateway.js';
 import { structuredComplete, ProviderNotConfiguredError, CircuitOpenError } from './provider-adapter.js';
 import { withinMonthlyBudget, monthlyCapUsd } from '../lib/llm.js';
@@ -40,6 +40,9 @@ export async function executeNextStep(runId, { workerId }) {
   }
 
   if (await checkCancel(run.id)) return finishAs(run.id, 'cancelled', null);
+  // Agent 契約の timeout_seconds（B-018 / E-014）: 起動（または承認後の再開）からの経過が上限を超えた Run は理由付きで中断する
+  const timeout = await runTimeoutExceeded(run, agentVersion);
+  if (timeout) return finishAs(run.id, 'cancelled', timeout);
   if (run.current_step >= skillVersions.length) return finishAs(run.id, 'completed', null);
   if (await checkPause(run.id)) return pauseAs(run.id);
   if (run.current_step >= run.max_steps) return finishAs(run.id, 'failed', `最大Step数（${run.max_steps}）に到達しました`);
@@ -237,6 +240,19 @@ async function collectPriorOutputs(client, runId) {
     }
   }
   return merged;
+}
+
+/** Agent 契約の timeout_seconds を超えていれば理由文字列、そうでなければ null。承認待ちの時間は数えない（最後の resumed から測る）。 */
+async function runTimeoutExceeded(run, agentVersion) {
+  let timeoutS = null;
+  try { timeoutS = Number(loadAgentDefinition(agentVersion.domain_pack, run.agent_id).definition.timeout_seconds) || null; } catch (err) { if (!(err instanceof SkillLoaderError)) throw err; }
+  if (!timeoutS) return null;
+  const since = await withTransaction(async (client) => {
+    const { rows } = await client.query(`SELECT COALESCE(MAX(created_at), $2::timestamptz) AS since FROM run_events WHERE run_id = $1 AND type = 'resumed'`, [run.id, run.created_at]);
+    return rows[0].since;
+  });
+  const elapsedS = (Date.now() - new Date(since).getTime()) / 1000;
+  return elapsedS > timeoutS ? `Agent 契約のタイムアウト（${timeoutS} 秒）を超えたため中断（経過 ${Math.round(elapsedS)} 秒）` : null;
 }
 
 async function handleStepFailure(client, run, message) {
