@@ -35,7 +35,7 @@ if (!process.env.DATABASE_URL || !process.env.SESSION_SECRET) {
 assertTestDatabaseUrl(process.env.DATABASE_URL); // F-34: DB 名・ロールの許可リスト
 
 const ALL_TABLES = [
-  'skill_evaluations', 'artifact_revisions', 'worker_heartbeats', 'artifact_citations', 'artifacts', 'effect_ledger', 'budget_reservations', 'run_events', 'agent_runs',
+  'artifact_checks', 'skill_evaluations', 'artifact_revisions', 'worker_heartbeats', 'artifact_citations', 'artifacts', 'effect_ledger', 'budget_reservations', 'run_events', 'agent_runs',
   'source_records', 'agent_skill_bindings', 'skill_versions', 'agent_versions',
   'chat_messages', 'chat_conversations', 'task_tool_calls', 'tasks', 'knowledge_candidates',
   'approval_steps', 'approval_requests', 'project_kpis', 'projects', 'requests',
@@ -1128,4 +1128,32 @@ test('F-32 レート制限: ログイン失敗が上限に達すると正しい�
     if (savedDaily === undefined) delete process.env.AGENT_RUN_MAX_PER_USER_PER_DAY; else process.env.AGENT_RUN_MAX_PER_USER_PER_DAY = savedDaily;
     resetAll();
   }
+});
+
+test('成果物レビュー UI（G-36）: 不明点ごとの確認済みチェックを記録・集計し、存在しない項目や権限外は拒否する', async () => {
+  const { rows: arts } = await pool.query(`SELECT a.id, a.content FROM artifacts a WHERE jsonb_array_length(COALESCE(a.content->'unknowns', '[]'::jsonb)) >= 1 ORDER BY a.id DESC LIMIT 1`);
+  assert.ok(arts.length === 1, '前提: 不明点を持つ成果物がある');
+  const art = arts[0]; const unknown = art.content.unknowns[0];
+  const before = await call(`/api/artifacts/${art.id}`, { cookie: adminCookie });
+  assert.equal(before.data.check_summary.unknowns_checked, 0);
+  const put = await call(`/api/artifacts/${art.id}/checks`, { method: 'PUT', cookie: adminCookie, body: { kind: 'unknown', text: unknown, checked: true, note: '技術部で確認済み' } });
+  assert.equal(put.status, 200);
+  assert.equal(put.data.check.checked, true);
+  const after = await call(`/api/artifacts/${art.id}`, { cookie: adminCookie });
+  assert.equal(after.data.check_summary.unknowns_checked, 1);
+  assert.ok(after.data.checks.some((c) => c.item_kind === 'unknown' && c.item_text === unknown && c.checked && c.note === '技術部で確認済み' && c.checked_by_name));
+  // 取り消し（冪等な upsert）
+  const undo = await call(`/api/artifacts/${art.id}/checks`, { method: 'PUT', cookie: adminCookie, body: { kind: 'unknown', text: unknown, checked: false } });
+  assert.equal(undo.data.check.checked, false);
+  assert.equal((await call(`/api/artifacts/${art.id}`, { cookie: adminCookie })).data.check_summary.unknowns_checked, 0);
+  // 存在しない項目 / 不正な kind / 権限外
+  assert.equal((await call(`/api/artifacts/${art.id}/checks`, { method: 'PUT', cookie: adminCookie, body: { kind: 'unknown', text: '存在しない項目', checked: true } })).status, 409);
+  assert.equal((await call(`/api/artifacts/${art.id}/checks`, { method: 'PUT', cookie: adminCookie, body: { kind: 'other', text: unknown, checked: true } })).status, 400);
+  const viewerCookie = await loginAs('e2e-viewer-agent@example.com', 'viewer-password'); // doc003-allow: 使い捨てテストDB専用の固定値
+  assert.equal((await call(`/api/artifacts/${art.id}/checks`, { method: 'PUT', cookie: viewerCookie, body: { kind: 'unknown', text: unknown, checked: true } })).status, 403);
+  // 成果物本体は変更されない（内容ハッシュ不変）
+  const { rows: same } = await pool.query(`SELECT content FROM artifacts WHERE id = $1`, [art.id]);
+  assert.deepEqual(same[0].content, art.content);
+  const { rows: audit } = await pool.query(`SELECT count(*)::int AS n FROM audit_log WHERE action = 'artifact.check'`);
+  assert.ok(audit[0].n >= 2);
 });
