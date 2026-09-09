@@ -61,11 +61,12 @@
 </style>
 </head>
 <body>
+<script id="embeddedState" type="application/json">{}</script>
 <header>
   <h1>みらい建設工業 部署別 Agent／Skill 機能一覧（確認・追加希望シート）</h1>
   <div class="sub">組織区分は公式サイト「組織図（2026.4.1 付）」（取締役会・社長・CSR／エンゲージメント／コンプライアンス委員会・監査役／営業本部・ソリューション営業本部・施工本部・技術本部・安全品質環境本部・管理本部・経営企画室／北海道〜九州の 7 支店／船舶事業部）に基づき 01〜09 に整理。Agent／Skill の出典は <code>app/domain-packs/mirai-construction/</code>（実装済み P1）、<code>backlog/p2-p3-catalog.yaml</code>（候補 P2/P3）。実行できるのは検索・比較・草案作成（A0〜A1）まで。採用・施工可否・品質合否の最終判断、設備・船舶制御、警報変更、外部への確定書き込みは対象外。</div>
   <div class="bar">
-    <button class="primary" id="btnSave">保存（このブラウザ）</button>
+    <button class="primary" id="btnSave">名前を付けて保存</button>
     <button id="btnExport">JSON 書き出し</button>
     <button id="btnImport">JSON 読み込み</button>
     <input type="file" id="fileImport" accept="application/json" hidden>
@@ -111,7 +112,7 @@
     <div class="cap">定義のみで Registry 未登録（どの Agent にも紐付いていない共通 Skill、3 件）: <code>source-normalize</code>（資料の正規化・除外対象の隔離）、<code>source-citation-verify</code>（引用の実在性・権限の検証）、<code>outcome-measurement</code>（実測に基づく成果測定）。運用者がバッチとして使う想定で、Agent Run の Step としては実行されない。</div>
   </section>
   <div id="app"></div>
-  <div class="foot">✅「確認」列にチェックし、「Agent 追加希望」「Skill 追加希望」欄に各組織からの要望を記入してください。入力はこのブラウザに自動保存されます（他の端末には同期されません）。共有する場合は「JSON 書き出し」または「印刷 / PDF」をご利用ください。本ファイルは外部通信を行いません。<br>
+  <div class="foot">✅「確認」列にチェックし、「Agent 追加希望」「Skill 追加希望」欄に各組織からの要望を記入してください。「名前を付けて保存」で、入力内容を埋め込んだこのシート（HTML ファイル）を任意の場所へ保存できます。保存したファイルを開くと入力が復元されます。入力はこのブラウザにも自動保存されます（他の端末には同期されません）。共有する場合は保存した HTML、「JSON 書き出し」または「印刷 / PDF」をご利用ください。本ファイルは外部通信を行いません。<br>
   組織図に対する補足: 「09_DX推進部」は公式サイトの組織図（2026.4.1 版）には掲載されていない区分で、ソリューション営業本部の DX 関連および共通基盤（IT/DX）を対象としています。「Knowledge 品質支援」の担当部署（Knowledge Curator）は組織図上の所属が未確定のため 06 に仮置きしています。</div>
 </main>
 <div class="toast" id="toast"></div>
@@ -221,8 +222,42 @@ const DATA = [
 
 const KEY = "mirai-agent-skill-sheet-v2";
 const state = load();
-function load(){ try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { return {}; } }
-function save(silent){ try { localStorage.setItem(KEY, JSON.stringify(state)); if(!silent) toast("保存しました"); } catch { toast("保存できませんでした（ブラウザ設定）"); } refreshStat(); }
+function readEmbedded(){ try { return JSON.parse(document.getElementById("embeddedState").textContent || "{}"); } catch { return {}; } }
+function readLocal(){ try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { return {}; } }
+// ファイルに埋め込まれた入力（名前を付けて保存したもの）と、このブラウザの自動保存のうち、新しい方を使う
+function load(){
+  const emb = readEmbedded(), loc = readLocal();
+  const tEmb = Date.parse(emb._saved_at || 0) || 0, tLoc = Date.parse(loc._saved_at || 0) || 0;
+  const hasEmb = Object.keys(emb).some(k => k !== "_saved_at"), hasLoc = Object.keys(loc).some(k => k !== "_saved_at");
+  if (hasEmb && (!hasLoc || tEmb >= tLoc)) return emb;
+  return hasLoc ? loc : emb;
+}
+function save(silent){ state._saved_at = new Date().toISOString(); try { localStorage.setItem(KEY, JSON.stringify(state)); if(!silent) toast("保存しました"); } catch { if(!silent) toast("保存できませんでした（ブラウザ設定）"); } refreshStat(); }
+// 入力内容を埋め込んだ完全な HTML を作る（開けば入力が復元される単独ファイル）
+function buildHtmlWithState(){
+  state._saved_at = new Date().toISOString();
+  const json = JSON.stringify(state).replace(/<\/script/gi, "<\\/script");
+  const clone = document.documentElement.cloneNode(true);
+  clone.querySelector("#embeddedState").textContent = json;
+  clone.querySelectorAll(".toast.show").forEach(t => t.classList.remove("show"));
+  return "<!doctype html>\n" + clone.outerHTML;
+}
+function defaultFileName(){ return `みらい建設工業_部署別Agent-Skill機能一覧_${new Date().toISOString().slice(0,10).replace(/-/g,"")}.html`; }
+async function saveAs(){
+  save(true);
+  const html = buildHtmlWithState();
+  if (window.showSaveFilePicker) {
+    try {
+      const handle = await window.showSaveFilePicker({ suggestedName: defaultFileName(), types: [{ description: "HTML ファイル", accept: { "text/html": [".html"] } }] });
+      const w = await handle.createWritable(); await w.write(new Blob([html], {type:"text/html"})); await w.close();
+      toast("保存しました: " + handle.name); return;
+    } catch (e) { if (e && e.name === "AbortError") return; /* 未対応・失敗時は下のフォールバック */ }
+  }
+  const name = prompt("保存するファイル名", defaultFileName()); if (name === null) return;
+  const blob = new Blob([html], {type:"text/html"}); const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = /\.html?$/i.test(name) ? name : name + ".html"; a.click(); URL.revokeObjectURL(a.href);
+  toast("ダウンロードしました");
+}
 function get(id, k){ return (state[id] && state[id][k]) || ""; }
 function set(id, k, v){ state[id] = state[id] || {}; state[id][k] = v; save(true); }
 function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
@@ -291,7 +326,7 @@ function exportJson(){
 }
 function toast(m){ const t=document.getElementById("toast"); t.textContent=m; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
-document.getElementById("btnSave").onclick = () => save(false);
+document.getElementById("btnSave").onclick = () => saveAs();
 document.getElementById("btnPrint").onclick = () => window.print();
 document.getElementById("btnExport").onclick = () => {
   const blob = new Blob([exportJson()], {type:"application/json"}); const a = document.createElement("a");
