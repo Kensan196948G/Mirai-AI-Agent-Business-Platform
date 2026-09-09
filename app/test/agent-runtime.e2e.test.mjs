@@ -1157,3 +1157,22 @@ test('成果物レビュー UI（G-36）: 不明点ごとの確認済みチェ�
   const { rows: audit } = await pool.query(`SELECT count(*)::int AS n FROM audit_log WHERE action = 'artifact.check'`);
   assert.ok(audit[0].n >= 2);
 });
+
+test('AI相談の IDEA 構造化: LLM 未設定でもルールベースで関係部署・近い Agent・相談原文を返し、統合カタログ API が承認状態を反映する', async () => {
+  const r = await call('/api/chat/messages', { method: 'POST', cookie: adminCookie, body: { text: '軟弱地盤の液状化対策の工法を比較したい' } });
+  assert.equal(r.status, 201);
+  const idea = r.data.message?.idea_json || r.data.idea_json || (r.data.messages || []).slice(-1)[0]?.idea_json;
+  assert.ok(idea, JSON.stringify(r.data).slice(0, 300));
+  assert.equal(idea.source, 'scripted');
+  assert.equal(idea.consultation, '軟弱地盤の液状化対策の工法を比較したい');
+  assert.ok(idea.departments.includes('04'));
+  assert.ok(idea.agents.some((a) => a.agent_id === 'technology-selection' && a.stage === 'P1' && a.executable));
+  assert.ok(!JSON.stringify(idea.idea).includes('（相談内容から抽出）'));
+  const cat = await call('/api/agent-catalog/org', { cookie: adminCookie });
+  assert.equal(cat.status, 200);
+  assert.equal(cat.data.organizations.length, 9);
+  assert.equal(cat.data.agents.length, 12);
+  const ts = cat.data.agents.find((a) => a.agent_id === 'technology-selection');
+  assert.equal(ts.runnable, true, '承認済み P1 は runnable');
+  assert.ok(cat.data.agents.filter((a) => a.stage !== 'P1').every((a) => a.runnable === false));
+});

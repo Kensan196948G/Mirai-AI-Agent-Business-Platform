@@ -228,6 +228,14 @@ curl -X POST http://127.0.0.1:<PORT>/api/agent-runs \
 
 P1 の 3 Agent は A0〜A1（外部書き込みなし）のため既定ではゲートを設定していない。P2/P3 で外部への確定書き込み（A2）を追加する Skill に `approval_gate` を付ける。正式な業務承認（desknet's NEO）とは別のアプリ内承認である（ADR-001）。
 
+## 💬 AI相談の IDEA 構造化と部署別カタログの照合
+
+| 項目 | 内容 |
+|---|---|
+| 構造化 | 相談文と会話履歴から、対象業務・現状・期待効果・必要データ・リスク候補・確認が必要な点を **LLM が JSON Schema 付きで抽出**（`src/lib/chat-idea.js`。業務Agent と同じ schema 検証・Prompt Injection 対策・費用計上）。LLM 未設定 / 月次上限 / 検証失敗時はルールベース（シナリオ + 語の一致）へ戻し、`idea_json.source` で区別。未抽出のプレースホルダーは表示しない |
+| 部署別カタログ | `domain-packs/mirai-construction/org-map.yaml`（組織 9 区分 × Agent）が正本。P1（実定義）と P2/P3（backlog 候補）を `src/agent-runtime/catalog.js` が統合し、`GET /api/agent-catalog/org` で承認状態付きで返す。部署別シート（docs）はこの表の配布用 |
+| 近い Agent | 構造化カードに関係部署と近い Agent（実行可 / 候補）を表示。P1 で実行可なら「この Agent で実行」で相談原文を業務Agent の相談欄へ転記（人が確認して開始）。該当が無ければ「未登録 → 追加希望へ」と明示 |
+
 ## 📄 利用者向けの文書（G-35 / G-37 / G-38）
 
 | 文書 | 用途 |

@@ -2,6 +2,7 @@ import express from 'express';
 import { getPool, withTransaction } from '../lib/db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { matchScenario } from '../lib/chatScenarios.js';
+import { structureIdea } from '../lib/chat-idea.js';
 import * as llm from '../lib/llm.js';
 
 const router = express.Router();
@@ -64,15 +65,18 @@ router.post('/messages', requireAuth, async (req, res) => {
   const result = await withTransaction(async (client) => {
     const conversationId = await getOrCreateConversation(client, req.user.id);
 
-    // Intent分類・Risk推定・Idea構造化は常にルールベース（matchScenario）で行う。
-    // 「案件化」ボタンはこの構造化データに依存するため、実LLMの有無に関わらず維持する。
     const scenario = matchScenario(text);
-    const ideaJson = { title: scenario.title, intent: scenario.intent, risk: scenario.risk, idea: scenario.idea };
 
     const { rows: history } = await client.query(
       `SELECT role, text FROM chat_messages WHERE conversation_id = $1 ORDER BY id DESC LIMIT $2`,
       [conversationId, HISTORY_LIMIT],
     );
+
+    // IDEA 構造化: LLM が使えれば相談文・履歴・Agent カタログから抽出（schema 検証・Injection 対策・費用計上つき）。
+    // 使えない / 失敗した場合はルールベース（シナリオ + 語の一致）へ戻し、idea_json.source で区別する。
+    const llmAllowed = llm.isConfigured() && (await llm.withinMonthlyBudget(client));
+    const structured = await structureIdea({ text, history: history.slice().reverse(), llmAllowed });
+    const ideaJson = structured.idea;
 
     await client.query(
       `INSERT INTO chat_messages (conversation_id, role, text) VALUES ($1, 'user', $2)`,
@@ -98,13 +102,18 @@ router.post('/messages', requireAuth, async (req, res) => {
       }
     }
 
+    // 費用・トークンは返答本文と IDEA 構造化の合計を記録する（月次上限の集計対象）
+    const usedLlm = llmMeta || structured.provider;
     const { rows } = await client.query(
       `INSERT INTO chat_messages (conversation_id, role, text, idea_json, provider, tokens_in, tokens_out, cost)
        VALUES ($1, 'ai', $2, $3, $4, $5, $6, $7)
        RETURNING role, text, idea_json, provider, created_at`,
       [
         conversationId, responseText, ideaJson,
-        llmMeta?.provider ?? null, llmMeta?.tokensIn ?? null, llmMeta?.tokensOut ?? null, llmMeta?.cost ?? null,
+        usedLlm ? (llmMeta?.provider || structured.provider) : null,
+        usedLlm ? (llmMeta?.tokensIn ?? 0) + (structured.tokensIn || 0) : null,
+        usedLlm ? (llmMeta?.tokensOut ?? 0) + (structured.tokensOut || 0) : null,
+        usedLlm ? (llmMeta?.cost ?? 0) + (structured.cost || 0) : null,
       ],
     );
     return rows[0];

@@ -1,0 +1,58 @@
+schema_version: "mirai.org-map/v1"
+pack_id: "mirai-construction"
+# =============================================================================
+# 組織（公式サイト「組織図（2026.4.1 付）」に基づく 9 区分）× Agent の対応表（正本）。
+# - P1 の Agent は agents/<id>.yaml に実定義があり、承認済みなら実行できる
+# - P2 / P3 は backlog/p2-p3-catalog.yaml の候補（実行不可）。有効化には各専門 Owner の評価が必要
+# - keywords は AI相談で「近い Agent」を決定的に絞り込むための語（LLM 未設定時のフォールバックにも使う）
+# - docs/みらい建設工業_部署別Agent-Skill機能一覧.html はこの表を各部署へ配布・回収するためのシート
+# =============================================================================
+organizations:
+  - code: "01"
+    dept: "経営・統治・委員会"
+    org: "取締役会 / 社長 / CSR委員会 / エンゲージメント委員会 / コンプライアンス委員会 / 監査役"
+    keywords: ["経営", "取締役", "委員会", "監査", "コンプライアンス", "ガバナンス", "統制"]
+    agents: []
+    note: "AI は承認者になれない（SoD）。正式な Gate 承認の正本は desknet's NEO Workflow。基盤の統制機能（承認拘束・監査ログ・版承認）のみ提供"
+  - code: "02"
+    dept: "営業・案件形成"
+    org: "営業本部 / ソリューション営業本部"
+    keywords: ["営業", "提案", "受注", "見積", "入札", "顧客", "実績", "案件形成"]
+    agents: ["project-case-research"]
+  - code: "03"
+    dept: "施工・調達・作業所"
+    org: "施工本部 / 作業所 / 調達"
+    keywords: ["施工", "作業所", "現場", "工程", "調達", "港湾", "海上", "浚渫", "護岸", "防波堤", "災害", "復旧", "維持管理", "補修", "点検", "エネルギー", "風力", "太陽光"]
+    agents: ["port-marine-construction-planning", "land-civil-disaster-recovery", "maintenance-repair-support", "energy-facility-construction"]
+  - code: "04"
+    dept: "技術・研究開発"
+    org: "技術本部 / 研究開発"
+    keywords: ["技術", "工法", "比較", "選定", "地盤", "改良", "液状化", "研究", "開発", "継承", "NETIS"]
+    agents: ["technology-selection", "ground-improvement-support", "research-technology-succession"]
+  - code: "05"
+    dept: "安全・品質・環境"
+    org: "安全品質環境本部"
+    keywords: ["安全", "品質", "環境", "レビュー", "基準", "規格", "検査", "是正", "災害防止"]
+    agents: ["safety-quality-environment-review"]
+  - code: "06"
+    dept: "管理本部・経営企画"
+    org: "管理本部 / 経営企画室"
+    keywords: ["管理", "経営企画", "人事", "総務", "経理", "サステナビリティ", "ESG", "ナレッジ", "Knowledge", "KPI", "成果測定", "ヘルプデスク", "問い合わせ", "情報システム"]
+    agents: ["sustainability-support", "knowledge-quality"]
+  - code: "07"
+    dept: "支店・営業支店・営業所"
+    org: "北海道〜九州の 7 支店 / 営業支店 / 営業所"
+    keywords: ["支店", "営業所", "地域", "北海道", "東北", "関東", "北陸", "中部", "近畿", "中国", "四国", "九州"]
+    agents: []
+    note: "支店固有の Agent は未設定。02 / 03 / 04 の Agent を地域の案件で利用する"
+  - code: "08"
+    dept: "船舶事業部"
+    org: "船舶事業部"
+    keywords: ["船舶", "作業船", "機械", "機電", "運用", "航行", "係留"]
+    agents: ["vessel-machinery-operation"]
+  - code: "09"
+    dept: "DX推進部"
+    org: "DX推進部（本基盤の運用主管）"
+    keywords: ["DX", "デジタル", "AI", "自動化", "システム", "ツール", "データ連携", "Notion", "Slack", "AppSuite"]
+    agents: []
+    note: "共通 Skill（出典取り込み・正規化・引用検証・成果測定）と基盤運用を担当。部署固有の Agent は無い"
