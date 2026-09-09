@@ -2,13 +2,9 @@ import express from 'express';
 import { getPool, withTransaction } from '../lib/db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { recordAudit } from '../lib/audit.js';
+import { nextKcCode } from '../lib/codes.js';
 
 const router = express.Router();
-
-async function nextKcCode(client) {
-  const { rows } = await client.query(`SELECT count(*)::int AS n FROM knowledge_candidates`);
-  return `KC-${300 + rows[0].n + 1}`;
-}
 
 router.get('/', requireAuth, async (_req, res) => {
   const { rows } = await getPool().query(

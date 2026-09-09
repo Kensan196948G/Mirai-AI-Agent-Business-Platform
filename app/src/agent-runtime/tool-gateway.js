@@ -6,6 +6,7 @@
 import { authorizeToolCall, authorizeSourceAccess, PolicyDeniedError } from './policy-engine.js';
 import { extractSearchTokens } from '../lib/search-tokens.js';
 import { appendEvent } from './job-store.js';
+import { nextArtifactCode } from '../lib/codes.js';
 
 /**
  * 承認済み出典の検索（B-12）。
@@ -55,11 +56,6 @@ async function toolSourceReadApprovedSnapshot(client, { run, sourceRecordId }) {
   if (rows.length === 0) throw new PolicyDeniedError(`source_record ${sourceRecordId} が見つかりません`);
   authorizeSourceAccess({ run, sourceRecord: rows[0] });
   return { source: rows[0] };
-}
-
-async function nextArtifactCode(client) {
-  const { rows } = await client.query(`SELECT count(*)::int AS n FROM artifacts`);
-  return `ART-${1000 + rows[0].n + 1}`;
 }
 
 /**

@@ -2,13 +2,9 @@ import express from 'express';
 import { getPool, withTransaction } from '../lib/db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { recordAudit } from '../lib/audit.js';
+import { nextTaskCode } from '../lib/codes.js';
 
 const router = express.Router();
-
-async function nextTaskCode(client) {
-  const { rows } = await client.query(`SELECT count(*)::int AS n FROM tasks`);
-  return `T-${1000 + rows[0].n + 1}`;
-}
 
 router.get('/', requireAuth, async (_req, res) => {
   const { rows } = await getPool().query(
