@@ -322,13 +322,18 @@ input::placeholder,textarea::placeholder{color:var(--muted)}
       </sc-if>
 
       <sc-if value="{{ isObs }}" hint-placeholder-val="{{ false }}">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px"><sc-for list="{{ rangeChips }}" as="c" hint-placeholder-count="3"><button onClick="{{ c.set }}" style="font-size:12.5px;font-weight:500;padding:7px 13px;border-radius:8px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.fg }};cursor:pointer">{{ c.label }}</button></sc-for><div style="flex:1"></div><span style="font-size:12px;color:var(--muted)">Prometheus · Loki · Grafana（Alloy収集）</span></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px"><sc-for list="{{ rangeChips }}" as="c" hint-placeholder-count="3"><button onClick="{{ c.set }}" style="font-size:12.5px;font-weight:500;padding:7px 13px;border-radius:8px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.fg }};cursor:pointer">{{ c.label }}</button></sc-for><div style="flex:1"></div><span style="font-size:12px;color:var(--muted)">実測のみ（agent_runs / run_events / artifacts / chat_messages を集計。推定値は表示しません）</span></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:16px"><sc-for list="{{ obsKpis }}" as="k" hint-placeholder-count="4"><div style="background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 17px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:7px"><div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11.5px;color:var(--muted);font-weight:500">{{ k.label }}</span><span style="width:8px;height:8px;border-radius:3px;background:{{ k.color }}"></span></div><div style="font-size:28px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.5px">{{ k.value }}</div><div style="font-size:11px;color:var(--muted);font-family:var(--mono)">{{ k.metric }}</div></div></sc-for></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;align-items:start">
-          <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)"><div style="padding:15px 18px;border-bottom:1px solid var(--line-2)"><div style="font-size:14px;font-weight:600">Provider別 Token / Cost</div><div style="font-size:11.5px;color:var(--muted);font-family:var(--mono)">agentos_model_tokens_total / agentos_model_cost_total</div></div><div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px"><sc-for list="{{ usageRows }}" as="u" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:5px"><div style="display:flex;justify-content:space-between;font-size:12.5px"><span style="color:var(--ink-2)">{{ u.p }}</span><span style="font-family:var(--mono);font-weight:600">{{ u.tokFmt }} tok · {{ u.costFmt }} · {{ u.runs }} runs</span></div><div style="height:8px;background:var(--line-2);border-radius:4px;overflow:hidden"><span style="display:block;height:100%;border-radius:4px;width:{{ u.pct }}%;background:{{ u.color }}"></span></div></div></sc-for></div></section>
-          <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)"><div style="padding:15px 18px;border-bottom:1px solid var(--line-2)"><div style="font-size:14px;font-weight:600">Agent Run 状態</div><div style="font-size:11.5px;color:var(--muted);font-family:var(--mono)">agentos_agent_runs_total{status}</div></div><div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px"><div style="display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--line-2)"><sc-for list="{{ runDist }}" as="r" hint-placeholder-count="4"><span style="width:{{ r.pct }}%;background:{{ r.color }};display:block"></span></sc-for></div><div style="display:flex;flex-direction:column;gap:9px"><sc-for list="{{ runDist }}" as="r" hint-placeholder-count="4"><div style="display:flex;align-items:center;gap:10px"><span style="width:9px;height:9px;border-radius:3px;background:{{ r.color }}"></span><span style="flex:1;font-size:12.5px;color:var(--ink-2)">{{ r.label }}</span><span style="font-family:var(--mono);font-size:12.5px;font-weight:600">{{ r.n }}</span></div></sc-for></div></div></section>
+          <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)"><div style="padding:15px 18px;border-bottom:1px solid var(--line-2)"><div style="font-size:14px;font-weight:600">Provider別 Token / Cost（タスク記録）</div><div style="font-size:11.5px;color:var(--muted);font-family:var(--mono)">tasks の記録値の合計（期間フィルタ対象外）</div></div><div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px"><sc-for list="{{ usageRows }}" as="u" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:5px"><div style="display:flex;justify-content:space-between;font-size:12.5px"><span style="color:var(--ink-2)">{{ u.p }}</span><span style="font-family:var(--mono);font-weight:600">{{ u.tokFmt }} tok · {{ u.costFmt }} · {{ u.runs }} runs</span></div><div style="height:8px;background:var(--line-2);border-radius:4px;overflow:hidden"><span style="display:block;height:100%;border-radius:4px;width:{{ u.pct }}%;background:{{ u.color }}"></span></div></div></sc-for></div></section>
+          <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)"><div style="padding:15px 18px;border-bottom:1px solid var(--line-2)"><div style="font-size:14px;font-weight:600">業務Agent Run 状態（期間内）</div><div style="font-size:11.5px;color:var(--muted);font-family:var(--mono)">agent_runs.status</div></div><div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px"><div style="display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--line-2)"><sc-for list="{{ runDist }}" as="r" hint-placeholder-count="4"><span style="width:{{ r.pct }}%;background:{{ r.color }};display:block"></span></sc-for></div><div style="display:flex;flex-direction:column;gap:9px"><sc-for list="{{ runDist }}" as="r" hint-placeholder-count="4"><div style="display:flex;align-items:center;gap:10px"><span style="width:9px;height:9px;border-radius:3px;background:{{ r.color }}"></span><span style="flex:1;font-size:12.5px;color:var(--ink-2)">{{ r.label }}</span><span style="font-family:var(--mono);font-size:12.5px;font-weight:600">{{ r.n }}</span></div></sc-for></div></div></section>
           <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)"><div style="padding:15px 18px;border-bottom:1px solid var(--line-2)"><div style="font-size:14px;font-weight:600">AI相談 LLM月次予算</div><div style="font-size:11.5px;color:var(--muted)">{{ llmBudget.statusLabel }}</div></div><div style="padding:16px 18px;display:flex;flex-direction:column;gap:8px"><div style="display:flex;justify-content:space-between;font-size:12.5px"><span style="color:var(--ink-2)">当月利用額</span><span style="font-family:var(--mono);font-weight:600">{{ llmBudget.spentFmt }} / {{ llmBudget.capFmt }}</span></div><div style="height:8px;background:var(--line-2);border-radius:4px;overflow:hidden"><span style="display:block;height:100%;border-radius:4px;width:{{ llmBudget.pct }}%;background:{{ llmBudget.color }}"></span></div><div style="font-size:11px;color:var(--muted)">上限到達時は自動でルールベース応答へフォールバックします</div></div></section>
           <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)"><div style="padding:15px 18px;border-bottom:1px solid var(--line-2)"><div style="font-size:14px;font-weight:600">Approval / Policy</div><div style="font-size:11.5px;color:var(--muted);font-family:var(--mono)">agentos_approval_pending_total{risk} / agentos_policy_denied_total</div></div><div style="padding:16px 18px;display:flex;flex-direction:column;gap:9px"><sc-for list="{{ riskDist }}" as="r" hint-placeholder-count="4"><div style="display:flex;align-items:center;gap:10px"><span style="font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;color:{{ r.fg }};background:{{ r.bg }};width:38px;text-align:center">{{ r.risk }}</span><div style="flex:1;height:6px;background:var(--line-2);border-radius:3px;overflow:hidden"><span style="display:block;height:100%;width:{{ r.pct }}%;background:{{ r.fg }}"></span></div><span style="font-family:var(--mono);font-size:12.5px;font-weight:600;width:20px;text-align:right">{{ r.n }}</span></div></sc-for><div style="display:flex;justify-content:space-between;font-size:12.5px;padding-top:8px;border-top:1px solid var(--line-2);margin-top:4px"><span style="color:var(--ink-2)">Policy DENY（期間内）</span><span style="font-family:var(--mono);font-weight:600;color:var(--red)">{{ deniedCount }}</span></div></div></section>
+          <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:auto;grid-column:1 / -1"><div style="padding:15px 18px;border-bottom:1px solid var(--line-2)"><div style="font-size:14px;font-weight:600">業務Agent 別 KPI（実測）</div><div style="font-size:11.5px;color:var(--muted)">完走率 = completed / total、レビュー率 = レビュー済み草案 / 草案。所要は completed の作成〜完了の平均。縮退 = LLM 出力を採用できず保留した回数</div></div>
+            <table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Agent</th><th style="text-align:right;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Run</th><th style="text-align:right;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">完了 / 失敗 / 中断</th><th style="text-align:right;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">完走率</th><th style="text-align:right;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">平均Step</th><th style="text-align:right;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">平均費用</th><th style="text-align:right;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">合計費用</th><th style="text-align:right;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">平均所要</th><th style="text-align:right;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">レビュー済 / 草案</th><th style="text-align:right;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">レビュー率</th><th style="text-align:right;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">縮退</th><th style="text-align:left;padding:11px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">最終実行</th></tr></thead>
+            <tbody><sc-for list="{{ agentKpiRows }}" as="k" hint-placeholder-count="3"><tr style-hover="background:var(--hover)"><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);font-family:var(--mono);font-weight:600">{{ k.agent }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);text-align:right;font-variant-numeric:tabular-nums">{{ k.total }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);text-align:right;font-variant-numeric:tabular-nums;color:var(--ink-2)">{{ k.done }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);text-align:right;font-weight:600;color:{{ k.rateFg }}">{{ k.rate }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);text-align:right">{{ k.steps }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);text-align:right;font-family:var(--mono)">{{ k.avgCost }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);text-align:right;font-family:var(--mono)">{{ k.totalCost }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);text-align:right">{{ k.dur }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);text-align:right;font-variant-numeric:tabular-nums">{{ k.artifacts }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);text-align:right">{{ k.review }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);text-align:right">{{ k.degraded }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);color:var(--muted);font-size:12px">{{ k.last }}</td></tr></sc-for></tbody></table>
+            <sc-if value="{{ agentKpiEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:18px;font-size:12.5px;color:var(--muted)">期間内の業務Agent Run はありません（実測データが無いため表示しません）</div></sc-if>
+          </section>
         </div>
       </sc-if>
 
@@ -506,7 +511,7 @@ class Component extends DCLogic {
     const [
       users, projects, tasks, approvals, knowledge, audit,
       integrations, agents, skills, router, usage, chat,
-      arCatalog, arRuns, arVersions,
+      arCatalog, arRuns, arVersions, arMetrics,
     ] = await Promise.all([
       this.api('/api/users'),
       this.api('/api/projects'),
@@ -523,6 +528,7 @@ class Component extends DCLogic {
       this.api('/api/agent-catalog').catch(() => ({ agents: [] })),
       this.api('/api/agent-runs').catch(() => ({ runs: [] })),
       this.api('/api/agent-catalog/versions').catch(() => ({ skills: [], agents: [] })),
+      this.api(`/api/agent-runs/metrics?range=${this.state.range || '30d'}`).catch(() => null),
     ]);
     this.setState({
       users: users.users.map(mapUser),
@@ -540,6 +546,7 @@ class Component extends DCLogic {
       arCatalog: arCatalog.agents || [],
       arRuns: arRuns.runs || [],
       arVersions: { skills: arVersions.skills || [], agents: arVersions.agents || [] },
+      arMetrics: arMetrics,
       chat: { messages: mapChatMessages(chat.messages), topic: -1, step: Math.max(0, chat.messages.length - 1) },
       openGroups: this.state.openGroups || { g1: true, g2: true, g3: true, g4: true },
       screen: this.state.screen || 'dashboard',
@@ -824,6 +831,13 @@ class Component extends DCLogic {
       this.toast('再開しました（権限・承認済み版を再検証してキューへ戻しました）', 'green');
     });
   }
+  obsSetRange(range) {
+    this.setState({ range });
+    this.guarded('agent-metrics', async () => {
+      const arMetrics = await this.api(`/api/agent-runs/metrics?range=${range}`);
+      this.setState({ arMetrics });
+    });
+  }
   arRerun(id) {
     this.guarded('agent-run-rerun', async () => {
       const r = await this.api(`/api/agent-runs/${id}/rerun`, { method: 'POST' });
@@ -949,11 +963,11 @@ class Component extends DCLogic {
       st(D.APR_ST[a.status]), { riskFg: this.risk(a.risk).fg, riskBg: this.risk(a.risk).bg },
     );
     const maxTok = Math.max(1, ...s.usage.map((u) => u.tok));
-    const rf = { '24h': 0.15, '7d': 1, '30d': 4.2 }[s.range] || 1;
+    // 実測のみ（以前の期間係数による換算は廃止）
     const usageRows = s.usage.map((u) => ({
-      p: u.p, costFmt: this.fmtCost(u.cost * (s.screen === 'observability' ? rf : 1)),
-      tokFmt: this.fmtTok(u.tok * (s.screen === 'observability' ? rf : 1)),
-      runs: Math.round(u.runs * (s.screen === 'observability' ? rf : 1)),
+      p: u.p, costFmt: this.fmtCost(u.cost),
+      tokFmt: this.fmtTok(u.tok),
+      runs: u.runs,
       pct: (u.tok / maxTok) * 100, color: u.color,
     }));
     const scoreColor = (n) => (n >= 80 ? 'var(--green)' : n >= 60 ? 'var(--amber)' : 'var(--red)');
@@ -1118,17 +1132,31 @@ class Component extends DCLogic {
     const webhookRows = [];
 
     // observability
-    const rangeChips = [['24h', '24時間'], ['7d', '7日'], ['30d', '30日']].map(([k, l]) => this.chip(l, '', s.range === k, () => this.setState({ range: k })));
+    const rangeChips = [['24h', '24時間'], ['7d', '7日'], ['30d', '30日'], ['all', '全期間']].map(([k, l]) => this.chip(l, '', s.range === k, () => this.obsSetRange(k)));
     const denied = s.audit.filter((e) => e.type === 'policy_denied').length;
+    // 実測のみ（agent_runs / run_events / artifacts の集計。推定値・係数は使わない）
+    const mx = s.arMetrics || { agents: [], by_status: {}, totals: { total: 0, completed: 0, active: 0, waiting: 0, ai_cost: 0, completion_rate: null, review_rate: null, degraded: 0 } };
+    const pctText = (v) => (v === null || v === undefined ? '—' : `${Math.round(v * 100)}%`);
     const obsKpis = [
-      { label: 'Agent Runs', value: s.tasks.length, metric: 'agentos_agent_runs_total', color: 'var(--purple)' },
-      { label: 'Queue Depth', value: s.tasks.filter((t) => ['ready', 'pending', 'running'].includes(t.status)).length, metric: 'agentos_task_queue_depth', color: 'var(--blue-2)' },
-      { label: 'AI Cost', value: this.fmtCost(s.usage.reduce((a, u) => a + u.cost, 0) * rf), metric: 'agentos_model_cost_total', color: 'var(--accent)' },
-      { label: 'API p95', value: (0.42 * (rf > 1 ? 1.1 : 1)).toFixed(2) + 's', metric: 'agentos_http_request_duration_seconds', color: 'var(--green-2)' },
+      { label: '業務Agent Run', value: mx.totals.total, metric: 'agent_runs（期間内）', color: 'var(--purple)' },
+      { label: '完走率', value: pctText(mx.totals.completion_rate), metric: 'completed / total', color: 'var(--green-2)' },
+      { label: '実行中 / 待ち', value: `${mx.totals.active} / ${mx.totals.waiting}`, metric: 'queued+running / waiting_approval+paused', color: 'var(--blue-2)' },
+      { label: 'AI 費用（期間内）', value: this.fmtCost(mx.totals.ai_cost || 0), metric: 'Run + AI相談の実測', color: 'var(--accent)' },
+      { label: '草案レビュー率', value: pctText(mx.totals.review_rate), metric: 'reviewed / artifacts', color: 'var(--amber)' },
     ];
-    const rdef = [['completed', 'green'], ['running', 'purple'], ['review', 'blue'], ['blocked', 'amber'], ['failed', 'red'], ['cancelled', 'muted']];
-    const runDist = rdef.map(([k, c]) => ({ label: D.TASK_ST[k][0], n: s.tasks.filter((t) => t.status === k).length, color: this.tone(c).fg }))
-      .filter((x) => x.n).map((x) => Object.assign(x, { pct: (x.n / s.tasks.length) * 100 }));
+    const rdef = [['completed', 'green'], ['running', 'purple'], ['queued', 'blue'], ['waiting_approval', 'amber'], ['paused', 'amber'], ['failed', 'red'], ['cancelled', 'muted']];
+    const RUN_LABEL = { completed: '完了', running: '実行中', queued: '待機中', waiting_approval: '承認待ち', paused: '一時停止', failed: '失敗', cancelled: '中断' };
+    const runTotal = Object.values(mx.by_status || {}).reduce((a, b) => a + b, 0);
+    const runDist = rdef.map(([k, c]) => ({ label: RUN_LABEL[k], n: (mx.by_status || {})[k] || 0, color: this.tone(c).fg }))
+      .filter((x) => x.n).map((x) => Object.assign(x, { pct: runTotal ? (x.n / runTotal) * 100 : 0 }));
+    const fmtDur = (sec) => (sec === null || sec === undefined ? '—' : sec < 60 ? `${Math.round(sec)}秒` : `${(sec / 60).toFixed(1)}分`);
+    const agentKpiRows = (mx.agents || []).map((a) => ({
+      agent: a.agent_id, total: a.total, done: `${a.completed} / ${a.failed} / ${a.cancelled}`, rate: pctText(a.completion_rate),
+      rateFg: a.completion_rate === null ? 'var(--muted)' : a.completion_rate >= 0.8 ? 'var(--green)' : a.completion_rate >= 0.5 ? 'var(--amber)' : 'var(--red)',
+      steps: a.avg_steps === null || a.avg_steps === undefined ? '—' : a.avg_steps.toFixed(1), avgCost: this.fmtCost(a.avg_cost || 0), totalCost: this.fmtCost(a.total_cost || 0),
+      dur: fmtDur(a.avg_duration_s), artifacts: `${a.reviewed} / ${a.artifacts}`, review: pctText(a.review_rate), degraded: a.degraded, last: a.last_run_at ? fmtDate(a.last_run_at) : '—',
+    }));
+    const agentKpiEmpty = agentKpiRows.length === 0;
     const riskDist = ['R1', 'R2', 'R3', 'R4'].map((r) => {
       const n = pendA.filter((a) => a.risk === r).length;
       return { risk: r, n, pct: pendA.length ? (n / pendA.length) * 100 : 0, fg: this.risk(r).fg, bg: this.risk(r).bg };
@@ -1333,7 +1361,7 @@ class Component extends DCLogic {
       recentProjects: s.projects.slice(0, 5).map(projRow),
       recentTasks: s.tasks.slice(0, 4).map(taskRow),
       pendingApprovals: pendA.map(aprRow), noPending: pendA.length === 0,
-      usageRows, llmBudget, knPendingCount: knPend.length,
+      usageRows, llmBudget, knPendingCount: knPend.length, agentKpiRows, agentKpiEmpty,
       knPendingRows: knPend.slice(0, 3).map((k) => ({ type: k.type, title: k.title, score: k.score, scoreColor: scoreColor(k.score) })),
       goProjects: () => this.go('projects'), goTasks: () => this.go('tasks'), goObs: () => this.go('observability'), goKnowledge: () => this.go('knowledge'),
       messages, typing: s.typing, chatInput: s.chatInput,

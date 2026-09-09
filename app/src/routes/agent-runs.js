@@ -35,6 +35,69 @@ router.get('/', requireAuth, async (_req, res) => {
   res.json({ runs: rows });
 });
 
+/**
+ * 業務Agent の実測 KPI（C-17）。推定値や係数は使わず、agent_runs / run_events / artifacts の実データだけを集計する。
+ * range: 24h | 7d | 30d | all（created_at 基準）
+ */
+const RANGES = { '24h': '24 hours', '7d': '7 days', '30d': '30 days', all: null };
+router.get('/metrics', requireAuth, async (req, res) => {
+  const range = Object.prototype.hasOwnProperty.call(RANGES, req.query.range) ? req.query.range : '30d';
+  const interval = RANGES[range];
+  const params = interval ? [interval] : [];
+  const where = interval ? `r.created_at >= now() - ($1 || '')::interval` : 'true';
+  const { rows: byAgent } = await getPool().query(
+    `WITH runs AS (
+       SELECT r.id, r.agent_id, r.status, r.current_step, r.created_at, r.finished_at,
+              COALESCE(u.cost, 0) AS cost, COALESCE(u.tokens, 0) AS tokens, COALESCE(u.degraded, 0) AS degraded
+       FROM agent_runs r
+       LEFT JOIN LATERAL (
+         SELECT SUM(e.cost)::float AS cost, SUM(COALESCE(e.tokens_in,0) + COALESCE(e.tokens_out,0))::bigint AS tokens,
+                count(*) FILTER (WHERE e.type = 'llm_degraded')::int AS degraded
+         FROM run_events e WHERE e.run_id = r.id
+       ) u ON true
+       WHERE ${where}
+     ), arts AS (
+       SELECT r.agent_id, count(*)::int AS artifacts, count(*) FILTER (WHERE a.review_state = 'reviewed')::int AS reviewed
+       FROM artifacts a JOIN runs r ON r.id = a.run_id GROUP BY r.agent_id
+     )
+     SELECT runs.agent_id,
+            count(*)::int AS total,
+            count(*) FILTER (WHERE status = 'completed')::int AS completed,
+            count(*) FILTER (WHERE status = 'failed')::int AS failed,
+            count(*) FILTER (WHERE status = 'cancelled')::int AS cancelled,
+            count(*) FILTER (WHERE status IN ('queued','running'))::int AS active,
+            count(*) FILTER (WHERE status IN ('waiting_approval','paused'))::int AS waiting,
+            AVG(current_step) FILTER (WHERE status = 'completed')::float AS avg_steps,
+            AVG(cost)::float AS avg_cost, SUM(cost)::float AS total_cost, AVG(tokens)::float AS avg_tokens,
+            AVG(EXTRACT(EPOCH FROM (finished_at - created_at))) FILTER (WHERE status = 'completed')::float AS avg_duration_s,
+            SUM(degraded)::int AS degraded,
+            MAX(created_at) AS last_run_at,
+            COALESCE(MAX(arts.artifacts), 0)::int AS artifacts, COALESCE(MAX(arts.reviewed), 0)::int AS reviewed
+     FROM runs LEFT JOIN arts ON arts.agent_id = runs.agent_id
+     GROUP BY runs.agent_id ORDER BY runs.agent_id`,
+    params,
+  );
+  const { rows: byStatus } = await getPool().query(
+    `SELECT status, count(*)::int AS n FROM agent_runs r WHERE ${where} GROUP BY status`, params,
+  );
+  const { rows: chat } = await getPool().query(
+    `SELECT COALESCE(SUM(cost), 0)::float AS cost FROM chat_messages m WHERE ${interval ? `m.created_at >= now() - ($1 || '')::interval` : 'true'}`, params,
+  );
+  const agents = byAgent.map((a) => ({
+    ...a,
+    completion_rate: a.total ? a.completed / a.total : null,
+    review_rate: a.artifacts ? a.reviewed / a.artifacts : null,
+  }));
+  const totals = agents.reduce((acc, a) => ({
+    total: acc.total + a.total, completed: acc.completed + a.completed, failed: acc.failed + a.failed, active: acc.active + a.active, waiting: acc.waiting + a.waiting,
+    total_cost: acc.total_cost + (a.total_cost || 0), artifacts: acc.artifacts + a.artifacts, reviewed: acc.reviewed + a.reviewed, degraded: acc.degraded + a.degraded,
+  }), { total: 0, completed: 0, failed: 0, active: 0, waiting: 0, total_cost: 0, artifacts: 0, reviewed: 0, degraded: 0 });
+  res.json({
+    range, agents, by_status: Object.fromEntries(byStatus.map((s) => [s.status, s.n])),
+    totals: { ...totals, completion_rate: totals.total ? totals.completed / totals.total : null, review_rate: totals.artifacts ? totals.reviewed / totals.artifacts : null, chat_cost: chat[0].cost, ai_cost: totals.total_cost + chat[0].cost },
+  });
+});
+
 router.get('/:id', requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) return res.status(400).json({ error: '不正な id' });

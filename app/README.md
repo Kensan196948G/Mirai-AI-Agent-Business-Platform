@@ -228,6 +228,21 @@ curl -X POST http://127.0.0.1:<PORT>/api/agent-runs \
 
 P1 の 3 Agent は A0〜A1（外部書き込みなし）のため既定ではゲートを設定していない。P2/P3 で外部への確定書き込み（A2）を追加する Skill に `approval_gate` を付ける。正式な業務承認（desknet's NEO）とは別のアプリ内承認である（ADR-001）。
 
+## 📈 業務Agent の実測 KPI（C-17）
+
+監視（Observability）画面は **実測のみ** を表示する（以前の期間係数による換算値と架空の API p95 は廃止）。`GET /api/agent-runs/metrics?range=24h|7d|30d|all` が `agent_runs` / `run_events` / `artifacts` / `chat_messages` を集計する。
+
+| 指標 | 定義 |
+|---|---|
+| 完走率 | completed / total（期間内に作成された Run） |
+| 平均費用 / 合計費用 | run_events の cost 合計（LLM 実請求ではなく単価からの概算） |
+| 平均所要 | completed の作成〜完了の平均秒 |
+| レビュー率 | レビュー済み草案 / 草案 |
+| 縮退 | `llm_degraded` の回数（LLM 出力を採用できず保留した回数） |
+| AI 費用（期間内） | Run の費用 + AI相談の費用 |
+
+設計文書の「成果測定」（人手作業時間との差・専門家修正量）は、レビュー時の入力がまだ無いため表示しない。
+
 ## 🧪 Skill 評価ランナー（C-16）
 
 | 手順 | コマンド | 備考 |
