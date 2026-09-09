@@ -1,0 +1,9 @@
+# /etc/systemd/system/mira-agent-os-audit-anchor.timer
+[Unit]
+Description=Daily audit log anchor for Mirai AgentOS
+[Timer]
+OnCalendar=*-*-* 03:30:00
+Persistent=true
+RandomizedDelaySec=120
+[Install]
+WantedBy=timers.target

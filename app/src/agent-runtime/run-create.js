@@ -8,7 +8,7 @@
  */
 import * as registry from './registry.js';
 import * as jobStore from './job-store.js';
-import { authorizeRunStart, authorizeRunConcurrency } from './policy-engine.js';
+import { authorizeRunStart, authorizeRunConcurrency, PolicyDeniedError } from './policy-engine.js';
 import { recordAudit } from '../lib/audit.js';
 
 // エージェントごとに受け付ける input_json のキーを固定する（利用者が任意のキーを混入できないようにする）。
@@ -40,6 +40,12 @@ export async function createRunForUser(client, { user, agentId, projectId, input
   await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`agent_run_create:${user.id}`]);
   const active = await jobStore.countActiveRuns(client, { userId: user.id });
   authorizeRunConcurrency({ activeForUser: active.forUser, activeTotal: active.total });
+  // F-32: 利用者あたりの日次作成上限（LLM 費用の暴走防止）
+  const dailyLimit = Number(process.env.AGENT_RUN_MAX_PER_USER_PER_DAY || '50');
+  const { rows: today } = await client.query(`SELECT count(*)::int AS n FROM agent_runs WHERE requested_by = $1 AND created_at >= date_trunc('day', now())`, [user.id]);
+  if (today[0].n >= dailyLimit) {
+    throw Object.assign(new PolicyDeniedError(`本日の Run 作成上限（利用者あたり ${dailyLimit} 件）に達しました。明日以降に再度開始してください`), { code: 'concurrency' });
+  }
 
   const agentVersionInfo = await registry.getApprovedAgentVersion(client, agentId);
   if (!agentVersionInfo) throw Object.assign(new Error(`Agent「${agentId}」の承認済み版がありません`), { status: 409 });
