@@ -14,6 +14,7 @@ import { validateCitations } from './evidence-validator.js';
 import { authorizeBudget, PolicyDeniedError } from './policy-engine.js';
 import { SKILL_HANDLERS } from './skills/index.js';
 import { ensureStepApproval } from './run-approvals.js';
+import { enforceOutputPolicy, collectSourceIds } from './prompt-guard.js';
 
 const ajv = new Ajv({ allErrors: true, strict: false });
 
@@ -110,6 +111,13 @@ export async function executeNextStep(runId, { workerId }) {
         }
         const reservation = await jobStore.getActiveReservation(client, run.id);
         const result = await structuredComplete(opts);
+        if (result.injectionSignals && result.injectionSignals.length > 0) {
+          // データ内の指示文は無視して処理を続けるが、疑いがあった事実は監査可能にする
+          await jobStore.appendEvent(client, run.id, {
+            type: 'injection_suspected', skillId: skillDef.skillId, skillVersion: freshSkillVersion.version, status: 'warn',
+            detail: { signals: result.injectionSignals.slice(0, 20) },
+          });
+        }
         if (result.degraded) {
           await jobStore.appendEvent(client, run.id, {
             type: 'llm_degraded', skillId: skillDef.skillId, skillVersion: freshSkillVersion.version, status: 'degraded',
@@ -150,6 +158,19 @@ export async function executeNextStep(runId, { workerId }) {
         return { done: true, run: await jobStore.getRun(client, run.id) };
       }
       return handleStepFailure(client, run, `Step実行エラー（${skillDef.skillId}）: ${err.message}`);
+    }
+
+    // Prompt Injection 対策（出力側）: 草案系 Skill は人手確認を固定し、根拠を Run 内で検索・検証された出典に限定し、秘密らしき記述を除去
+    const needsReview = skillDef.execution.require_domain_review === true || skillDef.execution.result_class === 'draft';
+    const guarded = enforceOutputPolicy(output, {
+      requireHumanReview: needsReview && Object.prototype.hasOwnProperty.call(output || {}, 'requires_human_review'),
+      allowedSourceIds: Array.isArray(output?.sources) ? collectSourceIds(input) : null,
+    });
+    if (guarded.enforced.length > 0) {
+      await jobStore.appendEvent(client, run.id, {
+        type: 'policy_enforced', skillId: skillDef.skillId, skillVersion: freshSkillVersion.version, status: 'ok', detail: { rules: guarded.enforced },
+      });
+      output = guarded.output;
     }
 
     const validateOutput = ajv.compile(skillDef.outputSchema);

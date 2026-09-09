@@ -1,0 +1,4 @@
+# gitleaks の既知の誤検出（fingerprint 単位で限定。値は実在の秘密ではない）
+# bb1d832: E2E テストの取り込み隔離テストに書いた「token=abcdef123456」というダミー文字列（検出テスト用）。
+#          現在のファイルでは連結文字列に変更済みだが、履歴全体スキャンのため当該 commit の 1 件だけを除外する。
+bb1d832ed2db1aa0ef66189c18138e4031cca70f:app/test/agent-runtime.e2e.test.mjs:generic-api-key:939

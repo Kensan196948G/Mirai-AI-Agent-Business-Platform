@@ -228,6 +228,19 @@ curl -X POST http://127.0.0.1:<PORT>/api/agent-runs \
 
 P1 の 3 Agent は A0〜A1（外部書き込みなし）のため既定ではゲートを設定していない。P2/P3 で外部への確定書き込み（A2）を追加する Skill に `approval_gate` を付ける。正式な業務承認（desknet's NEO）とは別のアプリ内承認である（ADR-001）。
 
+## 🛡️ Prompt Injection 対策（C-18）
+
+出典本文・Tool 応答・利用者入力は「データ」であり「指示」ではない、を実装で保証する（`src/agent-runtime/prompt-guard.js`）。
+
+| 層 | 対策 | 検証 |
+|---|---|---|
+| 取り込み | `source-normalize` が指示文（指示の無視・役割変更・ポリシー改変・秘密の要求・持ち出し）と秘密らしき文字列を検出したら `quarantined` にし、人が確認するまで検索対象にしない | E2E / 評価ケース SN-01 |
+| LLM 入力 | 制御文字・ゼロ幅文字・双方向制御文字を除去し、`<untrusted_data>` で囲んで「従わない」ことを system / user prompt で明示。指示文の疑いは `run_events`（`injection_suspected`）に記録 | provider-adapter テスト |
+| LLM 出力 | JSON Schema 検証（余分なフィールドは不採用）→ 草案は `requires_human_review=true` を固定、根拠はその Run で検索・検証された出典に限定、秘密らしき記述・指示文は除去して `unknowns` に明記。強制した事実は `policy_enforced` に記録 | ユニット + E2E（乗っ取られた出力を再現） |
+| 権限 | LLM は Tool を直接呼べない（Tool は Skill 実装だけが呼び、Policy Engine が許可リストで判定）。`shell.exec` / `http.fetch` / `external.send` 等はグローバル禁止 | policy-engine テスト |
+
+判定は決定的で、LLM に自己採点させない。パターンに無い新手の指示文は検出できないため、最終防御は「人手レビュー必須」と「根拠の範囲制限」である。
+
 ## 📈 業務Agent の実測 KPI（C-17）
 
 監視（Observability）画面は **実測のみ** を表示する（以前の期間係数による換算値と架空の API p95 は廃止）。`GET /api/agent-runs/metrics?range=24h|7d|30d|all` が `agent_runs` / `run_events` / `artifacts` / `chat_messages` を集計する。
