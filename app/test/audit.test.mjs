@@ -99,3 +99,19 @@ test('canonicalize: detail に Date が含まれても JSON.stringify と同じ 
   assert.equal(a, b);
   assert.ok(a.includes('2026-09-09T00:00:00.000Z'));
 });
+
+test('canonicalize: detail に明示的な undefined 値のキー（role/dept 等、未指定フィールドの destructure でよく起きる）が含まれても、' +
+  'PostgreSQL の JSONB へ保存して読み戻した後（＝undefined キーは失われる）と同じ hash を再計算できる', () => {
+  const detailWithUndefined = { role: undefined, dept: undefined, name: undefined, email: undefined, active: false };
+  const a = canonicalize({ actor_type: 'user', actor_name: 'x', action: 'user.deactivate', resource_type: 'user', resource_id: 1, detail: detailWithUndefined });
+  // pg ドライバは JSONB パラメータを JSON.stringify 相当で送るため、undefined キーは保存されない。
+  // DB から読み戻した後の detail はこの形になる。
+  const roundTripped = JSON.parse(JSON.stringify(detailWithUndefined));
+  const b = canonicalize({ actor_type: 'user', actor_name: 'x', action: 'user.deactivate', resource_type: 'user', resource_id: 1, detail: roundTripped });
+  assert.equal(a, b);
+  assert.deepEqual(roundTripped, { active: false });
+  // 配列内の undefined は JSON.stringify と同じく null 化する（要素そのものは消えない）
+  const arrA = canonicalize({ actor_type: 'x', actor_name: 'x', action: 'x', resource_type: 'x', resource_id: 1, detail: { list: [1, undefined, 3] } });
+  const arrB = canonicalize({ actor_type: 'x', actor_name: 'x', action: 'x', resource_type: 'x', resource_id: 1, detail: JSON.parse(JSON.stringify({ list: [1, undefined, 3] })) });
+  assert.equal(arrA, arrB);
+});
