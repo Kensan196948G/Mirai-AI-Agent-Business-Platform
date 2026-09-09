@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>みらい建設工業 Agent／Skill 追加希望 集計・優先度付け</title>
+<style>
+:root{--ink:#1a2433;--muted:#6b7686;--line:#e3e8ef;--bg:#f4f6f9;--surface:#fff;--accent:#e08a2b;--accent-d:#c9781f;--green:#1f8255;--amber:#b5701a;--red:#c5392f;--blue:#2e5aac;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box}body{margin:0;font-family:"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;color:var(--ink);background:var(--bg);font-size:13.5px;line-height:1.55}
+header{position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--line);padding:14px 22px;z-index:5}
+h1{font-size:18px;margin:0 0 4px}.sub{color:var(--muted);font-size:12px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+button{font:inherit;font-size:12.5px;padding:7px 12px;border-radius:8px;border:1px solid var(--line);background:var(--surface);cursor:pointer}button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}button:hover{filter:brightness(.97)}
+select,input[type=text]{font:inherit;font-size:12.5px;padding:5px 8px;border:1px solid var(--line);border-radius:7px;background:#fff}
+main{padding:18px 22px;max-width:1500px;margin:0 auto}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:22px;text-align:center;color:var(--muted);background:var(--surface)}.drop.over{border-color:var(--accent);background:#fdf3e6}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}.card .k{font-size:11.5px;color:var(--muted)}.card .v{font-size:22px;font-weight:600}
+table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}th,td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}th{font-size:11.5px;color:var(--muted);background:#fafbfc;position:sticky;top:112px}
+td.text{min-width:260px}td .src{font-size:11px;color:var(--muted);font-family:var(--mono)}
+.tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:6px;font-weight:600}.tag.agent{background:#ede7f6;color:#6b45b0}.tag.skill{background:#e9f0fb;color:var(--blue)}
+.dup{font-size:11px;color:var(--amber)}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+.toast{position:fixed;right:16px;bottom:16px;background:#141c29;color:#fff;padding:10px 14px;border-radius:8px;font-size:12.5px;opacity:0;transition:.2s}.toast.show{opacity:1}
+.foot{color:var(--muted);font-size:12px;margin-top:14px}
+@media print{header{position:static}button,.bar,.drop,.filters,select,input{display:none}th{position:static}body{background:#fff}main{padding:0}}
+</style>
+</head>
+<body>
+<script id="embeddedState" type="application/json">{}</script>
+<header>
+  <h1>みらい建設工業 Agent／Skill 追加希望 集計・優先度付け</h1>
+  <div class="sub">各部署が「部署別 Agent／Skill 機能一覧シート」で保存した JSON（JSON 書き出し）または HTML（名前を付けて保存）を読み込み、追加希望を一覧化して優先度・状態を付けます。外部通信はありません。判断内容はこのブラウザに自動保存され、「名前を付けて保存」で HTML として持ち出せます。</div>
+  <div class="bar">
+    <button class="primary" id="btnSave">名前を付けて保存</button>
+    <button id="btnLoad">シートを読み込む（JSON / HTML、複数可）</button>
+    <input type="file" id="fileInput" accept=".json,.html,application/json,text/html" multiple hidden>
+    <button id="btnCsv">CSV 書き出し</button>
+    <button id="btnJson">JSON 書き出し</button>
+    <button id="btnPrint">印刷 / PDF</button>
+    <button id="btnClear">読み込みと判断をクリア</button>
+    <span class="sub" id="stat"></span>
+  </div>
+</header>
+<main>
+  <div class="drop" id="drop">ここにシートのファイル（JSON / HTML）をドロップ、または「シートを読み込む」から選択してください。同じ部署のファイルを再度読み込むと、その部署の希望は最新の内容に置き換わります（優先度・状態の判断は保持されます）。</div>
+  <div class="cards" id="cards"></div>
+  <div class="filters">
+    <label>組織 <select id="fDept"><option value="">すべて</option></select></label>
+    <label>種別 <select id="fType"><option value="">すべて</option><option value="agent">Agent</option><option value="skill">Skill</option></select></label>
+    <label>状態 <select id="fStatus"><option value="">すべて</option><option value="未判定">未判定</option><option value="検討中">検討中</option><option value="採用">採用</option><option value="見送り">見送り</option><option value="既存で対応">既存で対応</option></select></label>
+    <label>優先度 <select id="fPri"><option value="">すべて</option><option value="高">高</option><option value="中">中</option><option value="低">低</option><option value="">未設定</option></select></label>
+    <label>検索 <input type="text" id="fText" placeholder="希望内容・Agent 名"></label>
+    <span class="sub" id="filterCount"></span>
+  </div>
+  <table>
+    <thead><tr><th>組織</th><th>Agent</th><th>種別</th><th>希望内容</th><th>提出元</th><th>優先度</th><th>状態</th><th>担当・備考</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <div class="foot">優先度・状態・備考は「希望内容 × Agent × 種別」ごとに保存されます。同じ文言の希望が複数部署から出ている場合は「重複 n 件」と表示します（集計の重み付けの参考）。P2/P3 の Agent は候補（未実装）であり、採用判断は各専門 Owner のレビューと評価資料を前提とします。</div>
+</main>
+<div class="toast" id="toast"></div>
+<script>
+const MAPPING = [{"code":"01","dept":"経営・統治・委員会","agents":[{"id":"g01-governance","name":"専用 Agent なし（統制機能のみ）","stage":"未設定"}]},{"code":"02","dept":"営業・案件形成","agents":[{"id":"project-case-research","name":"施工実績・提案支援","stage":"P1"}]},{"code":"03","dept":"施工・調達・作業所","agents":[{"id":"port-marine-construction-planning","name":"港湾・海上施工計画支援","stage":"P2"},{"id":"land-civil-disaster-recovery","name":"陸上土木・防災復旧支援","stage":"P2"},{"id":"maintenance-repair-support","name":"維持管理・補修支援","stage":"P2"},{"id":"energy-facility-construction","name":"エネルギー施設建設支援","stage":"P2"}]},{"code":"04","dept":"技術・研究開発","agents":[{"id":"technology-selection","name":"技術選定・比較支援","stage":"P1"},{"id":"ground-improvement-support","name":"地盤改良支援","stage":"P2"},{"id":"research-technology-succession","name":"研究・技術継承支援","stage":"P2"}]},{"code":"05","dept":"安全・品質・環境","agents":[{"id":"safety-quality-environment-review","name":"安全・品質・環境レビュー支援","stage":"P2"}]},{"code":"06","dept":"管理本部・経営企画","agents":[{"id":"sustainability-support","name":"サステナビリティ支援","stage":"P2"},{"id":"knowledge-quality","name":"Knowledge 品質支援","stage":"P1"},{"id":"outcome-measurement-kpi","name":"成果測定（KPI 集計）","stage":"基盤"}]},{"code":"07","dept":"支店・営業支店・営業所","agents":[{"id":"g07-branches","name":"支店共通（02／03／04 の Agent を利用）","stage":"未設定"}]},{"code":"08","dept":"船舶事業部","agents":[{"id":"vessel-machinery-operation","name":"船舶・機械運用支援","stage":"P3"}]},{"code":"09","dept":"DX推進部","agents":[{"id":"common-skills","name":"共通 Skill（Runtime 基盤）","stage":"基盤"}]}];
+const AGENT_INDEX = {}; MAPPING.forEach(d => d.agents.forEach(a => { AGENT_INDEX[a.id] = { code: d.code, dept: d.dept, name: a.name, stage: a.stage }; }));
+const KEY = "mirai-agent-skill-wish-aggregate-v1";
+function readEmbedded(){ try { return JSON.parse(document.getElementById("embeddedState").textContent || "{}"); } catch { return {}; } }
+function readLocal(){ try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { return {}; } }
+function load(){
+  const emb = readEmbedded(), loc = readLocal();
+  const tEmb = Date.parse(emb._saved_at || 0) || 0, tLoc = Date.parse(loc._saved_at || 0) || 0;
+  const has = (s) => (s.sources && s.sources.length) || (s.decisions && Object.keys(s.decisions).length);
+  if (has(emb) && (!has(loc) || tEmb >= tLoc)) return emb;
+  return has(loc) ? loc : emb;
+}
+const state = Object.assign({ sources: [], decisions: {} }, load());
+function save(){ state._saved_at = new Date().toISOString(); try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} }
+function esc(s){ return String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function toast(m){ const t = document.getElementById("toast"); t.textContent = m; t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 2200); }
+function norm(s){ return String(s || "").replace(/\s+/g, "").replace(/[、。・\-—–（）()「」]/g, "").toLowerCase(); }
+function decisionKey(agentId, type, text){ return `${agentId}|${type}|${norm(text)}`; }
+
+/** シートの JSON 書き出し、または名前を付けて保存した HTML から items を取り出す */
+function parseSheet(name, text){
+  let items = null;
+  try {
+    const j = JSON.parse(text);
+    if (Array.isArray(j.items)) items = j.items;
+  } catch {}
+  if (!items) {
+    const m = /<script id="embeddedState" type="application\/json">([\s\S]*?)<\/script>/.exec(text);
+    if (m) {
+      const st = JSON.parse(m[1].replace(/<\\\/script/gi, "</script"));
+      items = Object.entries(st).filter(([k]) => !k.startsWith("_")).map(([agentId, v]) => {
+        const a = AGENT_INDEX[agentId] || {}; const list = (x) => Array.isArray(x) ? x : (typeof x === "string" && x.trim() ? x.split(/\r?\n/).map(s => s.replace(/^[・\-•]\s*/, "").trim()).filter(Boolean) : []);
+        return { code: a.code, dept: a.dept, agent_id: agentId, agent: a.name, stage: a.stage, checked: !!v.checked, wish_agent: list(v.wishAgent), wish_skill: list(v.wishSkill), memo: v.memo || "" };
+      });
+    }
+  }
+  if (!items) throw new Error("シートの形式を認識できません");
+  return items.filter(it => (it.wish_agent || []).length || (it.wish_skill || []).length || it.memo);
+}
+function addSource(name, items){
+  const codes = [...new Set(items.map(i => i.code).filter(Boolean))];
+  // 同名ファイル、または同じ部署（code）だけを含む既存ソースは、新しい内容で置き換える（判断は decisions に残る）
+  state.sources = state.sources.filter(s => s.name !== name && !(s.codes.length && s.codes.every(c => codes.includes(c))));
+  state.sources.push({ name, loaded_at: new Date().toISOString(), codes, items });
+  save(); render(); toast(`${name}: ${items.reduce((n, i) => n + (i.wish_agent || []).length + (i.wish_skill || []).length, 0)} 件の希望を読み込みました`);
+}
+async function loadFiles(files){
+  for (const f of files) {
+    try { addSource(f.name, parseSheet(f.name, await f.text())); } catch (e) { toast(`${f.name}: ${e.message}`); }
+  }
+}
+function allWishes(){
+  const out = [];
+  for (const s of state.sources) for (const it of s.items) {
+    const a = AGENT_INDEX[it.agent_id] || {};
+    const base = { code: it.code || a.code || "", dept: it.dept || a.dept || "", agent_id: it.agent_id, agent: it.agent || a.name || it.agent_id, stage: it.stage || a.stage || "", source: s.name };
+    for (const w of it.wish_agent || []) out.push({ ...base, type: "agent", text: w });
+    for (const w of it.wish_skill || []) out.push({ ...base, type: "skill", text: w });
+  }
+  const groups = {}; out.forEach(w => { const k = `${w.type}|${norm(w.text)}`; groups[k] = (groups[k] || 0) + 1; });
+  out.forEach(w => { w.dup = groups[`${w.type}|${norm(w.text)}`]; w.key = decisionKey(w.agent_id, w.type, w.text); w.d = state.decisions[w.key] || {}; });
+  return out.sort((a, b) => (a.code || "").localeCompare(b.code || "") || a.agent.localeCompare(b.agent) || a.type.localeCompare(b.type));
+}
+function setDecision(key, patch){ state.decisions[key] = Object.assign({}, state.decisions[key], patch); save(); renderCards(); }
+function renderCards(){
+  const ws = allWishes();
+  const byDept = {}; ws.forEach(w => { byDept[w.dept] = (byDept[w.dept] || 0) + 1; });
+  const st = (s) => ws.filter(w => (w.d.status || "未判定") === s).length;
+  const cards = [
+    ["読み込んだシート", state.sources.length], ["希望の総数", ws.length], ["Agent 希望", ws.filter(w => w.type === "agent").length], ["Skill 希望", ws.filter(w => w.type === "skill").length],
+    ["優先度 高", ws.filter(w => w.d.priority === "高").length], ["採用", st("採用")], ["検討中", st("検討中")], ["未判定", st("未判定")],
+  ];
+  document.getElementById("cards").innerHTML = cards.map(([k, v]) => `<div class="card"><div class="k">${esc(k)}</div><div class="v">${v}</div></div>`).join("") +
+    Object.entries(byDept).map(([d, n]) => `<div class="card"><div class="k">${esc(d)}</div><div class="v">${n}</div></div>`).join("");
+  document.getElementById("stat").textContent = `シート ${state.sources.length} 件 · 希望 ${ws.length} 件 · 判断済み ${ws.filter(w => w.d.status && w.d.status !== "未判定").length} 件`;
+}
+function render(){
+  renderCards();
+  const ws = allWishes();
+  const fd = document.getElementById("fDept"); const cur = fd.value;
+  fd.innerHTML = '<option value="">すべて</option>' + MAPPING.map(d => `<option value="${esc(d.dept)}">${esc(d.code)} ${esc(d.dept)}</option>`).join(""); fd.value = cur;
+  const q = norm(document.getElementById("fText").value); const ft = document.getElementById("fType").value; const fs = document.getElementById("fStatus").value; const fp = document.getElementById("fPri");
+  const priFilterActive = fp.selectedIndex > 0; const fpv = fp.value;
+  const rows = ws.filter(w => (!fd.value || w.dept === fd.value) && (!ft || w.type === ft) && (!fs || (w.d.status || "未判定") === fs) && (!priFilterActive || (w.d.priority || "") === fpv) && (!q || norm(w.text + w.agent).includes(q)));
+  document.getElementById("filterCount").textContent = `${rows.length} / ${ws.length} 件`;
+  document.getElementById("rows").innerHTML = rows.length ? rows.map(w => `<tr>
+    <td><div>${esc(w.code)} ${esc(w.dept)}</div></td>
+    <td><div>${esc(w.agent)}</div><div class="src">${esc(w.agent_id)} · ${esc(w.stage)}</div></td>
+    <td><span class="tag ${w.type}">${w.type === "agent" ? "Agent" : "Skill"}</span></td>
+    <td class="text">${esc(w.text)}${w.dup > 1 ? `<div class="dup">重複 ${w.dup} 件（他部署からも同じ希望）</div>` : ""}</td>
+    <td><div class="src">${esc(w.source)}</div></td>
+    <td><select data-k="${esc(w.key)}" data-f="priority"><option value="">未設定</option>${["高","中","低"].map(p => `<option ${w.d.priority === p ? "selected" : ""}>${p}</option>`).join("")}</select></td>
+    <td><select data-k="${esc(w.key)}" data-f="status">${["未判定","検討中","採用","見送り","既存で対応"].map(s => `<option ${(w.d.status || "未判定") === s ? "selected" : ""}>${s}</option>`).join("")}</select></td>
+    <td><input type="text" data-k="${esc(w.key)}" data-f="note" value="${esc(w.d.note || "")}" placeholder="担当・理由・関連 Agent" style="width:100%"></td>
+  </tr>`).join("") : `<tr><td colspan="8" style="color:var(--muted);text-align:center;padding:22px">まだ希望がありません。シートのファイルを読み込んでください</td></tr>`;
+  document.querySelectorAll("#rows select, #rows input").forEach(el => el.addEventListener("change", () => setDecision(el.dataset.k, { [el.dataset.f]: el.value })));
+}
+function exportRows(){ return allWishes().map(w => ({ code: w.code, dept: w.dept, agent_id: w.agent_id, agent: w.agent, stage: w.stage, type: w.type, wish: w.text, source: w.source, duplicates: w.dup, priority: w.d.priority || "", status: w.d.status || "未判定", note: w.d.note || "" })); }
+function download(name, blob){ const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; a.click(); URL.revokeObjectURL(a.href); }
+function buildHtmlWithState(){
+  state._saved_at = new Date().toISOString();
+  const json = JSON.stringify(state).replace(/<\/script/gi, "<\\/script");
+  const clone = document.documentElement.cloneNode(true);
+  clone.querySelector("#embeddedState").textContent = json;
+  clone.querySelectorAll(".toast.show").forEach(t => t.classList.remove("show"));
+  return "<!doctype html>\n" + clone.outerHTML;
+}
+function defaultFileName(){ return `みらい建設工業_追加希望集計_${new Date().toISOString().slice(0,10).replace(/-/g,"")}.html`; }
+async function saveAs(){
+  save();
+  const html = buildHtmlWithState();
+  if (window.showSaveFilePicker) {
+    try { const h = await window.showSaveFilePicker({ suggestedName: defaultFileName(), types: [{ description: "HTML ファイル", accept: { "text/html": [".html"] } }] }); const w = await h.createWritable(); await w.write(new Blob([html], { type: "text/html" })); await w.close(); toast("保存しました: " + h.name); return; }
+    catch (e) { if (e && e.name === "AbortError") return; }
+  }
+  const name = prompt("保存するファイル名", defaultFileName()); if (name === null) return;
+  download(/\.html?$/i.test(name) ? name : name + ".html", new Blob([html], { type: "text/html" })); toast("ダウンロードしました");
+}
+document.getElementById("btnSave").onclick = saveAs;
+document.getElementById("btnLoad").onclick = () => document.getElementById("fileInput").click();
+document.getElementById("fileInput").onchange = (e) => { loadFiles([...e.target.files]); e.target.value = ""; };
+const drop = document.getElementById("drop");
+drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("over"); });
+drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+drop.addEventListener("drop", (e) => { e.preventDefault(); drop.classList.remove("over"); loadFiles([...e.dataTransfer.files]); });
+document.getElementById("btnCsv").onclick = () => {
+  const rows = exportRows(); const head = Object.keys(rows[0] || { code:"",dept:"",agent_id:"",agent:"",stage:"",type:"",wish:"",source:"",duplicates:"",priority:"",status:"",note:"" });
+  const csv = "﻿" + [head.join(","), ...rows.map(r => head.map(k => `"${String(r[k] ?? "").replace(/"/g, '""')}"`).join(","))].join("\r\n");
+  download(`追加希望集計_${new Date().toISOString().slice(0,10)}.csv`, new Blob([csv], { type: "text/csv" }));
+};
+document.getElementById("btnJson").onclick = () => download(`追加希望集計_${new Date().toISOString().slice(0,10)}.json`, new Blob([JSON.stringify({ exported_at: new Date().toISOString(), sources: state.sources.map(s => ({ name: s.name, loaded_at: s.loaded_at, codes: s.codes })), wishes: exportRows() }, null, 2)], { type: "application/json" }));
+document.getElementById("btnPrint").onclick = () => window.print();
+document.getElementById("btnClear").onclick = () => { if (confirm("読み込んだシートと優先度・状態の判断をすべて消去します。よろしいですか？")) { state.sources = []; state.decisions = {}; save(); render(); } };
+["fDept","fType","fStatus","fPri"].forEach(id => document.getElementById(id).addEventListener("change", render));
+document.getElementById("fText").addEventListener("input", render);
+render();
+</script>
+</body>
+</html>

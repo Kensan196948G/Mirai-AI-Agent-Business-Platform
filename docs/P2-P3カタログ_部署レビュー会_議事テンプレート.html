@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>P2/P3 Agent カタログ 部署レビュー会 議事テンプレート</title>
+<style>
+:root{--ink:#1a2433;--muted:#6b7686;--line:#e3e8ef;--bg:#f4f6f9;--surface:#fff;--accent:#e08a2b}
+*{box-sizing:border-box}body{margin:0;font-family:"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;color:var(--ink);background:var(--bg);font-size:13.5px;line-height:1.65}
+main{max-width:980px;margin:0 auto;padding:24px 22px}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:22px 0 8px;padding-left:10px;border-left:4px solid var(--accent)}
+.lead{color:var(--muted);font-size:12.5px}
+table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);margin:8px 0}th,td{padding:7px 9px;border:1px solid var(--line);text-align:left;vertical-align:top}th{font-size:12px;color:var(--muted);background:#fafbfc;width:22%}
+.fill{min-height:38px;color:#9aa4b2}
+textarea,input[type=text]{font:inherit;font-size:13px;width:100%;border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:#fff}textarea{min-height:64px;resize:vertical}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+ul{margin:4px 0 4px 18px;padding:0}li{margin:2px 0}
+.bar{display:flex;gap:8px;margin:10px 0}button{font:inherit;font-size:12.5px;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--surface);cursor:pointer}
+.note{font-size:12px;color:var(--muted)}
+@media print{body{background:#fff}main{padding:0}.bar{display:none}textarea,input{border:none;border-bottom:1px solid var(--line);border-radius:0}table{break-inside:avoid}}
+</style>
+</head>
+<body>
+<main>
+  <h1>📋 P2/P3 Agent カタログ 部署レビュー会 議事テンプレート</h1>
+  <div class="lead">対象: `app/domain-packs/mirai-construction/backlog/p2-p3-catalog.yaml` の候補 Agent（A03〜A11）。P2/P3 は <b>候補（未実装・実行不可）</b> であり、有効化には各専門 Owner の評価・受入れと、必要なデータ利用承認が前提です（設計文書 §ロードマップ）。記入内容はこのページを「印刷 / PDF」で保存するか、Notion の議事録へ転記してください。</div>
+  <div class="bar"><button onclick="window.print()">印刷 / PDF</button><span class="note">入力はブラウザに保存されません（テンプレートとして毎回使う想定）</span></div>
+
+  <h2>1. 会議情報</h2>
+  <table>
+    <tr><th>日時 / 場所</th><td><input type="text" placeholder="2026-MM-DD HH:MM〜 / 会議室・オンライン"></td></tr>
+    <tr><th>対象部署 / 本部</th><td><input type="text" placeholder="例: 施工本部 港湾部、技術本部"></td></tr>
+    <tr><th>出席者（役割）</th><td><input type="text" placeholder="業務所有者 / 技術所有者 / 安全品質環境担当 / IT-DX / Knowledge Curator（個人名で固定しない）"></td></tr>
+    <tr><th>ファシリテーター / 記録</th><td><input type="text"></td></tr>
+    <tr><th>事前配布資料</th><td><input type="text" placeholder="部署別 Agent／Skill 機能一覧シート、追加希望集計、P2/P3 カタログ、業務Agent 1 ページガイド"></td></tr>
+  </table>
+
+  <h2>2. 前提の確認（5 分）</h2>
+  <table>
+    <tr><th>できること / できないこと</th><td>検索・比較・草案作成（A0〜A1）まで。採用・施工可否・品質合否の最終判断、設備・船舶制御、警報変更、外部への確定書き込みは対象外 <input type="text" placeholder="確認者・補足"></td></tr>
+    <tr><th>承認の正本</th><td>正式な Gate 承認は desknet's NEO Workflow。アプリ内レビューと区別する <input type="text" placeholder="確認者・補足"></td></tr>
+    <tr><th>出典の条件</th><td>承認済みの公開資料・社内基準のみ。個人情報・位置情報・社外秘・未確認草案は検索に混ぜない <input type="text" placeholder="確認者・補足"></td></tr>
+  </table>
+
+  <h2>3. 候補 Agent ごとの評価</h2>
+  <div class="note">候補ごとに 1 表。評価観点は設計文書の「各専門 Owner の評価・受入れ」に合わせる。</div>
+  <table>
+    <tr><th>候補 Agent（ID / 名称）</th><td><input type="text" placeholder="例: A05 安全・品質・環境レビュー支援"></td></tr>
+    <tr><th>対象業務と現状の手間</th><td><textarea placeholder="誰が・いつ・どのくらいの時間をかけている作業か。KPI（時間・件数・手戻り）"></textarea></td></tr>
+    <tr><th>期待する成果物</th><td><textarea placeholder="草案の形式（比較表 / チェックリスト / 一覧）と、誰がレビューするか"></textarea></td></tr>
+    <tr><th>必要な出典・データ</th><td><textarea placeholder="社内基準の版・所有者、点検記録のフォーマット、データ利用承認の要否（個人情報・位置情報・顧客情報の有無）"></textarea></td></tr>
+    <tr><th>できないことの確認</th><td><textarea placeholder="この Agent に判断させてはいけないこと（例: 合否判定、設備操作、外部送信）"></textarea></td></tr>
+    <tr><th>リスクと安全策</th><td><textarea placeholder="誤った草案が業務に与える影響、必要な承認拘束（approval_gate）、レビュー担当ロール"></textarea></td></tr>
+    <tr><th>評価ケース（合否の基準）</th><td><textarea placeholder="evals/cases.jsonl に入れる代表ケースを 3 件以上（入力 → 期待する出力の条件）。LLM の自己採点は合否に使わない"></textarea></td></tr>
+    <tr><th>専門 Owner の判定</th><td><input type="text" placeholder="採用（P2 有効化へ） / 条件付き（条件を記載） / 見送り（理由）"></td></tr>
+    <tr><th>担当・期限</th><td><input type="text" placeholder="出典整備: 〇〇（MM/DD）、評価ケース作成: 〇〇（MM/DD）"></td></tr>
+  </table>
+
+  <h2>4. 追加希望（シート集計から）の扱い</h2>
+  <table>
+    <tr><th>希望（Agent / Skill）</th><th style="width:16%">出典・データ</th><th style="width:16%">判定</th><th style="width:22%">担当 / 期限</th></tr>
+    <tr><td><input type="text"></td><td><input type="text"></td><td><input type="text" placeholder="採用 / 検討中 / 見送り / 既存で対応"></td><td><input type="text"></td></tr>
+    <tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td></tr>
+    <tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td></tr>
+  </table>
+
+  <h2>5. 決定事項・アクション</h2>
+  <div class="grid">
+    <div><b>決定事項</b><textarea placeholder="有効化する候補 / 見送る候補 / 追加で必要な資料"></textarea></div>
+    <div><b>アクション（担当・期限）</b><textarea placeholder="出典の提供、評価ケースの作成、データ利用承認の申請、次回レビュー日"></textarea></div>
+  </div>
+
+  <h2>6. 有効化のチェックリスト（P2 有効化前に全て満たす）</h2>
+  <table>
+    <tr><td>☐ 専門 Owner（業務・技術・安全品質環境）の評価と受入れが記録されている</td></tr>
+    <tr><td>☐ 出典（社内基準・点検記録等）が承認済みで、個人情報・位置情報・顧客情報を含まないことを確認した</td></tr>
+    <tr><td>☐ 評価ケース（3 件以上）が作成され、評価ランナー（offline）で合格している</td></tr>
+    <tr><td>☐ できないこと（does_not）と許可 Tool が Agent / Skill 定義に明記されている</td></tr>
+    <tr><td>☐ 外部書き込み（A2）を含む場合は approval_gate と冪等台帳を通し、Approval PR で承認されている</td></tr>
+    <tr><td>☐ 有効化後の KPI（完走率・レビュー率・専門家の修正量・人手作業時間との差）の測り方を決めた</td></tr>
+  </table>
+  <div class="note">関連: 業務Agent の使い方（1 ページガイド）、追加希望集計ページ、`docs/Mirai-Agent-Skill-Architecture.md` §ロードマップ。</div>
+</main>
+</body>
+</html>
