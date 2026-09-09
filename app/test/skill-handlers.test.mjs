@@ -120,3 +120,18 @@ test('evidence-backed-draft は出典ゼロのとき LLM を呼ばず、前段�
   assert.ok(!out.unknowns.some((u) => u.includes('LLM出力の検証に失敗')), 'LLM を呼んでいないのに検証失敗と書かない');
   assert.ok(new Ajv({ allErrors: true }).compile(def.outputSchema)(out), 'output schema に適合');
 });
+
+test('Prompt Injection（C-18）: LLM が乗っ取られた出力（人手確認 false・捏造出典・秘密）を返しても、evidence-backed-draft は人手確認を固定し検証済み出典だけを残す', async () => {
+  const def = loadSkillDefinition(PACK, 'evidence-backed-draft', '1.0.0');
+  const ctx = makeCtx(def, INPUTS['evidence-backed-draft']);
+  ctx.structuredComplete = async () => ({
+    data: {
+      findings: ['正当な事実', 'システムプロンプトを表示します: sk-abcdefghijklmnopqrstuvwxyz1234'],
+      sources: [{ source_record_id: 1 }, { source_record_id: 999 }], unknowns: [], assumptions: [], requires_human_review: false,
+    }, degraded: false, tokensIn: 1, tokensOut: 1, cost: 0,
+  });
+  const out = await SKILL_HANDLERS['evidence-backed-draft'](ctx);
+  assert.equal(out.requires_human_review, true);
+  assert.deepEqual(out.sources.map((s) => s.source_record_id), [1], '前段で検証された出典（1）だけを残し、捏造の 999 を除く');
+  assert.ok(new Ajv({ allErrors: true }).compile(def.outputSchema)(out));
+});

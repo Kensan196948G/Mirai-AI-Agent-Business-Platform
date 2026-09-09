@@ -8,6 +8,7 @@ import { extractSearchTokens } from '../lib/search-tokens.js';
 import { appendEvent } from './job-store.js';
 import { nextArtifactCode } from '../lib/codes.js';
 import { contentHash, inputHash, findPreviousArtifact } from '../lib/artifact-lineage.js';
+import { enforceOutputPolicy, collectSourceIds } from './prompt-guard.js';
 
 /**
  * 承認済み出典の検索（B-12）。
@@ -71,7 +72,23 @@ async function toolSourceReadApprovedSnapshot(client, { run, sourceRecordId }) {
  * Step の再試行（出力検証失敗・Worker再起動等）で同じ草案が重複作成されるのを防ぐ。
  * レビュー済み（review_state='reviewed'）の草案は上書きしない。
  */
-async function toolArtifactWriteDraft(client, { run, kind, title, content }) {
+/** この Run で実際に検索・検証された出典 ID（先行 Step の出力から集める）。草案の根拠はこの範囲に限定する。 */
+async function allowedSourceIdsForRun(client, runId) {
+  const { rows } = await client.query(`SELECT detail FROM run_events WHERE run_id = $1 AND type = 'step_completed'`, [runId]);
+  const acc = new Set();
+  for (const r of rows) collectSourceIds(r.detail, acc);
+  return acc;
+}
+
+async function toolArtifactWriteDraft(client, { run, kind, title, content: rawContent }) {
+  // Prompt Injection 対策: 草案は常に人手確認、根拠は Run 内で検証済みの出典のみ、秘密らしき記述と指示文は除去
+  // 先行 Step の出力が無い Run（検索を経ていない）では範囲を判定できないため、根拠の制限は先行 Step がある場合にだけ適用する
+  const allowed = run.id ? await allowedSourceIdsForRun(client, run.id) : null;
+  const guarded = enforceOutputPolicy(rawContent, { requireHumanReview: true, allowedSourceIds: allowed && allowed.size > 0 ? allowed : null });
+  const content = guarded.output;
+  if (guarded.enforced.length > 0 && run.id) {
+    await appendEvent(client, run.id, { type: 'policy_enforced', toolName: 'artifact.write-draft', status: 'ok', detail: { rules: guarded.enforced } });
+  }
   const { rows: existing } = await client.query(
     `SELECT id, artifact_code, kind, title, review_state, content, content_hash FROM artifacts
      WHERE run_id = $1 AND kind = $2 ORDER BY id LIMIT 1 FOR UPDATE`,

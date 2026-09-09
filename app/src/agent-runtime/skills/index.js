@@ -6,6 +6,8 @@
  * ctx = { client, run, skillVersion, input, callTool, structuredComplete, validateCitations, nextSeq }
  */
 
+import { sanitizeUntrustedText, scanForInjection, scanForSecrets } from '../prompt-guard.js';
+
 async function technologyCatalogSearch(ctx) {
   const result = await ctx.callTool('knowledge.search-approved', {
     query: ctx.input.query, sourceType: 'technology_catalog', projectId: ctx.run.project_id,
@@ -211,8 +213,12 @@ async function outcomeMeasurement(ctx) {
 }
 
 async function sourceNormalize(ctx) {
-  const text = String(ctx.input.raw_text || '');
+  const text = sanitizeUntrustedText(String(ctx.input.raw_text || ''), { maxLength: 200000 });
   const reasons = [];
+  const inj = scanForInjection(text);
+  if (inj.suspicious) reasons.push(`指示文らしき記述を検出（プロンプトインジェクションの疑い: ${inj.matches.join(', ')}）`);
+  const secrets = scanForSecrets(text);
+  if (secrets.length) reasons.push(`秘密らしき文字列を検出（${secrets.join(', ')}）`);
   if (/\d{2,4}[-‐]\d{2,4}[-‐]\d{4,}/.test(text)) reasons.push('電話番号らしき文字列を検出');
   if (/緯度|経度|[0-9]{1,3}\.[0-9]{3,}[,、]\s*[0-9]{1,3}\.[0-9]{3,}/.test(text)) reasons.push('位置情報らしき文字列を検出');
   const normalized = text.replace(/\s+/g, ' ').trim();
