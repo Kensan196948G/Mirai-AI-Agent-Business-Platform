@@ -1,0 +1,1 @@
+{"case_id": "KD-01", "input": {"knowledge_candidate_id": 5, "title": "存在しない候補 ZZZ-000", "summary": "既存の昇格済み Knowledge に一致しないタイトル"}, "expect": {"duplicates_max": 0, "conflicts_max": 0, "knowledge_candidate_id_equals": 5, "notes": "昇格済み Knowledge に一致が無ければ LLM を呼ばず重複なしを返す。候補 ID は引き継ぐ"}}

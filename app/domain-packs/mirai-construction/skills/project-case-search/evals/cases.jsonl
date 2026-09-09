@@ -1,0 +1,2 @@
+{"case_id": "PCS-01", "input": {"query": "存在しない架空工事 QQQ-999"}, "expect": {"candidates_max": 0, "unknowns_min": 1, "notes": "該当なしは unknowns に記録し棄権する"}}
+{"case_id": "PCS-02", "input": {"query": "港湾のケーソン据付工事の実績"}, "expect": {"candidates_min": 0, "notes": "承認済み施工実績があれば返す（本番 DB では 1 件以上、テスト DB では 0 件でも失敗ではない）"}}

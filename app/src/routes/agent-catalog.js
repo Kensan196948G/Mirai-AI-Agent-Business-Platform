@@ -48,8 +48,15 @@ router.get('/', requireAuth, async (_req, res) => {
 
 router.get('/versions', requireAuth, async (_req, res) => {
   const { rows: skills } = await getPool().query(
-    `SELECT sv.id, sv.skill_id AS name, sv.version, sv.status, sv.risk, sv.content_hash, sv.approved_at, u.name AS approved_by_name
-     FROM skill_versions sv LEFT JOIN users u ON u.id = sv.approved_by ORDER BY sv.skill_id, sv.created_at DESC`,
+    `SELECT sv.id, sv.skill_id AS name, sv.version, sv.status, sv.risk, sv.content_hash, sv.approved_at, u.name AS approved_by_name,
+            e.total AS eval_total, e.passed AS eval_passed, e.mode AS eval_mode, e.created_at AS eval_at
+     FROM skill_versions sv LEFT JOIN users u ON u.id = sv.approved_by
+     LEFT JOIN LATERAL (
+       SELECT count(*)::int AS total, count(*) FILTER (WHERE passed)::int AS passed, mode, MIN(created_at) AS created_at
+       FROM skill_evaluations se WHERE se.skill_id = sv.skill_id AND se.content_hash = sv.content_hash
+       GROUP BY batch_id, mode ORDER BY MIN(created_at) DESC LIMIT 1
+     ) e ON true
+     ORDER BY sv.skill_id, sv.created_at DESC`,
   );
   const { rows: agents } = await getPool().query(
     `SELECT av.id, av.agent_id AS name, av.version, av.status, av.owner_role, av.content_hash, av.approved_at, u.name AS approved_by_name

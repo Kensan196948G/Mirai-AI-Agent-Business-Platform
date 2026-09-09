@@ -1,0 +1,2 @@
+{"case_id": "KRP-01", "input": {"knowledge_candidate_id": 1, "findings": ["出典が明記されている"], "flags": [], "duplicates": [], "conflicts": [], "unknowns": ["有効期限が不明"]}, "expect": {"requires_human_review": true, "findings_min": 1, "unknowns_min": 1, "artifact_id_min": 0, "notes": "レビュー用パケットは常に人手確認が必要。前段の findings / unknowns を失わない"}}
+{"case_id": "KRP-02", "input": {"knowledge_candidate_id": 2}, "expect": {"requires_human_review": true, "findings_max": 0, "notes": "前段の出力が無くても空のパケットとして保存できる"}}

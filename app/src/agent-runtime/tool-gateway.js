@@ -116,6 +116,19 @@ const TOOL_HANDLERS = {
 };
 
 /**
+ * 評価ランナー専用: 読み取り専用 Tool を run_events へ記録せずに実行する。
+ * 書き込み Tool（artifact.write-draft）は DB に触れず、偽の成果物 ID を返す（評価で本番データを作らない）。
+ */
+export async function invokeToolForEvaluation(client, toolName, args) {
+  if (toolName === 'artifact.write-draft') {
+    return { artifact: { id: 0, artifact_code: 'ART-EVAL', kind: args.kind, title: args.title, review_state: 'draft', reused: false, evaluation_stub: true } };
+  }
+  const handler = TOOL_HANDLERS[toolName];
+  if (!handler) throw new PolicyDeniedError(`Tool「${toolName}」は登録されていません`);
+  return handler(client, args);
+}
+
+/**
  * Tool呼び出しの唯一の入口。policy-engineでの許可判定 → run_eventsへの記録 → 実行 → 結果記録、の順で行う。
  */
 export async function callTool(client, { run, skillVersion, toolName, args }) {
