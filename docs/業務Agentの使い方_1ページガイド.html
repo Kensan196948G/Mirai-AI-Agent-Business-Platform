@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>業務Agent の使い方（1 ページガイド）</title>
+<style>
+:root{--ink:#1a2433;--muted:#6b7686;--line:#e3e8ef;--bg:#f4f6f9;--surface:#fff;--accent:#e08a2b;--green:#1f8255;--amber:#b5701a;--red:#c5392f;--blue:#2e5aac}
+*{box-sizing:border-box}body{margin:0;font-family:"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;color:var(--ink);background:var(--bg);font-size:14px;line-height:1.7}
+main{max-width:980px;margin:0 auto;padding:26px 22px}
+h1{font-size:22px;margin:0 0 6px}h2{font-size:16px;margin:26px 0 8px;padding-left:10px;border-left:4px solid var(--accent)}
+.lead{color:var(--muted);font-size:13px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:10px 0}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}.step{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}.step .n{display:inline-block;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;text-align:center;line-height:26px;font-weight:700;margin-bottom:6px}
+table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{font-size:12px;color:var(--muted);background:#fafbfc}
+.ok{color:var(--green);font-weight:600}.ng{color:var(--red);font-weight:600}.note{font-size:12.5px;color:var(--muted)}
+ul{margin:6px 0 6px 18px;padding:0}li{margin:3px 0}
+@media print{body{background:#fff}main{padding:0}.box,.step,table{break-inside:avoid}}
+</style>
+</head>
+<body>
+<main>
+  <h1>🛠️ 業務Agent の使い方（1 ページガイド）</h1>
+  <div class="lead">Mirai AgentOS の「業務Agent（Agent Runs）」は、承認済みの公開資料を検索して比較や草案を <b>下書きとして</b> 作る道具です。採用・施工可否・品質合否の判断はしません。最終判断は必ず人が行います。</div>
+
+  <h2>😊 かんたんに言うと</h2>
+  <div class="box">
+    「うちの技術で、この条件に合いそうなものを整理して」と頼むと、<b>会社の公式サイトに載っている技術紹介・施工実績（承認済みのものだけ）</b>を調べて、「確認できたこと」「まだ分からないこと」「根拠のページ」を並べた下書きを作ります。<br>
+    出典に書かれていないことは「不明」と書きます。分からないことを勝手に埋めません。
+  </div>
+
+  <h2>🧭 使い方（4 ステップ）</h2>
+  <div class="steps">
+    <div class="step"><span class="n">1</span><b>Agent を選ぶ</b><br>左メニュー「業務Agent（Agent Runs）」→ Agent を 1 つ選ぶ（下表）。</div>
+    <div class="step"><span class="n">2</span><b>相談内容を書く</b><br>例:「軟弱地盤の液状化対策として CPG工法 を適用できる条件と他の地盤改良技術との比較」。<span class="ng">個人情報・位置情報・社外秘は書かない</span>。</div>
+    <div class="step"><span class="n">3</span><b>Run を開始 → 待つ</b><br>通常 1〜2 分。状態が「完了」になったら成果物（草案）が表示されます。</div>
+    <div class="step"><span class="n">4</span><b>読んでレビューする</b><br>「確認できた事実」「不明点」「根拠」を確認し、問題なければ「レビュー済みにする」。気になる点はコメントに残す。</div>
+  </div>
+
+  <h2>🤖 いま使える Agent（P1、3 種類）</h2>
+  <table>
+    <thead><tr><th>Agent</th><th>こんなとき</th><th>相談欄に書くこと</th><th>できること</th><th>できないこと</th></tr></thead>
+    <tbody>
+      <tr><td><b>技術選定・比較支援</b><br><span class="note">technology-selection</span></td><td>保有技術のうち条件に合いそうなものを整理したい</td><td>用途・条件・比較したい観点</td><td>候補の検索、適用条件と不足情報の整理、出典付き比較草案</td><td>工法の採用決定、施工設計の確定、設備・警報の操作</td></tr>
+      <tr><td><b>施工実績・提案支援</b><br><span class="note">project-case-research</span></td><td>似た工事の実績を集めて提案の論点を整理したい</td><td>工事の種類・条件・知りたい論点</td><td>承認済み施工実績の検索、類似点・相違点の整理、提案草案の下書き</td><td>提案書の正式発行、受注可否の判断、顧客への送信</td></tr>
+      <tr><td><b>Knowledge 品質支援</b><br><span class="note">knowledge-quality</span></td><td>ナレッジ候補の根拠・重複・機密をチェックしたい</td><td>対象のナレッジ候補（画面で選ぶ）</td><td>根拠の有無・重複・機密らしき記述の検査、レビュー用パケット</td><td>ナレッジの自動昇格（昇格は Knowledge Curator が判断）</td></tr>
+    </tbody>
+  </table>
+
+  <h2>🔍 成果物の読み方</h2>
+  <div class="box">
+    <ul>
+      <li><b>確認できた事実</b>: 出典（公式サイトの技術紹介・施工実績）に書かれていることだけ。各項目の根拠は下の「根拠」のリンク先で確認できます</li>
+      <li><b>不明点・要確認</b>: 出典に書かれていないこと。<span class="ng">数値や条件を推測で補っていません</span>。ここは人が調べる項目です</li>
+      <li><b>仮定</b>: 整理のために置いた前提。合っているか確認してください</li>
+      <li><b>前回との差分</b>: 同じ相談を再実行したときに、前回の草案と何が変わったか</li>
+      <li><b>レビュー済み</b>にすると内容が固定され、以後は書き換えられません（改変があれば ⚠ が出ます）</li>
+    </ul>
+  </div>
+
+  <h2>🚦 安全のしくみ（知っておくと安心）</h2>
+  <table>
+    <thead><tr><th>しくみ</th><th>意味</th></tr></thead>
+    <tbody>
+      <tr><td>承認済み出典だけを使う</td><td>公開サイトの資料を DX推進部が承認したものだけが検索対象。未承認・隔離中の資料は使われません</td></tr>
+      <tr><td>人手確認が必須</td><td>すべての草案は「要レビュー」で作られます。AI が自分で承認・昇格することはできません</td></tr>
+      <tr><td>正式承認は desknet's NEO</td><td>アプリ内の「レビュー済み」「承認」は業務上の正式承認ではありません。Gate 承認は NEO Workflow で行います</td></tr>
+      <tr><td>費用の上限</td><td>Run 1 件あたり約 $0.5、月全体で $5 の上限。超えると自動で止まります（1 件の実行は通常 $0.01 未満）</td></tr>
+      <tr><td>同時実行の上限</td><td>1 人あたり同時 2 件、1 日 50 件まで。終わってから次を開始してください</td></tr>
+      <tr><td>記録</td><td>誰が・いつ・何を実行し、どの出典を使ったかは監査ログに残ります</td></tr>
+    </tbody>
+  </table>
+
+  <h2>❓ 困ったとき</h2>
+  <div class="box">
+    <ul>
+      <li><b>「該当する承認済み出典が見つかりません」</b>: 出典がまだ登録されていないか、言い方が違うかもしれません。技術名（例: MC-Caisson、CPG工法）や工事の種類（例: ケーソン据付、防波堤）を入れて再実行してみてください。それでも無ければ DX推進部へ「この資料を出典に追加してほしい」と依頼</li>
+      <li><b>「失敗」になった</b>: Run 詳細の「実行イベント」に理由が出ます。「LLM 出力を採用できず保留」は AI の出力が形式に合わなかったときで、再実行で直ることがあります。何度も失敗する場合は DX推進部へ</li>
+      <li><b>「承認待ち」で止まっている</b>: その Step は承認が必要な設定です。承認画面で Approver が判断します（自分の申請は自分で承認できません）</li>
+      <li><b>個人情報を入れてしまった</b>: すぐに DX推進部へ連絡してください。該当 Run と草案を削除します（削除は監査ログに残ります）</li>
+    </ul>
+  </div>
+  <div class="note">問い合わせ: DX推進部。詳しい仕様は `app/README.md`（開発者向け）、部署ごとの Agent／Skill の一覧と追加希望は「みらい建設工業_部署別Agent-Skill機能一覧.html」。</div>
+</main>
+</body>
+</html>
