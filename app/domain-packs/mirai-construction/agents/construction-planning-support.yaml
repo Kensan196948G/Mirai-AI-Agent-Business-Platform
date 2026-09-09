@@ -21,8 +21,12 @@ input_contract:
       type: string
       maxLength: 60000
 delegates_to:
-- technology-selection
+- construction-planning-expert
+- environmental-expert
+- port-marine-expert
 - project-case-research
+- quantity-cost-expert
+- technology-selection
 timeout_seconds: 600
 budget_usd: 0.5
 model_category: Research / Classification

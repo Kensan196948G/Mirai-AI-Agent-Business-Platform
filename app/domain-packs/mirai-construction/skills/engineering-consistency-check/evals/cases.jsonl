@@ -1,0 +1,2 @@
+{"case_id": "EC-01", "input": {"query": "整合確認", "technical_text": "天端高 T.P.+3.5m、既設は D.L.+2.0m。座標は JGD2011 と一部 JGD2000。荷重 50 kN と 5 tf を併記"}, "expect": {"issues_min": 3, "coordinate_systems_min": 2, "datums_min": 2, "notes": "基準面混在・座標系不一致・単位系混在を検出"}}
+{"case_id": "EC-02", "input": {"query": "整合確認"}, "expect": {"issues_max": 0, "unknowns_min": 1, "notes": "本文が無ければ抽出不能を明示"}}

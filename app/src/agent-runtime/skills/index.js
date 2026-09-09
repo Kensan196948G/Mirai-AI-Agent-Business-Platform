@@ -422,7 +422,87 @@ async function regionalContext(ctx) {
   };
 }
 
+// =============================================================================
+// 第 3 段: 土木専門 Agent が共用する決定的 Skill（推測しない。無いものは未確定として登録する）
+// =============================================================================
+
+/** 専門分野ごとの必要条件が相談文・先行資料に書かれているかを照合する（D-015: 条件が無ければ未確定）。 */
+async function conditionGapRegister(ctx) {
+  const required = Array.isArray(ctx.input.required_conditions) ? ctx.input.required_conditions : [];
+  const corpus = [String(ctx.input.query || ''), String(ctx.input.technical_text || ''), String(ctx.input.quantities_text || ''), String(ctx.input.document_text || '')];
+  for (const p of Array.isArray(ctx.input.prior_context) ? ctx.input.prior_context : []) corpus.push(...(p.findings || []).map(String));
+  const text = corpus.join('\n');
+  // 「N値」「地下水位」のような条件名と、その語幹（先頭 2 文字以上）のどちらかが本文にあれば「記載あり」。「不明」「未定」と併記されていれば未確定
+  const present = []; const missing = [];
+  for (const c of required) {
+    const idx = text.indexOf(c);
+    // 条件名の直後（同じ文の 12 文字以内）に「不明」等があれば未確定。次の文には波及させない
+    const tail = idx >= 0 ? text.slice(idx + c.length, idx + c.length + 12).split(/[。\n]/)[0] : '';
+    const written = idx >= 0 && !/不明|未定|未確定|未取得|わからない/.test(tail);
+    (written ? present : missing).push(c);
+  }
+  const unknowns = missing.map((c) => `未確定条件: ${c}（相談文・先行資料に記載がないため推測しない）`);
+  if (required.length === 0) unknowns.push('required_conditions が Agent 契約に無いため、条件の充足を判定できません');
+  const content = { findings: present.map((c) => `条件「${c}」の記載あり`), unknowns, assumptions: [], sources: [], present_conditions: present, missing_conditions: missing };
+  const art = await writeDraft(ctx, 'condition_gap_register', `Run ${ctx.run.run_code} 未確定条件の登録`, content);
+  return { present_conditions: present, missing_conditions: missing, unknowns, requires_human_review: true, ...art };
+}
+
+const UNIT_RE = /(?<![A-Za-z])(mm|cm|m3|m2|m|km|kN|N|tf|t|kPa|MPa|kg|ft|in)(?![A-Za-z])/g;
+const CRS_RE = /(JGD2011|JGD2000|Tokyo\s?Datum|日本測地系|世界測地系|WGS\s?84|平面直角座標系?\s?第?\s?[0-9IVXⅠ-Ⅻ]+系?|UTM\s?\d*)/g;
+const DATUM_RE = /(T\.?P\.?|D\.?L\.?|C\.?D\.?L\.?|L\.?W\.?L\.?|H\.?W\.?L\.?|A\.?P\.?|K\.?P\.?)(?=[+\-±\s\d])/g;
+const UNIT_FAMILY = { length: ['mm', 'cm', 'm', 'km', 'ft', 'in'], force: ['kN', 'N', 'tf', 't', 'kg'], pressure: ['kPa', 'MPa'] };
+const IMPERIAL = new Set(['ft', 'in']); const GRAVIMETRIC = new Set(['tf', 't', 'kg']); const SI_FORCE = new Set(['kN', 'N']);
+
+/** 数値・単位・座標系・基準面の整合（D-018 / X-013 / X-014）。抽出できなければ不明として明示し、推定しない。 */
+async function engineeringConsistencyCheck(ctx) {
+  const corpus = [String(ctx.input.technical_text || ''), String(ctx.input.quantities_text || ''), String(ctx.input.document_text || '')];
+  for (const p of Array.isArray(ctx.input.prior_context) ? ctx.input.prior_context : []) corpus.push(...(p.findings || []).map(String));
+  const text = corpus.join('\n');
+  const units = [...new Set([...text.matchAll(UNIT_RE)].map((m) => m[1]))];
+  const crs = [...new Set([...text.matchAll(CRS_RE)].map((m) => m[1].replace(/\s+/g, '')))];
+  const datums = [...new Set([...text.matchAll(DATUM_RE)].map((m) => m[1].replace(/\./g, '').toUpperCase()))];
+  const issues = []; const unknowns = [];
+  if (!text.trim()) unknowns.push('数値・座標を含む本文（technical_text 等）が無いため、単位・座標系・基準面の整合を判定できません');
+  const lengthUnits = units.filter((u) => UNIT_FAMILY.length.includes(u));
+  if (lengthUnits.some((u) => IMPERIAL.has(u)) && lengthUnits.some((u) => !IMPERIAL.has(u))) issues.push(`長さの単位系が混在しています（${lengthUnits.join(', ')}）: SI とヤード・ポンド法を同一資料で併用`);
+  const forceUnits = units.filter((u) => UNIT_FAMILY.force.includes(u));
+  if (forceUnits.some((u) => GRAVIMETRIC.has(u)) && forceUnits.some((u) => SI_FORCE.has(u))) issues.push(`力・荷重の単位系が混在しています（${forceUnits.join(', ')}）: SI（kN）と重力単位系（tf 等）の併用`);
+  if (crs.length > 1) issues.push(`座標系が複数現れます（${crs.join(', ')}）: 測地系の不一致は位置ずれの原因になるため統一を確認`);
+  if (datums.length > 1) issues.push(`基準面が複数現れます（${datums.join(', ')}）: T.P. / D.L. / C.D.L. の換算値の明示が必要`);
+  const content = { findings: [...(units.length ? [`単位: ${units.join(', ')}`] : []), ...(crs.length ? [`座標系: ${crs.join(', ')}`] : []), ...(datums.length ? [`基準面: ${datums.join(', ')}`] : []), ...issues], unknowns, assumptions: [], sources: [], issues, units_found: units, coordinate_systems: crs, datums };
+  const art = await writeDraft(ctx, 'engineering_consistency', `Run ${ctx.run.run_code} 数値・単位・座標系の整合`, content);
+  return { units_found: units, coordinate_systems: crs, datums, issues, unknowns, requires_human_review: true, ...art };
+}
+
+/** 基準・指針の版と発行元を承認済み出典から確認し、旧版・新版の混在を検出する（D-019 / G-016）。基準本文は判断に使わない。 */
+async function standardReferenceCheck(ctx) {
+  const types = Array.isArray(ctx.input.standard_source_types) && ctx.input.standard_source_types.length ? ctx.input.standard_source_types : ['standard', 'technology_catalog'];
+  const references = []; const seen = new Set();
+  for (const t of types) {
+    const r = await ctx.callTool('knowledge.search-approved', { query: ctx.input.query, sourceType: t, projectId: ctx.run.project_id, withMeta: true });
+    for (const c of r.candidates || []) {
+      if (seen.has(c.source_record_id)) continue; seen.add(c.source_record_id);
+      references.push({ source_record_id: c.source_record_id, title: c.title, source_type: c.source_type || t, version: c.version ?? null, published_at: c.published_at ?? null, effective_to: c.effective_to ?? null, canonical_url: c.canonical_url ?? null });
+    }
+  }
+  const issues = []; const unknowns = [];
+  const byTitle = new Map();
+  for (const ref of references) { const k = ref.title.replace(/\s+/g, ''); if (!byTitle.has(k)) byTitle.set(k, []); byTitle.get(k).push(ref); }
+  for (const [, refs] of byTitle) if (refs.length > 1) issues.push(`「${refs[0].title}」に複数の版があります（version ${refs.map((r) => r.version).join(', ')}）: 適用する版を明示`);
+  const soon = new Date(); soon.setDate(soon.getDate() + 90);
+  for (const ref of references) if (ref.effective_to && new Date(ref.effective_to) <= soon) issues.push(`「${ref.title}」の有効期限（${ref.effective_to}）が 90 日以内です`);
+  if (!references.some((r) => r.source_type === 'standard')) unknowns.push('社内基準（source_type=standard）は未登録のため、基準への適合は判定できません（B-10: 社内基準資料の提供待ち）');
+  if (references.length === 0) unknowns.push('相談内容に対応する承認済みの基準・技術資料が見つかりません');
+  const content = { findings: references.map((r) => `${r.title}（${r.source_type} / version ${r.version ?? '—'} / 発行 ${r.published_at ?? '不明'}）`), unknowns, assumptions: [], sources: references.map((r) => ({ source_record_id: r.source_record_id, locator: `version ${r.version ?? '—'}` })), issues, references };
+  const art = await writeDraft(ctx, 'standard_reference', `Run ${ctx.run.run_code} 根拠基準の版確認`, content);
+  return { references, issues, unknowns, requires_human_review: true, ...art };
+}
+
 Object.assign(SKILL_HANDLERS, {
+  'condition-gap-register': conditionGapRegister,
+  'engineering-consistency-check': engineeringConsistencyCheck,
+  'standard-reference-check': standardReferenceCheck,
   'knowledge-brief': knowledgeBrief,
   'planning-brief': planningBrief,
   'document-review': documentReview,

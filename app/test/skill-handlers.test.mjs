@@ -146,3 +146,53 @@ test('Prompt Injection（C-18）: LLM が乗っ取られた出力（人手確認
   assert.deepEqual(out.sources.map((s) => s.source_record_id), [1], '前段で検証された出典（1）だけを残し、捏造の 999 を除く');
   assert.ok(new Ajv({ allErrors: true }).compile(def.outputSchema)(out));
 });
+
+// ---------------------------------------------------------------------------
+// 第 3 段: 土木専門 Agent の決定的 Skill（推測しない・未確定を登録する・単位/座標系/基準面の混在を検出する・基準の版を追跡する）
+// ---------------------------------------------------------------------------
+test('condition-gap-register: 書かれていない条件は未確定として登録し、「不明」と併記された条件も未確定にする（推測しない）', async () => {
+  const def = loadSkillDefinition(PACK, 'condition-gap-register', '1.0.0');
+  const ctx = makeCtx(def, { query: '軟弱地盤で N値 3 の粘性土。地下水位は不明。', required_conditions: ['N値', '土質', '地下水位', '層厚'], prior_context: [{ agent_id: 'x', findings: ['層厚 5 m の粘性土層'] }] });
+  const out = await SKILL_HANDLERS['condition-gap-register'](ctx);
+  assert.ok(ajv.validate(def.outputSchema, out), ajv.errorsText(ajv.errors));
+  assert.deepEqual(out.present_conditions, ['N値', '層厚'], '先行 Step の事実（層厚）も記載ありとみなす');
+  assert.deepEqual(out.missing_conditions, ['土質', '地下水位'], '「粘性土」から土質を推測しない。「不明」と併記された地下水位も未確定');
+  assert.ok(out.unknowns.some((u) => /未確定条件: 地下水位/.test(u)) && out.requires_human_review === true);
+  assert.ok(ctx.calls.includes('artifact.write-draft'));
+});
+
+test('engineering-consistency-check: 単位系・座標系・基準面の混在を検出し、本文が無ければ判定不能を明示する', async () => {
+  const def = loadSkillDefinition(PACK, 'engineering-consistency-check', '1.0.0');
+  const out = await SKILL_HANDLERS['engineering-consistency-check'](makeCtx(def, { query: '整合', technical_text: '天端高 T.P.+3.5m、既設は D.L.+2.0m。座標は JGD2011 と一部 JGD2000。荷重 50 kN と 5 tf を併記。延長 100 ft' }));
+  assert.ok(ajv.validate(def.outputSchema, out), ajv.errorsText(ajv.errors));
+  assert.ok(out.issues.some((i) => /基準面が複数/.test(i)) && out.issues.some((i) => /座標系が複数/.test(i)));
+  assert.ok(out.issues.some((i) => /力・荷重の単位系が混在/.test(i)) && out.issues.some((i) => /長さの単位系が混在/.test(i)));
+  assert.deepEqual(out.coordinate_systems, ['JGD2011', 'JGD2000']); assert.deepEqual(out.datums, ['TP', 'DL']);
+  const empty = await SKILL_HANDLERS['engineering-consistency-check'](makeCtx(def, { query: '整合' }));
+  assert.equal(empty.issues.length, 0); assert.ok(empty.unknowns.some((u) => /判定できません/.test(u)));
+  // 同一単位系だけなら問題なし（誤検出しない）
+  const ok = await SKILL_HANDLERS['engineering-consistency-check'](makeCtx(def, { query: '整合', technical_text: '幅 10 m、高さ 3.5 m、荷重 50 kN、座標 JGD2011、T.P.+2.0m' }));
+  assert.equal(ok.issues.length, 0);
+});
+
+test('standard-reference-check: 承認済み出典の版・発行日を references に残し、同一タイトルの複数版と社内基準の未登録を明示する', async () => {
+  const def = loadSkillDefinition(PACK, 'standard-reference-check', '1.0.0');
+  const ctx = makeCtx(def, { query: '防波堤 設計' });
+  ctx.callTool = async (toolName, args) => {
+    ctx.calls.push(toolName);
+    if (toolName === 'knowledge.search-approved') {
+      assert.equal(args.withMeta, true, '版・発行日を要求する');
+      return args.sourceType === 'technology_catalog' ? { candidates: [
+        { source_record_id: 1, title: '港湾の施設の技術上の基準', summary: 's', evidence_type: 'standard', source_type: 'technology_catalog', version: 1, published_at: '2018-05-01', effective_to: null },
+        { source_record_id: 2, title: '港湾の施設の技術上の基準', summary: 's', evidence_type: 'standard', source_type: 'technology_catalog', version: 2, published_at: '2024-04-01', effective_to: null },
+      ] } : { candidates: [] };
+    }
+    if (toolName === 'artifact.write-draft') return { artifact: { id: '42', artifact_code: 'ART-TEST', reused: false } };
+    throw new Error('unexpected tool ' + toolName);
+  };
+  const out = await SKILL_HANDLERS['standard-reference-check'](ctx);
+  assert.ok(ajv.validate(def.outputSchema, out), ajv.errorsText(ajv.errors));
+  assert.equal(out.references.length, 2);
+  assert.ok(out.issues.some((i) => /複数の版/.test(i)));
+  assert.ok(out.unknowns.some((u) => /社内基準.*未登録/.test(u)));
+});

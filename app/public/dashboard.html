@@ -408,7 +408,7 @@ input::placeholder,textarea::placeholder{color:var(--muted)}
   <sc-if value="{{ ar.sec.hasFlags }}" hint-placeholder-val="{{ false }}"><div><div style="font-weight:600;color:var(--red);margin-bottom:3px">要注意（機密等）</div><sc-for list="{{ ar.sec.flags }}" as="it" hint-placeholder-count="1"><div style="display:flex;gap:6px"><span>・</span><span style="flex:1">{{ it.text }}</span></div></sc-for></div></sc-if>
   <sc-if value="{{ ar.sec.hasCites }}" hint-placeholder-val="{{ false }}"><div><div style="font-weight:600;color:var(--ink-2);margin-bottom:3px">根拠（出典）</div><sc-for list="{{ ar.sec.cites }}" as="ci" hint-placeholder-count="2"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button onClick="{{ ci.open }}" style="border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:3px 9px;border-radius:6px;font-size:11.5px;cursor:pointer" style-hover="background:var(--subtle)">本文を見る</button><span style="flex:1;min-width:0">{{ ci.title }} <span style="color:var(--muted);font-size:11px">（{{ ci.evidence }}）</span></span><sc-if value="{{ ci.hasUrl }}" hint-placeholder-val="{{ true }}"><a href="{{ ci.url }}" target="_blank" rel="noopener noreferrer" style="font-size:11.5px;color:var(--blue)">公式ページ ↗</a></sc-if></div></sc-for></div></sc-if>
   <sc-if value="{{ ar.sec.empty }}" hint-placeholder-val="{{ false }}"><div style="color:var(--muted)">（内容なし）</div></sc-if>
-</div><sc-if value="{{ ar.hasDiff }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;white-space:pre-wrap;line-height:1.55;background:var(--subtle);border-radius:7px;padding:8px 10px">{{ ar.diffText }}</div></sc-if><sc-if value="{{ ar.canReview }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:8px;align-items:center"><input value="{{ ar.note }}" onChange="{{ ar.setNote }}" placeholder="レビューコメント（Auditに記録）" style="flex:1;font-size:12px"><button onClick="{{ ar.review }}" style="background:var(--green);color:#fff;border:1px solid var(--green);padding:6px 11px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">レビュー済みにする</button></div></sc-if></div></sc-for><sc-if value="{{ arRun.noArtifacts }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px;color:var(--muted)">成果物はまだありません（最終Stepの完了後に作成されます）</div></sc-if></div></div>
+</div><sc-if value="{{ ar.hasDiff }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;white-space:pre-wrap;line-height:1.55;background:var(--subtle);border-radius:7px;padding:8px 10px">{{ ar.diffText }}</div></sc-if><sc-if value="{{ ar.hasExpertBadge }}" hint-placeholder-val="{{ false }}"><div style="font-size:11.5px;font-weight:600;color:var(--red);background:var(--red-bg);border-radius:6px;padding:4px 8px;display:inline-block">{{ ar.expertBadge }}</div></sc-if><sc-if value="{{ ar.expertNoteNeeded }}" hint-placeholder-val="{{ false }}"><sc-if value="{{ ar.canReview }}" hint-placeholder-val="{{ false }}"><input value="{{ ar.expertNote }}" onChange="{{ ar.setExpertNote }}" placeholder="専門技術者の所見（T5/T6 は必須・Audit に記録）" style="font-size:12px"></sc-if></sc-if><sc-if value="{{ ar.canReview }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:8px;align-items:center"><input value="{{ ar.note }}" onChange="{{ ar.setNote }}" placeholder="レビューコメント（Auditに記録）" style="flex:1;font-size:12px"><button onClick="{{ ar.review }}" style="background:var(--green);color:#fff;border:1px solid var(--green);padding:6px 11px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">レビュー済みにする</button></div></sc-if></div></sc-for><sc-if value="{{ arRun.noArtifacts }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px;color:var(--muted)">成果物はまだありません（最終Stepの完了後に作成されます）</div></sc-if></div></div>
               </div>
               <sc-if value="{{ arRun.canRerun }}" hint-placeholder-val="{{ false }}"><div style="padding:13px 18px;border-top:1px solid var(--line-2);display:flex;gap:8px"><button onClick="{{ arRun.rerun }}" style="border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:7px 12px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--subtle)">同じ入力で再実行（前回との差分を表示）</button></div></sc-if>
               <sc-if value="{{ arRun.canCancel }}" hint-placeholder-val="{{ false }}"><div style="padding:13px 18px;border-top:1px solid var(--line-2);display:flex;gap:8px;flex-wrap:wrap"><sc-if value="{{ arRun.canPause }}" hint-placeholder-val="{{ false }}"><button onClick="{{ arRun.pause }}" style="border:1px solid var(--line);background:var(--surface);color:var(--amber);padding:7px 12px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--amber-bg)">一時停止</button></sc-if><sc-if value="{{ arRun.canResume }}" hint-placeholder-val="{{ false }}"><button onClick="{{ arRun.resume }}" style="border:1px solid var(--line);background:var(--surface);color:var(--green);padding:7px 12px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--green-bg)">再開</button></sc-if><button onClick="{{ arRun.cancel }}" style="border:1px solid var(--line);background:var(--surface);color:var(--red);padding:7px 12px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--red-bg)">Cancel（中断要求）</button></div></sc-if>
@@ -943,10 +943,22 @@ class Component extends DCLogic {
       this.toast('中断を要求しました（実行中のStep完了後に停止します）', 'amber');
     });
   }
-  arReview(artifactId, runId) {
+  arReview(artifactId, runId, opts) {
     const note = (this.state.ar.notes || {})[artifactId] || '';
+    const expertNote = (this.state.ar.expertNotes || {})[artifactId] || '';
+    const o = opts || {};
+    const body = { note };
+    if (o.expertNeeded) {
+      // T3 以上: 専門技術者として内容を確認したことを明示的に宣言する（サーバ側でも検証）。T5/T6 は所見が必須
+      if (!window.confirm('この成果物は技術リスクが高く、専門技術者のレビューが必須です。専門技術者として内容を確認しましたか？')) return;
+      body.expert_confirmed = true;
+      if (o.expertNoteNeeded) {
+        if (expertNote.trim().length < 10) { this.toast('T5/T6 の成果物は専門技術者の所見（10 文字以上）が必須です', 'red'); return; }
+        body.expert_note = expertNote;
+      }
+    }
     this.guarded('artifact-review', async () => {
-      await this.api(`/api/artifacts/${artifactId}/review`, { method: 'POST', body: { note } });
+      await this.api(`/api/artifacts/${artifactId}/review`, { method: 'POST', body });
       this.toast('レビュー済みにしました（Audit記録済）', 'green');
       this.arOpenRun(runId);
     });
@@ -1419,9 +1431,14 @@ class Component extends DCLogic {
         pinned: a.review_state === 'reviewed' && a.reviewed_content_hash ? `版固定 ${String(a.reviewed_content_hash).slice(0, 12)}${a.integrity === false ? ' ⚠ 内容がレビュー時から変わっています' : ''}` : '',
         sec: artifactSections(a, d.run.id),
         canReview: a.review_state === 'draft' && this.can('review'),
+        expertBadge: a.ai_completion_prohibited ? '専門技術者の所見必須（AI 単独完了不可）' : a.expert_review_required ? '専門技術者レビュー必須' : '',
+        hasExpertBadge: !!(a.expert_review_required || a.ai_completion_prohibited),
+        expertNeeded: !!a.expert_review_required, expertNoteNeeded: !!a.ai_completion_prohibited,
+        expertNote: (ar.expertNotes || {})[a.id] || '',
+        setExpertNote: (e) => this.arPatch({ expertNotes: Object.assign({}, ar.expertNotes, { [a.id]: e.target.value }) }),
         note: (ar.notes || {})[a.id] || '',
         setNote: (e) => this.arPatch({ notes: Object.assign({}, ar.notes, { [a.id]: e.target.value }) }),
-        review: () => this.arReview(a.id, d.run.id),
+        review: () => this.arReview(a.id, d.run.id, { expertNeeded: !!a.expert_review_required, expertNoteNeeded: !!a.ai_completion_prohibited }),
       }, a.review_state === 'reviewed' ? { st: 'レビュー済', fg: 'var(--green)', bg: 'var(--green-bg)' } : { st: '草案', fg: 'var(--amber)', bg: 'var(--amber-bg)' })),
       noArtifacts: (d.artifacts || []).length === 0,
       canCancel: ['queued', 'running', 'waiting_approval', 'paused'].includes(d.run.status),
@@ -1451,7 +1468,7 @@ class Component extends DCLogic {
       planSource: od.orchestration.plan_source === 'llm' ? 'LLM 計画（カタログ・承認状態で検証）' : 'ルールベース計画（語の一致）', summary: (od.orchestration.plan_json || {}).summary || '',
       cost: `${this.fmtCost(Number(od.orchestration.cost_usd || 0))} / 上限 ${this.fmtCost(Number(od.orchestration.budget_usd || 0))}`, err: od.orchestration.error_message || '', hasErr: !!od.orchestration.error_message,
       steps: (od.steps || []).map((st) => Object.assign({
-        seq: st.seq, agent: st.agent_id, reason: st.reason || '', deps: (st.depends_on || []).length ? `先行: ${st.depends_on.join(',')}` : '独立', run: st.run_code || '—', err: st.error_message || st.run_error || '',
+        seq: st.seq, agent: `${st.agent_id}${st.layer === 'civil_expert' ? '（土木専門）' : st.layer === 'cross_review' ? '（相互レビュー）' : ''}`, reason: st.reason || '', deps: (st.depends_on || []).length ? `先行: ${st.depends_on.join(',')}` : '独立', run: st.run_code || '—', err: st.error_message || st.run_error || '',
         open: () => { if (st.run_id) { this.arOpenRun(st.run_id); } },
       }, orcSt(st.status === 'running' ? 'running' : st.status === 'completed' ? 'completed' : st.status === 'waiting_approval' ? 'waiting_approval' : st.status === 'blocked' ? 'blocked' : st.status === 'failed' ? 'failed' : st.status === 'cancelled' || st.status === 'skipped' ? 'cancelled' : 'planned'))),
       rejected: ((od.orchestration.plan_json || {}).rejected || []).map((r) => `${r.agent_id}: ${r.reason}`),

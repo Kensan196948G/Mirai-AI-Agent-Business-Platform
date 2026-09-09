@@ -1,0 +1,55 @@
+schema_version: mirai.agent-definition/v1
+agent_id: civil-review-expert
+version: 1.0.0
+domain_pack: mirai-construction
+title: 土木レビュー 専門Agent
+owner_role: 技術本部（レビュー）
+layer: civil_expert
+technical_risk_class: T4
+purpose: 他の専門 Agent の出力（事実・不明点・根拠）を横断して、数値・単位・前提・出典の不整合と未確認事項を抽出する。第 4 段の Cross Review の基礎。
+does_not: 技術的な合否判定、最終設計判断。
+max_autonomy_level: A1
+input_contract:
+  type: object
+  properties:
+    query:
+      type: string
+      minLength: 1
+      maxLength: 4000
+    technical_text:
+      type: string
+      maxLength: 60000
+    quantities_text:
+      type: string
+      maxLength: 60000
+    document_text:
+      type: string
+      maxLength: 60000
+required_conditions:
+- 対象成果物
+- 前提条件
+keywords:
+- レビュー
+- 査読
+- 照査
+- 矛盾
+- 整合
+- 確認
+timeout_seconds: 900
+budget_usd: 0.5
+model_category: Research / Classification
+skills:
+- skill_id: engineering-consistency-check
+  version: 1.0.0
+- skill_id: standard-reference-check
+  version: 1.0.0
+- skill_id: document-review
+  version: 1.0.0
+  params:
+    criteria:
+    - 数値・単位の整合
+    - 前提条件の明示
+    - 出典の版と発行元
+    - 未確認事項の明示
+    - 安全・構造クリティカルの人間判断
+output: 根拠付きの技術論点草案（review_state=draft、T3 以上は専門技術者レビュー必須、T5/T6 は AI 単独完了不可）

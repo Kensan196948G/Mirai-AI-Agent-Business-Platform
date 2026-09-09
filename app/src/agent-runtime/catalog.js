@@ -31,6 +31,7 @@ export function loadUnifiedCatalog(packId = 'mirai-construction') {
           agent_id: agentId, stage: 'P1', title: def.title, purpose: String(def.purpose || '').trim(), does_not: String(def.does_not || '').trim(),
           owner_role: def.owner_role, max_autonomy_level: def.max_autonomy_level, skills: (def.skills || []).map((s) => s.skill_id), executable: true,
           layer: def.layer || 'organization', technical_risk_class: def.technical_risk_class || null, delegates_to: def.delegates_to || [],
+          keywords: def.keywords || [], required_conditions: def.required_conditions || [],
         };
       } catch (err) {
         if (!(err instanceof SkillLoaderError)) throw err;
@@ -39,17 +40,30 @@ export function loadUnifiedCatalog(packId = 'mirai-construction') {
         entry = {
           agent_id: agentId, stage: c.stage, title: c.title, purpose: `${c.main_deliverable || ''}（候補: ${(c.skill_candidates || []).join('、')}）`,
           does_not: (c.forbidden || []).join('、'), owner_role: c.owner_role, max_autonomy_level: null, skills: c.skill_candidates || [], executable: false,
-          backlog_id: c.id, required_materials: c.required_materials || [], layer: 'organization', technical_risk_class: null, delegates_to: [],
+          backlog_id: c.id, required_materials: c.required_materials || [], layer: 'organization', technical_risk_class: null, delegates_to: [], keywords: [], required_conditions: [],
         };
       }
       entry.org_code = org.code; entry.dept = org.dept;
       agents.set(agentId, entry);
     }
   }
+  // 土木専門 Agent（第 3 段）: 部署に属さず、組織責務 Agent から委譲される横断層。org-map.yaml の civil_experts に列挙する
+  for (const agentId of orgMap.civil_experts || []) {
+    if (agents.has(agentId)) throw new SkillLoaderError(`civil_experts の「${agentId}」は organizations にも登録されています（二重登録）`);
+    const def = loadAgentDefinition(packId, agentId).definition;
+    if (def.layer !== 'civil_expert') throw new SkillLoaderError(`civil_experts の「${agentId}」は layer: civil_expert でなければなりません`);
+    agents.set(agentId, {
+      agent_id: agentId, stage: 'P1', title: def.title, purpose: String(def.purpose || '').trim(), does_not: String(def.does_not || '').trim(),
+      owner_role: def.owner_role, max_autonomy_level: def.max_autonomy_level, skills: (def.skills || []).map((s) => s.skill_id), executable: true,
+      layer: 'civil_expert', technical_risk_class: def.technical_risk_class || null, delegates_to: def.delegates_to || [],
+      keywords: def.keywords || [], required_conditions: def.required_conditions || [], org_code: null, dept: '土木専門（横断）',
+    });
+  }
   const catalog = {
     pack_id: packId,
     organizations: (orgMap.organizations || []).map((o) => ({ code: o.code, dept: o.dept, org: o.org, keywords: o.keywords || [], agents: o.agents || [], note: o.note || '' })),
     agents: [...agents.values()],
+    civil_experts: orgMap.civil_experts || [],
   };
   cache.set(packId, catalog);
   return catalog;
@@ -64,7 +78,7 @@ export function catalogForPrompt(packId) {
   const c = loadUnifiedCatalog(packId);
   return {
     organizations: c.organizations.map((o) => ({ code: o.code, dept: o.dept })),
-    agents: c.agents.map((a) => ({ agent_id: a.agent_id, title: a.title, stage: a.stage, dept: a.dept, purpose: a.purpose.slice(0, 160) })),
+    agents: c.agents.map((a) => ({ agent_id: a.agent_id, title: a.title, stage: a.stage, dept: a.dept, layer: a.layer, technical_risk_class: a.technical_risk_class, delegates_to: a.delegates_to, purpose: a.purpose.slice(0, 160) })),
   };
 }
 
@@ -84,7 +98,10 @@ export function matchByKeywords(text, packId) {
     const score = hits.reduce((n, k) => n + (a.title.includes(k) ? 3 : body.includes(k) ? 1 : 0), 0);
     return { agent_id: a.agent_id, score };
   }).filter((a) => a.score >= 2).sort((a, b) => b.score - a.score);
-  return { departments: deptScores.slice(0, 3).map((d) => d.code), agents: agentScores.slice(0, 3) };
+  // 土木専門 Agent は自身の keywords（専門用語）との一致で別枠に挙げる（組織 Agent の枠を奪わない）
+  const experts = c.agents.filter((a) => a.layer === 'civil_expert').map((a) => ({ agent_id: a.agent_id, score: (a.keywords || []).filter((k) => t.includes(k)).length }))
+    .filter((a) => a.score >= 1).sort((a, b) => b.score - a.score);
+  return { departments: deptScores.slice(0, 3).map((d) => d.code), agents: agentScores.filter((a) => findAgent(a.agent_id, packId)?.layer !== 'civil_expert').slice(0, 3), experts: experts.slice(0, 3) };
 }
 
 /** LLM が返した agent_id / 部署コードのうち、カタログに存在するものだけを残す。 */

@@ -1173,7 +1173,7 @@ test('AI相談の IDEA 構造化: LLM 未設定でもルールベースで関係
   const cat = await call('/api/agent-catalog/org', { cookie: adminCookie });
   assert.equal(cat.status, 200);
   assert.equal(cat.data.organizations.length, 9);
-  assert.equal(cat.data.agents.length, 20);
+  assert.equal(cat.data.agents.length, 29);
   const ts = cat.data.agents.find((a) => a.agent_id === 'technology-selection');
   assert.equal(ts.runnable, true, '承認済み P1 は runnable');
   assert.ok(cat.data.agents.filter((a) => a.stage !== 'P1').every((a) => a.runnable === false));
@@ -1198,10 +1198,11 @@ test('司令塔（CTO Orchestrator）: 要求から計画を作り、複数 Agen
   const d1 = await call(`/api/orchestrations/${orch.id}`, { cookie: adminCookie });
   assert.equal(d1.status, 200);
   assert.ok(d1.data.steps.length >= 1);
-  assert.ok(d1.data.steps.every((s) => s.reason && s.run_code), '各 Step に理由と Run が付く');
+  assert.ok(d1.data.steps.every((s) => s.reason), '各 Step に理由が付く');
+  assert.ok(d1.data.steps.filter((s) => s.layer === 'organization').every((s) => s.run_code), '独立した組織責務 Agent の Step には Run が付く（土木専門 Agent は委譲元の完了を待つ）');
   assert.ok(d1.data.orchestration.plan_json.rejected.some((r) => /候補/.test(r.reason)), '候補 Agent は却下理由を残す');
   const { rows: runs } = await pool.query(`SELECT id, orchestration_id, orchestration_step_id, status FROM agent_runs WHERE orchestration_id = $1 ORDER BY id`, [orch.id]);
-  assert.equal(runs.length, d1.data.steps.length);
+  assert.equal(runs.length, d1.data.steps.filter((s) => s.layer === 'organization').length);
   assert.ok(runs.every((r) => r.orchestration_step_id));
   // Worker 相当で Run を進める（決定的 Step は完走し、LLM Step で明示的に失敗する）→ 全 Run 終了 → 部分完了 or 失敗
   for (const r of runs) { let step; for (let i = 0; i < 6; i++) { step = await claimAndExecute(r.id); if (step.done) break; } }
@@ -1266,5 +1267,86 @@ test('組織責務 Agent 01〜09（第 2 段）: Registry に存在し、決定�
   assert.equal(orc.status, 201);
   const od = await call(`/api/orchestrations/${orc.data.orchestration.id}`, { cookie: adminCookie });
   assert.ok(od.data.steps.some((s) => s.agent_id === 'governance-support'), JSON.stringify(od.data.steps.map((s) => s.agent_id)));
+  await pool.query(`UPDATE agent_runs SET status = 'cancelled', finished_at = now() WHERE status IN ('queued','running') AND requested_by = $1`, [adminId]);
+});
+
+test('土木専門 Agent 9 種（第 3 段）: 技術リスク区分が Run と成果物に固定され、T3 以上は専門技術者の確認なしにレビュー済みにできず、T5 は所見が必須。司令塔は委譲元の後段として専門 Agent を起動する', async () => {
+  await withTransaction(async (client) => {
+    const { loadUnifiedCatalog } = await import('../src/agent-runtime/catalog.js');
+    for (const a of loadUnifiedCatalog('mirai-construction').agents.filter((x) => x.executable)) await syncAgent(client, 'mirai-construction', a.agent_id, '1.0.0', { approvedByUserId: adminId, status: 'approved' });
+  });
+  const cat = await call('/api/agent-catalog/org', { cookie: adminCookie });
+  const experts = cat.data.agents.filter((a) => a.layer === 'civil_expert');
+  assert.equal(experts.length, 9);
+  assert.ok(experts.every((a) => a.executable && a.runnable && a.org_code === null && /^T[1-6]$/.test(a.technical_risk_class)), JSON.stringify(experts.map((a) => [a.agent_id, a.runnable, a.technical_risk_class])));
+
+  // 地盤（T4）: 未確定条件の登録 → 基準の版確認 → 出典要約（決定的）→ 適用条件（LLM 未設定で明示的に失敗）。条件の無いものは推測せず未確定にする
+  const g = await call('/api/agent-runs', { method: 'POST', cookie: adminCookie, body: { agentId: 'geotechnical-expert', input: { query: '軟弱地盤で N値 3 の粘性土。液状化対策の工法を比較したい', technical_text: '天端 T.P.+3.0m、既設は D.L.+1.5m。荷重 50 kN と 5 tf' } } });
+  assert.equal(g.status, 201, JSON.stringify(g.data));
+  let step; for (let i = 0; i < 8; i++) { step = await claimAndExecute(g.data.run.id); if (step.done) break; }
+  // 承認済み出典が無い環境では LLM 系 Skill は「根拠なし」を明示して完走する（LLM が必要になれば LLM未設定 で明示的に失敗する）
+  assert.ok(step.run.status === 'completed' || (step.run.status === 'failed' && /LLM未設定/.test(step.run.error_message)), `${step.run.status}: ${step.run.error_message}`);
+  const grun = (await pool.query(`SELECT technical_risk_class, expert_review_required FROM agent_runs WHERE id = $1`, [g.data.run.id])).rows[0];
+  assert.deepEqual(grun, { technical_risk_class: 'T4', expert_review_required: true });
+  const gd = await call(`/api/agent-runs/${g.data.run.id}`, { cookie: adminCookie });
+  const gap = gd.data.artifacts.find((a) => a.kind === 'condition_gap_register');
+  assert.ok(gap && gap.expert_review_required === true && gap.ai_completion_prohibited === false, JSON.stringify(gd.data.artifacts));
+  const gapContent = (await pool.query(`SELECT content FROM artifacts WHERE id = $1`, [gap.id])).rows[0].content;
+  assert.ok(gapContent.missing_conditions.includes('地下水位') && gapContent.present_conditions.includes('N値'), JSON.stringify(gapContent));
+  assert.equal(gapContent.technical_risk_class, 'T4');
+  const std = (await pool.query(`SELECT content FROM artifacts WHERE run_id = $1 AND kind = 'standard_reference'`, [g.data.run.id])).rows[0].content;
+  assert.ok(std.unknowns.some((u) => /社内基準.*未登録/.test(u)), '社内基準の未登録を隠さない');
+  // T3 以上のレビュー: 専門技術者の確認宣言が無ければ 422、あれば通り、監査に残る
+  const r1 = await call(`/api/artifacts/${gap.id}/review`, { method: 'POST', cookie: adminCookie, body: { note: 'ok' } });
+  assert.equal(r1.status, 422, JSON.stringify(r1.data));
+  const r2 = await call(`/api/artifacts/${gap.id}/review`, { method: 'POST', cookie: adminCookie, body: { note: 'ok', expert_confirmed: true } });
+  assert.equal(r2.status, 200, JSON.stringify(r2.data));
+  const { rows: aud } = await pool.query(`SELECT detail FROM audit_log WHERE action = 'artifact.review' AND resource_id = $1 ORDER BY id DESC LIMIT 1`, [gap.id]);
+  assert.equal(aud[0].detail.expert_confirmed, true); assert.equal(aud[0].detail.expert_review_required, true);
+
+  // 構造（T5）: AI 単独では完了できない。専門技術者の所見（expert_note）が無ければレビュー済みにできない
+  const s = await call('/api/agent-runs', { method: 'POST', cookie: adminCookie, body: { agentId: 'structural-expert', input: { query: '杭基礎の耐震性能の論点整理', technical_text: '荷重 100 kN' } } });
+  assert.equal(s.status, 201);
+  step = await claimAndExecute(s.data.run.id);
+  const sArt = (await pool.query(`SELECT id, expert_review_required, ai_completion_prohibited FROM artifacts WHERE run_id = $1 ORDER BY id LIMIT 1`, [s.data.run.id])).rows[0];
+  assert.deepEqual({ e: sArt.expert_review_required, p: sArt.ai_completion_prohibited }, { e: true, p: true });
+  const r3 = await call(`/api/artifacts/${sArt.id}/review`, { method: 'POST', cookie: adminCookie, body: { expert_confirmed: true } });
+  assert.equal(r3.status, 422); assert.match(r3.data.error, /T5\/T6/);
+  const r4 = await call(`/api/artifacts/${sArt.id}/review`, { method: 'POST', cookie: adminCookie, body: { expert_confirmed: true, expert_note: '構造技術者として荷重条件の未確定を確認。設計判断は別途行う' } });
+  assert.equal(r4.status, 200, JSON.stringify(r4.data));
+  const note = (await pool.query(`SELECT review_note FROM artifacts WHERE id = $1`, [sArt.id])).rows[0].review_note;
+  assert.match(note, /専門技術者所見/);
+  await pool.query(`UPDATE agent_runs SET status = 'cancelled', finished_at = now() WHERE id = $1 AND status IN ('queued','running')`, [s.data.run.id]);
+
+  // BIM/CIM（T2）: 専門技術者レビューは必須ではない（通常の人手確認のみ）
+  const b = await call('/api/agent-runs', { method: 'POST', cookie: adminCookie, body: { agentId: 'bim-cim-cad-gis-expert', input: { query: '点群と CAD の座標系整合', technical_text: '座標 JGD2011。一部 JGD2000。単位 m' } } });
+  assert.equal(b.status, 201);
+  for (let i = 0; i < 3; i++) { step = await claimAndExecute(b.data.run.id); if (step.done) break; }
+  const bArts = (await pool.query(`SELECT kind, expert_review_required, content FROM artifacts WHERE run_id = $1 ORDER BY id`, [b.data.run.id])).rows;
+  assert.ok(bArts.length >= 2 && bArts.every((a) => a.expert_review_required === false));
+  assert.ok(bArts.find((a) => a.kind === 'engineering_consistency').content.issues.some((i) => /座標系が複数/.test(i)));
+  await pool.query(`UPDATE agent_runs SET status = 'cancelled', finished_at = now() WHERE id = $1 AND status IN ('queued','running')`, [b.data.run.id]);
+
+  // 司令塔（B-005）: 組織責務 Agent の後段として専門 Agent が計画され、委譲元の完了後に prior_context 付きで起動する。統合草案は最大技術リスクを持つ
+  const orc = await call('/api/orchestrations', { method: 'POST', cookie: adminCookie, body: { request: '経営企画の KPI 向けに数量と積算のコストを整理したい' } });
+  assert.equal(orc.status, 201, JSON.stringify(orc.data));
+  let od = await call(`/api/orchestrations/${orc.data.orchestration.id}`, { cookie: adminCookie });
+  const expertStep = od.data.steps.find((s) => s.agent_id === 'quantity-cost-expert');
+  assert.ok(expertStep && expertStep.layer === 'civil_expert' && expertStep.status === 'pending' && expertStep.depends_on.length === 1, JSON.stringify(od.data.steps));
+  const orgStep = od.data.steps.find((s) => s.seq === expertStep.depends_on[0]);
+  assert.equal(orgStep.layer, 'organization');
+  // 委譲元の Run を完了扱いにして（LLM 無しでは完走しないため）、専門 Agent の Run が作られることを確認する
+  await pool.query(`UPDATE agent_runs SET status = 'completed', finished_at = now() WHERE id = $1`, [orgStep.run_id]);
+  od = await call(`/api/orchestrations/${orc.data.orchestration.id}`, { cookie: adminCookie });
+  const es = od.data.steps.find((s) => s.agent_id === 'quantity-cost-expert');
+  assert.equal(es.status, 'running', JSON.stringify(es));
+  const eRun = (await pool.query(`SELECT input_json, technical_risk_class FROM agent_runs WHERE id = $1`, [es.run_id])).rows[0];
+  assert.equal(eRun.technical_risk_class, 'T3'); assert.ok(Array.isArray(eRun.input_json.prior_context), '委譲元の成果が prior_context として渡る');
+  for (let i = 0; i < 6; i++) { step = await claimAndExecute(es.run_id); if (step.done) break; }
+  // 他の組織責務 Step（LLM が必要）も終了扱いにして統合させる
+  await pool.query(`UPDATE agent_runs SET status = 'completed', finished_at = now() WHERE orchestration_id = $1 AND status IN ('queued','running')`, [orc.data.orchestration.id]);
+  od = await call(`/api/orchestrations/${orc.data.orchestration.id}`, { cookie: adminCookie });
+  assert.ok(['partial', 'completed', 'failed'].includes(od.data.orchestration.status), od.data.orchestration.status);
+  assert.ok(od.data.final_artifact && od.data.final_artifact.content.technical_risk_class === 'T3' && od.data.final_artifact.expert_review_required === true, JSON.stringify(od.data.final_artifact));
   await pool.query(`UPDATE agent_runs SET status = 'cancelled', finished_at = now() WHERE status IN ('queued','running') AND requested_by = $1`, [adminId]);
 });

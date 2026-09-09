@@ -3,6 +3,7 @@
  * LLMへ一切与えない。呼び出しは常に authorizeToolCall を経由し、許可・拒否どちらも
  * run_events へ記録する。
  */
+import { technicalRiskPolicy } from './skill-loader.js';
 import { authorizeToolCall, authorizeSourceAccess, PolicyDeniedError } from './policy-engine.js';
 import { extractSearchTokens } from '../lib/search-tokens.js';
 import { appendEvent } from './job-store.js';
@@ -16,7 +17,7 @@ import { enforceOutputPolicy, collectSourceIds } from './prompt-guard.js';
  * 部分一致（pg_trgm GIN index）で候補を集め、一致した語数と title の類似度で並べる。
  * 有効期限切れ（effective_to < 今日）と未承認は除外する。
  */
-async function toolKnowledgeSearchApproved(client, { query, sourceType, projectId }) {
+async function toolKnowledgeSearchApproved(client, { query, sourceType, projectId, withMeta = false }) {
   const tokens = extractSearchTokens(query);
   if (tokens.length === 0) return { candidates: [] };
 
@@ -28,7 +29,7 @@ async function toolKnowledgeSearchApproved(client, { query, sourceType, projectI
   const hitExprs = tokens.map((_, i) => `(CASE WHEN title ILIKE $${i + 5} THEN 3 WHEN summary ILIKE $${i + 5} THEN 2 WHEN content_text ILIKE $${i + 5} THEN 1 ELSE 0 END)`);
   const { rows } = await client.query(
     `SELECT * FROM (
-       SELECT id, title, summary, evidence_type, source_type,
+       SELECT id, title, summary, evidence_type, source_type, version, published_at, effective_from, effective_to, canonical_url,
               (${hitExprs.join(' + ')}) AS hit_score,
               similarity(title, $3::text) AS title_sim
        FROM source_records
@@ -44,7 +45,9 @@ async function toolKnowledgeSearchApproved(client, { query, sourceType, projectI
     params,
   );
   // pg は BIGINT 列を文字列で返すため、JSON Schema（type: integer）検証に通るよう Number() で正規化する。
-  return { candidates: rows.map((r) => ({ source_record_id: Number(r.id), title: r.title, summary: r.summary, evidence_type: r.evidence_type })) };
+  // withMeta: 版・発行日・有効期限・発行元 URL を付ける（standard-reference-check が基準の版を追跡するために使う。既定では従来どおり）
+  return { candidates: rows.map((r) => ({ source_record_id: Number(r.id), title: r.title, summary: r.summary, evidence_type: r.evidence_type,
+    ...(withMeta ? { source_type: r.source_type, version: r.version, published_at: r.published_at ? String(r.published_at).slice(0, 10) : null, effective_to: r.effective_to ? String(r.effective_to).slice(0, 10) : null, canonical_url: r.canonical_url || null } : {}) })) };
 }
 
 /** 既存の昇格済みKnowledge（knowledge_candidates.status='promoted'）を検索する。source_recordsとは別物。 */
@@ -81,11 +84,14 @@ async function allowedSourceIdsForRun(client, runId) {
 }
 
 async function toolArtifactWriteDraft(client, { run, kind, title, content: rawContent }) {
+  const risk = technicalRiskPolicy(run.technical_risk_class);
   // Prompt Injection 対策: 草案は常に人手確認、根拠は Run 内で検証済みの出典のみ、秘密らしき記述と指示文は除去
   // 先行 Step の出力が無い Run（検索を経ていない）では範囲を判定できないため、根拠の制限は先行 Step がある場合にだけ適用する
   const allowed = run.id ? await allowedSourceIdsForRun(client, run.id) : null;
   const guarded = enforceOutputPolicy(rawContent, { requireHumanReview: true, allowedSourceIds: allowed && allowed.size > 0 ? allowed : null });
   const content = guarded.output;
+  // 技術リスク区分を成果物本文にも残す（T3 以上: 専門技術者レビュー必須、T5/T6: AI 単独では完了しない）
+  if (risk.technical_risk_class) Object.assign(content, { technical_risk_class: risk.technical_risk_class, expert_review_required: risk.expert_review_required, ai_completion_prohibited: risk.ai_completion_prohibited });
   if (guarded.enforced.length > 0 && run.id) {
     await appendEvent(client, run.id, { type: 'policy_enforced', toolName: 'artifact.write-draft', status: 'ok', detail: { rules: guarded.enforced } });
   }
@@ -115,9 +121,9 @@ async function toolArtifactWriteDraft(client, { run, kind, title, content: rawCo
     const ih = inputHash(run.input_json || {});
     const prev = await findPreviousArtifact(client, { agentId: run.agent_id, kind, inputHash: ih, excludeRunId: run.id });
     const { rows } = await client.query(
-      `INSERT INTO artifacts (artifact_code, run_id, kind, title, content, review_state, content_hash, input_hash, previous_artifact_id, lineage_version)
-       VALUES ($1,$2,$3,$4,$5,'draft',$6,$7,$8,$9) RETURNING id, artifact_code, kind, title, review_state, previous_artifact_id, lineage_version`,
-      [artifactCode, run.id, kind, title, JSON.stringify(content), newHash, ih, prev ? prev.id : null, prev ? Number(prev.lineage_version) + 1 : 1],
+      `INSERT INTO artifacts (artifact_code, run_id, kind, title, content, review_state, content_hash, input_hash, previous_artifact_id, lineage_version, expert_review_required, ai_completion_prohibited)
+       VALUES ($1,$2,$3,$4,$5,'draft',$6,$7,$8,$9,$10,$11) RETURNING id, artifact_code, kind, title, review_state, previous_artifact_id, lineage_version, expert_review_required, ai_completion_prohibited`,
+      [artifactCode, run.id, kind, title, JSON.stringify(content), newHash, ih, prev ? prev.id : null, prev ? Number(prev.lineage_version) + 1 : 1, risk.expert_review_required, risk.ai_completion_prohibited],
     );
     artifact = { ...rows[0], reused: false };
   }

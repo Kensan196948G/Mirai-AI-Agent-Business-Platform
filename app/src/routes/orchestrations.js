@@ -51,7 +51,7 @@ router.get('/:id', requireAuth, async (req, res) => {
      FROM orchestration_steps s LEFT JOIN agent_runs r ON r.id = s.run_id WHERE s.orchestration_id = $1 ORDER BY s.seq`,
     [id],
   );
-  const { rows: art } = orch.final_artifact_id ? await getPool().query(`SELECT id, artifact_code, title, content, review_state FROM artifacts WHERE id = $1`, [orch.final_artifact_id]) : { rows: [] };
+  const { rows: art } = orch.final_artifact_id ? await getPool().query(`SELECT id, artifact_code, title, content, review_state, expert_review_required, ai_completion_prohibited FROM artifacts WHERE id = $1`, [orch.final_artifact_id]) : { rows: [] };
   const { rows: u } = await getPool().query(`SELECT name FROM users WHERE id = $1`, [orch.requested_by]);
   res.json({ orchestration: { ...orch, requested_by_name: u[0]?.name || '' }, steps, final_artifact: art[0] || null });
 });

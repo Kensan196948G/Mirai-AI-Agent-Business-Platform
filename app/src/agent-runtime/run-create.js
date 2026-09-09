@@ -10,7 +10,7 @@ import * as registry from './registry.js';
 import * as jobStore from './job-store.js';
 import { authorizeRunStart, authorizeRunConcurrency, PolicyDeniedError } from './policy-engine.js';
 import { recordAudit } from '../lib/audit.js';
-import { loadAgentDefinition, loadSkillDefinition, SkillLoaderError } from './skill-loader.js';
+import { loadAgentDefinition, loadSkillDefinition, SkillLoaderError, technicalRiskPolicy } from './skill-loader.js';
 
 // 既存 P1 Agent の入力キー（Agent 契約に input_contract が無い場合の後方互換）。
 export const AGENT_INPUT_ALLOWLIST = {
@@ -54,6 +54,10 @@ export function pickAllowed(input, keys) {
  * 同一トランザクション内で呼ぶ。失敗は status 付きの Error（400 / 403 / 409）。
  * user: { id, name, role }、via: 'api' | 'cli'
  */
+export function riskClassFor(agentId, packId = 'mirai-construction') {
+  try { return loadAgentDefinition(packId, agentId).definition.technical_risk_class || null; } catch (err) { if (err instanceof SkillLoaderError) return null; throw err; }
+}
+
 export async function createRunForUser(client, { user, agentId, projectId, input, via = 'api', maxSteps = 8, orchestration = null }) {
   const keys = agentId ? inputKeysFor(agentId) : null;
   if (!keys) throw Object.assign(new Error('不正な agentId'), { status: 400 });
@@ -79,6 +83,12 @@ export async function createRunForUser(client, { user, agentId, projectId, input
   });
   if (orchestration) {
     await client.query(`UPDATE agent_runs SET orchestration_id = $1, orchestration_step_id = $2 WHERE id = $3`, [orchestration.id, orchestration.stepId, run.id]);
+  }
+  // 技術リスク区分（Agent 契約の T1〜T6）を Run に固定する。T3 以上は専門技術者レビュー、T5/T6 は AI 単独完了不可（成果物側で強制）
+  const risk = technicalRiskPolicy(riskClassFor(agentId));
+  if (risk.technical_risk_class) {
+    await client.query(`UPDATE agent_runs SET technical_risk_class = $1, expert_review_required = $2 WHERE id = $3`, [risk.technical_risk_class, risk.expert_review_required, run.id]);
+    run.technical_risk_class = risk.technical_risk_class; run.expert_review_required = risk.expert_review_required;
   }
   await jobStore.reserveBudget(client, run.id, runBudgetUsd());
   await recordAudit(client, {

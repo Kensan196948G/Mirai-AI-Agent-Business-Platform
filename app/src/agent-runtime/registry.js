@@ -152,7 +152,7 @@ export async function getAgentVersionById(client, agentVersionId) {
   const agentVersion = rows[0];
   const { rows: bindings } = await client.query(
     `SELECT sv.id, sv.skill_id, sv.version, sv.content_hash, sv.status, sv.risk, sv.definition_path,
-            sv.allowed_tools, b.sort_order
+            sv.allowed_tools, sv.approval_gate, b.sort_order, b.params
      FROM agent_skill_bindings b JOIN skill_versions sv ON sv.id = b.skill_version_id
      WHERE b.agent_version_id = $1
      ORDER BY b.sort_order`,

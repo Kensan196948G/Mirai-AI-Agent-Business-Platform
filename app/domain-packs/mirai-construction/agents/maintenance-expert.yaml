@@ -1,0 +1,69 @@
+schema_version: mirai.agent-definition/v1
+agent_id: maintenance-expert
+version: 1.0.0
+domain_pack: mirai-construction
+title: 維持管理 専門Agent
+owner_role: 維持管理技術
+layer: civil_expert
+technical_risk_class: T3
+purpose: 点検記録・劣化状況から補修・補強の論点と承認済み技術の適用条件を整理する。
+does_not: 健全度判定、補修工法の確定。
+max_autonomy_level: A1
+input_contract:
+  type: object
+  properties:
+    query:
+      type: string
+      minLength: 1
+      maxLength: 4000
+    technical_text:
+      type: string
+      maxLength: 60000
+    quantities_text:
+      type: string
+      maxLength: 60000
+    document_text:
+      type: string
+      maxLength: 60000
+required_conditions:
+- 構造物種別
+- 点検結果
+- 劣化状況
+- 供用条件
+- 補修履歴
+keywords:
+- 維持管理
+- 点検
+- 補修
+- 劣化
+- 診断
+- 老朽
+- 補強
+- 電磁波
+- 探査
+timeout_seconds: 900
+budget_usd: 0.5
+model_category: Research / Classification
+skills:
+- skill_id: condition-gap-register
+  version: 1.0.0
+  params:
+    required_conditions:
+    - 構造物種別
+    - 点検結果
+    - 劣化状況
+    - 供用条件
+    - 補修履歴
+- skill_id: knowledge-brief
+  version: 1.0.0
+  params:
+    source_types:
+    - technology_catalog
+    - project_case
+- skill_id: applicability-gap-check
+  version: 1.0.0
+- skill_id: technology-comparison
+  version: 1.0.0
+- skill_id: evidence-backed-draft
+  version: 1.0.0
+output: 根拠付きの技術論点草案（review_state=draft、T3 以上は専門技術者レビュー必須、T5/T6 は AI 単独完了不可）
