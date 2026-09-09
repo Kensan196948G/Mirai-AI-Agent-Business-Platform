@@ -228,6 +228,15 @@ curl -X POST http://127.0.0.1:<PORT>/api/agent-runs \
 
 P1 の 3 Agent は A0〜A1（外部書き込みなし）のため既定ではゲートを設定していない。P2/P3 で外部への確定書き込み（A2）を追加する Skill に `approval_gate` を付ける。正式な業務承認（desknet's NEO）とは別のアプリ内承認である（ADR-001）。
 
+## 🔗 外部連携の基盤（D-20〜D-24）
+
+| 項目 | 内容 |
+|---|---|
+| 接続状態 | Integrations 画面は環境変数の有無（`src/integrations/connectors.js`）と「接続確認（読み取り専用）」の結果で状態を決める。手動で connected にする手段は無い。未設定の連携は `未設定（必要な環境変数）` と表示 |
+| 正式承認参照 | 承認詳細で desknet's NEO の承認番号を「控える」ことができるが、常に **未検証** で保存され、承認の成立には使わない。検証は NEO 連携の仕様確認後に実装（現在は 501 blocked） |
+| AI相談 → 業務Agent | 相談の構造化カードの「業務Agent で技術候補を比較」で `technology-selection` の相談欄へ転記（人が確認して開始） |
+| 仕様案と確認事項 | `docs/architecture/外部連携仕様案_D20-D23.md`。外部接続・書き込み・production secret はすべて Approval PR 対象 |
+
 ## 🔀 モデル多重化と Model Router（C-19）
 
 | 項目 | 内容 |

@@ -1004,3 +1004,43 @@ test('Model Router（C-19）: /api/router は各 category の解決結果を返�
   assert.match(row.resolved.fallback_reason, /anthropic/);
   await call('/api/router', { method: 'PATCH', cookie: adminCookie, body: { category: 'Research / Classification', model: 'DeepSeek-V3' } });
 });
+
+test('外部連携の実状態（D 基盤）: Integrations は環境変数の有無で状態を示し、手動で connected にできない。正式承認の番号は未検証のまま', async () => {
+  // migration 011 で neo / appsuite が追加される
+  const list = await call('/api/integrations', { cookie: adminCookie });
+  assert.equal(list.status, 200);
+  const ids = list.data.integrations.map((i) => i.id);
+  assert.ok(ids.includes('neo') && ids.includes('appsuite'));
+  for (const i of list.data.integrations) {
+    assert.ok(i.runtime, `${i.id} に runtime がある`);
+    assert.equal(i.runtime.configured, false, 'テスト環境は未設定');
+    assert.ok(!('NOTION_API_TOKEN' in i.runtime) && !JSON.stringify(i.runtime).includes('Bearer'));
+  }
+  // 疎通確認: 未設定なので attention のまま、理由が detail に入る。外部へは出ない
+  const chk = await call('/api/integrations/neo/check', { method: 'POST', cookie: adminCookie });
+  assert.equal(chk.status, 200);
+  assert.equal(chk.data.integration.status, 'attention');
+  assert.match(chk.data.integration.detail, /環境変数が未設定/);
+  assert.equal(chk.data.check.checked, false);
+  assert.equal((await call('/api/integrations/nope/check', { method: 'POST', cookie: adminCookie })).status, 404);
+  const viewerCookie = await loginAs('e2e-viewer-agent@example.com', 'viewer-password'); // doc003-allow: 使い捨てテストDB専用の固定値
+  assert.equal((await call('/api/integrations/neo/check', { method: 'POST', cookie: viewerCookie })).status, 403);
+  const { rows: audit } = await pool.query(`SELECT count(*)::int AS n FROM audit_log WHERE action = 'integration.check'`);
+  assert.ok(audit[0].n >= 1);
+
+  // 正式承認（NEO）の承認番号: 控えは unverified、検証は blocked（501）、approval の成立には影響しない
+  const { rows: apr } = await pool.query(`SELECT id, status FROM approval_requests ORDER BY id LIMIT 1`);
+  assert.ok(apr.length >= 1, '前提: 承認申請が 1 件以上ある');
+  const set = await call(`/api/approvals/${apr[0].id}/external-ref`, { method: 'PATCH', cookie: adminCookie, body: { externalRef: 'NEO-2026-000123', note: '手入力' } });
+  assert.equal(set.status, 200);
+  assert.equal(set.data.approval.external_ref_status, 'unverified');
+  const verify = await call(`/api/approvals/${apr[0].id}/external-ref/verify`, { method: 'POST', cookie: adminCookie });
+  assert.equal(verify.status, 501);
+  assert.equal(verify.data.blocked, true);
+  const after = (await pool.query(`SELECT status, external_ref_status FROM approval_requests WHERE id = $1`, [apr[0].id])).rows[0];
+  assert.equal(after.status, apr[0].status, '承認番号の手入力で承認状態は変わらない');
+  assert.equal(after.external_ref_status, 'unverified');
+  const detail = await call(`/api/approvals/${apr[0].id}`, { cookie: adminCookie });
+  assert.equal(detail.data.approval.external_ref, 'NEO-2026-000123');
+  assert.equal((await call(`/api/approvals/${apr[0].id}/external-ref`, { method: 'PATCH', cookie: viewerCookie, body: { externalRef: 'x' } })).status, 403);
+});
