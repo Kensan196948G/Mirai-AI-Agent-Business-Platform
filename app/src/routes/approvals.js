@@ -4,6 +4,7 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 import { recordAudit } from '../lib/audit.js';
 import { nextApprovalCode } from '../lib/codes.js';
 import * as jobStore from '../agent-runtime/job-store.js';
+import { runtimeStatus } from '../integrations/connectors.js';
 
 const router = express.Router();
 
@@ -62,6 +63,7 @@ export async function createApprovalWithSteps(client, { projectId, requestedBy, 
 router.get('/', requireAuth, async (_req, res) => {
   const { rows } = await getPool().query(
     `SELECT ar.id, ar.approval_code, ar.type, ar.risk, ar.target, ar.status, ar.created_at, ar.decided_at, ar.target_status,
+            ar.external_ref, ar.external_ref_status,
             p.id AS project_id, p.project_code, p.title, u.name AS requested_by_name
      , ar.agent_run_id, r.run_code
      FROM approval_requests ar
@@ -92,6 +94,7 @@ router.get('/:id', requireAuth, async (req, res) => {
   if (!Number.isInteger(id)) return res.status(400).json({ error: '不正な id' });
   const { rows } = await getPool().query(
     `SELECT ar.id, ar.approval_code, ar.type, ar.risk, ar.target, ar.status, ar.target_status, ar.created_at, ar.binding,
+            ar.external_ref, ar.external_ref_status, ar.external_ref_note, ar.external_ref_updated_at,
             p.id AS project_id, p.project_code, p.title, ar.agent_run_id, r.run_code
      FROM approval_requests ar LEFT JOIN projects p ON p.id = ar.project_id LEFT JOIN agent_runs r ON r.id = ar.agent_run_id
      WHERE ar.id = $1`,
@@ -192,6 +195,44 @@ router.post('/:id/steps/:stepId/decide', requireAuth, async (req, res) => {
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });
   }
+});
+
+/**
+ * 正式承認（desknet's NEO）の承認番号を控える（D-20）。
+ * 手入力の番号は必ず 'unverified' で保存し、承認の成立には使わない。'verified' にできるのは NEO 連携で検証できた場合だけ。
+ */
+router.patch('/:id/external-ref', requireAuth, requireRole('Administrator', 'Approver'), async (req, res) => {
+  const id = Number(req.params.id);
+  const { externalRef, note } = req.body || {};
+  if (!Number.isInteger(id)) return res.status(400).json({ error: '不正な id' });
+  if (!externalRef || typeof externalRef !== 'string' || externalRef.length > 100) return res.status(400).json({ error: 'externalRef は 100 文字以内の文字列' });
+  try {
+    const result = await withTransaction(async (client) => {
+      const { rows } = await client.query(
+        `UPDATE approval_requests SET external_ref = $1, external_ref_status = 'unverified', external_ref_note = $2, external_ref_updated_at = now()
+         WHERE id = $3 RETURNING id, approval_code, external_ref, external_ref_status`,
+        [externalRef.trim(), note || null, id],
+      );
+      if (rows.length === 0) throw Object.assign(new Error('approval が見つかりません'), { status: 404 });
+      await recordAudit(client, {
+        actorId: req.user.id, actorType: 'user', actorName: req.user.name,
+        action: 'approval.external_ref', resourceType: 'approval', resourceId: id, detail: { external_ref: externalRef.trim(), status: 'unverified' },
+      });
+      return rows[0];
+    });
+    res.json({ approval: result });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+/** NEO で検証する（連携未接続の間は blocked: 501。手動で verified にする手段は用意しない）。 */
+router.post('/:id/external-ref/verify', requireAuth, requireRole('Administrator', 'Approver'), async (req, res) => {
+  const rs = runtimeStatus('neo');
+  if (!rs.configured || rs.spec === 'unconfirmed') {
+    return res.status(501).json({ error: `正式承認の検証は blocked: ${rs.blocked_reason}。承認番号は「未検証」のままです`, blocked: true, runtime: rs });
+  }
+  return res.status(501).json({ error: '正式承認の検証 API は仕様確認後に実装します', blocked: true, runtime: rs });
 });
 
 export default router;

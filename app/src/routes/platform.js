@@ -7,6 +7,7 @@ import { getPool, withTransaction } from '../lib/db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { recordAudit } from '../lib/audit.js';
 import * as llm from '../lib/llm.js';
+import { runtimeStatus, checkConnector } from '../integrations/connectors.js';
 import { describeRouter } from '../lib/model-catalog.js';
 
 const router = express.Router();
@@ -14,7 +15,35 @@ const router = express.Router();
 // --- Integrations ---------------------------------------------------------
 router.get('/integrations', requireAuth, async (_req, res) => {
   const { rows } = await getPool().query(`SELECT * FROM integrations ORDER BY id`);
-  res.json({ integrations: rows });
+  // 実際の設定状況（環境変数の有無・仕様確認状況）を添える。値は含めない
+  res.json({ integrations: rows.map((r) => ({ ...r, runtime: runtimeStatus(r.id) })) });
+});
+
+/**
+ * 読み取り専用の疎通確認（D-20〜D-23）。手動で connected にする手段は無く、確認に成功した場合だけ connected へ更新する。
+ * 未設定・仕様未確認・失敗は attention のまま理由を detail に残す（未接続を成功表示しない）。
+ */
+router.post('/integrations/:id/check', requireAuth, requireRole('Administrator'), async (req, res) => {
+  const id = req.params.id;
+  const result = await checkConnector(id);
+  try {
+    const updated = await withTransaction(async (client) => {
+      const { rows } = await client.query(
+        `UPDATE integrations SET status = $1, detail = $2, last_sync_at = CASE WHEN $3 THEN now() ELSE last_sync_at END, updated_at = now()
+         WHERE id = $4 RETURNING id, status, detail, last_sync_at`,
+        [result.ok ? 'connected' : 'attention', result.detail, result.checked === true, id],
+      );
+      if (rows.length === 0) throw Object.assign(new Error('integration が見つかりません'), { status: 404 });
+      await recordAudit(client, {
+        actorId: req.user.id, actorType: 'user', actorName: req.user.name,
+        action: 'integration.check', resourceType: 'integration', resourceId: id, detail: { ok: result.ok, checked: result.checked === true, detail: result.detail },
+      });
+      return rows[0];
+    });
+    res.json({ integration: { ...updated, runtime: runtimeStatus(id) }, check: result });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
 });
 
 router.patch('/integrations/:id', requireAuth, requireRole('Administrator'), async (req, res) => {

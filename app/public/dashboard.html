@@ -153,7 +153,7 @@ input::placeholder,textarea::placeholder{color:var(--muted)}
                       <div style="border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)">
                         <div style="padding:11px 14px;border-bottom:1px solid var(--line-2);display:flex;align-items:center;gap:8px"><span style="font-size:11px;font-weight:600;color:var(--accent);letter-spacing:.5px">IDEA 構造化</span><span style="flex:1;font-size:13px;font-weight:600">{{ m.ideaTitle }}</span><span style="font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:6px;color:{{ m.riskFg }};background:{{ m.riskBg }}">{{ m.risk }}</span></div>
                         <dl style="display:grid;grid-template-columns:max-content 1fr;gap:8px 14px;margin:0;padding:12px 14px;font-size:12.5px"><sc-for list="{{ m.idea }}" as="row" hint-placeholder-count="6"><dt style="color:var(--muted);font-weight:600;font-size:12px">{{ row.k }}</dt><dd style="margin:0">{{ row.v }}</dd></sc-for></dl>
-                        <div style="padding:11px 14px;border-top:1px solid var(--line-2);display:flex;gap:8px;align-items:center"><span style="flex:1;font-size:11.5px;color:var(--muted)">Intent: {{ m.intent }} · Notion Idea として記録済</span><button onClick="{{ m.promote }}" style="background:var(--accent);color:#fff;border:1px solid var(--accent);padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--accent-d)">正式案件化（Project ID発番）</button></div>
+                        <div style="padding:11px 14px;border-top:1px solid var(--line-2);display:flex;gap:8px;align-items:center"><span style="flex:1;font-size:11.5px;color:var(--muted)">Intent: {{ m.intent }}</span><sc-if value="{{ m.canAgentRun }}" hint-placeholder-val="{{ false }}"><button onClick="{{ m.toAgentRun }}" style="border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--subtle)">業務Agent で技術候補を比較</button></sc-if><button onClick="{{ m.promote }}" style="background:var(--accent);color:#fff;border:1px solid var(--accent);padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--accent-d)">正式案件化（Project ID発番）</button></div>
                       </div>
                     </sc-if>
                   </div>
@@ -267,7 +267,7 @@ input::placeholder,textarea::placeholder{color:var(--muted)}
             <aside style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden">
               <div style="padding:16px 18px;border-bottom:1px solid var(--line-2)"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="font-family:var(--mono);font-size:11.5px;color:var(--muted)">{{ apr.id }}</span><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:{{ apr.fg }};background:{{ apr.bg }}">{{ apr.st }}</span><span style="font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;color:{{ apr.riskFg }};background:{{ apr.riskBg }}">{{ apr.risk }}</span></div><div style="font-size:15px;font-weight:600;line-height:1.35">{{ apr.title }}</div><div style="font-size:12px;color:var(--muted);margin-top:4px">{{ apr.pk }} · 申請: {{ apr.by }} · {{ apr.at }}</div></div>
               <div style="padding:16px 18px;display:flex;flex-direction:column;gap:16px">
-                <dl style="display:grid;grid-template-columns:max-content 1fr;gap:8px 14px;margin:0;font-size:12.5px"><dt style="color:var(--muted);font-weight:600;font-size:12px">Action Type</dt><dd style="margin:0;font-family:var(--mono);font-size:12px">{{ apr.type }}</dd><dt style="color:var(--muted);font-weight:600;font-size:12px">対象</dt><dd style="margin:0">{{ apr.target }}</dd></dl>
+                <dl style="display:grid;grid-template-columns:max-content 1fr;gap:8px 14px;margin:0;font-size:12.5px"><dt style="color:var(--muted);font-weight:600;font-size:12px">Action Type</dt><dd style="margin:0;font-family:var(--mono);font-size:12px">{{ apr.type }}</dd><dt style="color:var(--muted);font-weight:600;font-size:12px">対象</dt><dd style="margin:0">{{ apr.target }}</dd><dt style="color:var(--muted);font-weight:600;font-size:12px">正式承認（NEO）</dt><dd style="margin:0"><div style="font-family:var(--mono);font-size:12px">{{ apr.extRef }}</div><div style="font-size:11px;color:var(--muted)">{{ apr.extRefNote }}</div><sc-if value="{{ apr.canExtRef }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:6px;margin-top:6px"><input value="{{ apr.extRefInput }}" onChange="{{ apr.setExtRef }}" placeholder="NEO 承認番号（参照のみ）" style="flex:1;font-size:12px"><button onClick="{{ apr.saveExtRef }}" style="border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:5px 10px;border-radius:7px;font-size:11.5px;font-weight:600;cursor:pointer">控える</button></div></sc-if></dd></dl>
                 <div><div style="font-size:11.5px;font-weight:600;color:var(--ink-2);margin-bottom:8px">Evidence</div><ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--ink-2)"><sc-for list="{{ apr.evidence }}" as="e" hint-placeholder-count="3"><li>{{ e }}</li></sc-for></ul></div>
                 <div><div style="font-size:11.5px;font-weight:600;color:var(--ink-2);margin-bottom:8px">Approval Steps</div><div style="display:flex;flex-direction:column;gap:6px"><sc-for list="{{ apr.steps }}" as="s" hint-placeholder-count="2"><div style="display:flex;align-items:center;gap:10px;font-size:12.5px;background:var(--subtle);border-radius:7px;padding:8px 10px"><span style="width:8px;height:8px;border-radius:50%;background:{{ s.color }}"></span><span style="font-weight:600;width:70px">{{ s.role }}</span><span style="flex:1;color:var(--ink-2)">{{ s.who }}</span><span style="font-size:11px;color:var(--muted);font-family:var(--mono)">{{ s.at }}</span><span style="font-size:11px;font-weight:600;color:{{ s.color }}">{{ s.label }}</span></div></sc-for></div></div>
                 <sc-if value="{{ apr.hasLog }}" hint-placeholder-val="{{ false }}"><div><div style="font-size:11.5px;font-weight:600;color:var(--ink-2);margin-bottom:8px">Decision Log（Append-only）</div><sc-for list="{{ apr.log }}" as="l" hint-placeholder-count="1"><div style="font-size:12.5px;padding:8px 0;border-bottom:1px solid var(--line-2)"><div style="display:flex;gap:8px;color:var(--muted);font-size:11.5px"><span style="font-family:var(--mono)">{{ l.at }}</span><span>{{ l.who }}</span><span style="font-weight:600;color:{{ l.color }}">{{ l.label }}</span></div><div style="margin-top:3px">{{ l.reason }}</div></div></sc-for></div></sc-if>
@@ -310,6 +310,8 @@ input::placeholder,textarea::placeholder{color:var(--muted)}
             <article style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:16px 18px;display:flex;flex-direction:column;gap:10px">
               <div style="display:flex;align-items:center;gap:10px"><span style="width:36px;height:36px;border-radius:9px;background:var(--subtle);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:var(--ink-2)">{{ i.initial }}</span><div style="flex:1;line-height:1.25"><div style="font-size:14px;font-weight:600">{{ i.name }}</div><div style="font-size:11.5px;color:var(--muted)">{{ i.role }}</div></div><span style="display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:{{ i.fg }}"><span style="width:7px;height:7px;border-radius:50%;background:{{ i.fg }};animation:{{ i.anim }}"></span>{{ i.stLabel }}</span></div>
               <div style="font-size:12.5px;color:var(--ink-2)">{{ i.detail }}</div>
+              <div style="font-size:11.5px;font-family:var(--mono);color:var(--muted)">{{ i.autonomy }} · {{ i.rtText }}</div>
+              <div style="font-size:11.5px;color:var(--ink-2)">読み取り: {{ i.readText }}<br>書き込み: {{ i.writeText }}</div>
               <div style="font-size:11.5px;color:var(--muted);padding:8px 10px;background:var(--subtle);border-radius:7px">{{ i.note }}</div>
               <div style="display:flex;align-items:center;gap:8px;margin-top:2px"><span style="flex:1;font-size:11.5px;color:var(--muted);font-family:var(--mono)">last sync {{ i.last }}</span><button onClick="{{ i.sync }}" style="border:1px solid var(--line);background:var(--surface);color:var(--blue);padding:6px 11px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer" style-hover="background:var(--blue-bg)">{{ i.btn }}</button></div>
             </article>
@@ -701,8 +703,9 @@ class Component extends DCLogic {
   sync(id) {
     this.setState((s) => ({ syncing: Object.assign({}, s.syncing, { [id]: true }) }));
     this.guarded('sync', async () => {
-      await this.api(`/api/integrations/${id}`, { method: 'PATCH', body: { status: 'connected' } });
+      const r = await this.api(`/api/integrations/${id}/check`, { method: 'POST' });
       await this.refreshAll();
+      this.toast(r.check && r.check.ok ? `${id}: 疎通確認に成功しました` : `${id}: ${(r.check && r.check.detail) || '未設定'}`, r.check && r.check.ok ? 'green' : 'amber');
     }).then(() => {
       // guarded は内部でエラーを飲み込むため、成功・失敗どちらでもここで syncing フラグを戻す
       this.setState((s) => ({ syncing: Object.assign({}, s.syncing, { [id]: false }) }));
@@ -830,6 +833,22 @@ class Component extends DCLogic {
       this.arOpenRun(id);
       this.toast('再開しました（権限・承認済み版を再検証してキューへ戻しました）', 'green');
     });
+  }
+  saveExternalRef(id) {
+    const v = (this.state.extRefDraft || '').trim();
+    if (!v) return this.toast('承認番号を入力してください', 'amber');
+    this.guarded('approval-external-ref', async () => {
+      await this.api(`/api/approvals/${id}/external-ref`, { method: 'PATCH', body: { externalRef: v } });
+      this.setState({ extRefDraft: '' });
+      await this.refreshAll();
+      this.toast('承認番号を「未検証」として控えました（NEO 連携で検証されるまで本番実行の許可にはなりません）', 'amber');
+    });
+  }
+  chatToAgentRun(m) {
+    const query = (m.idea || []).find((x) => x[0] === '対象業務')?.[1] || m.ideaTitle || '';
+    this.arSetForm({ agentId: 'technology-selection', query: query === '（相談内容から抽出）' ? '' : query });
+    this.go('agentruns');
+    this.toast('相談内容を業務Agent の相談欄に転記しました。個人情報・社外秘が無いか確認して「Run を開始」してください', 'green');
   }
   obsSetRange(range) {
     this.setState({ range });
@@ -1085,6 +1104,11 @@ class Component extends DCLogic {
           reject: () => this.decide(A.id, 'rejected'),
           return: () => this.toast('差戻しは現バージョンでは未対応です（却下をご利用ください）', 'amber'),
           policyNote: step ? `現在の Step は ${step.role}。${A.risk} は Human Approval 必須` : '—',
+          extRef: A.extRef ? `${A.extRef}（${({ unverified: '未検証', verified: '検証済み', rejected: '却下' })[A.extRefStatus] || A.extRefStatus}）` : '未登録',
+          extRefNote: A.extRef && A.extRefStatus !== 'verified' ? 'NEO 連携が未接続のため検証できません。承認番号の手入力は本番実行の許可にはなりません' : 'desknet\'s NEO の承認番号（参照のみ。アプリ内承認とは別）',
+          extRefInput: s.extRefDraft || '', setExtRef: (e) => this.setState({ extRefDraft: e.target.value }),
+          canExtRef: ['Administrator', 'Approver'].includes(s.role),
+          saveExtRef: () => this.saveExternalRef(A._id),
         },
         st(D.APR_ST[A.status]),
       );
@@ -1122,11 +1146,18 @@ class Component extends DCLogic {
     // integrations
     const integRows = s.integrations.map((i) => {
       const sy = s.syncing[i.id];
+      const rt = i.runtime || {};
+      // 実際の設定状況（環境変数の有無）を優先して表示する。手動で connected にする手段は無い
+      const real = !rt.configured ? '未設定' : (i.status === 'connected' ? '接続確認済み' : '要確認');
+      const rtText = !rt.configured
+        ? `未設定（${(rt.missing_env || []).join(', ')}）`
+        : (rt.blocked_reason ? `${rt.mode} · ${rt.blocked_reason}` : `${rt.mode}`);
       return {
         name: i.name, role: i.role, initial: i.name[0], detail: i.detail, note: i.note, last: i.last,
-        fg: sy ? 'var(--blue)' : i.status === 'connected' ? 'var(--green)' : 'var(--amber)',
-        stLabel: sy ? '同期中' : i.status === 'connected' ? 'Connected' : '要確認',
-        anim: sy ? 'pulse 1s infinite' : 'none', btn: sy ? '同期中…' : '今すぐ同期', sync: () => this.sync(i.id),
+        fg: sy ? 'var(--blue)' : real === '接続確認済み' ? 'var(--green)' : real === '未設定' ? 'var(--muted)' : 'var(--amber)',
+        stLabel: sy ? '確認中' : real,
+        rtText, autonomy: rt.autonomy || '—', readText: rt.read || '', writeText: rt.write || '',
+        anim: sy ? 'pulse 1s infinite' : 'none', btn: sy ? '確認中…' : '接続確認（読み取り専用）', sync: () => this.sync(i.id),
       };
     });
     const webhookRows = [];
@@ -1338,6 +1369,7 @@ class Component extends DCLogic {
         showSource: ai && !!m.source,
         sourceLabel: m.source === 'llm' ? 'DeepSeek 応答' : 'シナリオ応答',
         promote: () => this.createProject({ title: m.ideaTitle, owner: me.id, risk: m.risk, summary: (m.idea || []).slice(0, 3).map((x) => x[1]).join('。') }),
+        toAgentRun: () => this.chatToAgentRun(m), canAgentRun: this.can('create'),
       };
     });
     const cstep = s.chat.step;
@@ -1476,6 +1508,7 @@ function deriveApprovalStatus(a) {
 function mapApproval(a) {
   return {
     id: a.approval_code, _id: a.id, pk: a.project_code || (a.run_code ? `Run ${a.run_code}` : '—'), type: a.type, title: a.target, risk: a.risk,
+    extRef: a.external_ref || '', extRefStatus: a.external_ref_status || null,
     status: deriveApprovalStatus(a), by: a.requested_by_name, at: fmtDate(a.created_at), target: a.target, evidence: [],
     steps: (a.steps || []).map((s) => ({ _id: s.id, role: s.role, who: s.assigned_user_name || `${s.role}ロール担当`, st: s.status, at: s.decided_at ? fmtDate(s.decided_at) : '' })),
     log: (a.steps || []).filter((s) => s.status !== 'pending').map((s) => ({ at: s.decided_at ? fmtDate(s.decided_at) : '', who: s.assigned_user_name || s.role, action: s.status, reason: s.reason || '' })),
@@ -1515,7 +1548,7 @@ function mapAudit(a) {
   };
 }
 function mapIntegration(i) {
-  return { id: i.id, name: i.name, role: i.role, status: i.status, last: i.last_sync_at ? fmtDate(i.last_sync_at) : '—', detail: i.detail, note: i.note };
+  return { id: i.id, name: i.name, role: i.role, status: i.status, last: i.last_sync_at ? fmtDate(i.last_sync_at) : '—', detail: i.detail, note: i.note, runtime: i.runtime || null };
 }
 function mapAgent(a) {
   return { id: a.id, name: a.name, duty: a.duty, skills: a.skills, model: a.model, on: a.enabled };
