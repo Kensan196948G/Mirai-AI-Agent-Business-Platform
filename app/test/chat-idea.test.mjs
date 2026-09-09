@@ -6,12 +6,14 @@ import { loadUnifiedCatalog, matchByKeywords, validateSuggestions, findAgent } f
 // llm.js は初回 import 時に環境変数を束縛するため、chat-idea を import する前に設定する（fetch はモックし外部へ出ない）
 process.env.LLM_PROVIDER = 'deepseek'; process.env.LLM_API_KEY = 'sk-test-dummy'; // doc003-allow: モック用のダミー
 
-test('統合カタログ: org-map の 9 組織と 29 Agent（P1 21 件は実行可、P2/P3 は候補）が読める', () => {
+test('統合カタログ: org-map の 9 組織と 30 Agent（P1 22 件は実行可、P2/P3 は候補）が読める', () => {
   const c = loadUnifiedCatalog();
   assert.equal(c.organizations.length, 9);
-  assert.equal(c.agents.length, 29);
+  assert.equal(c.agents.length, 30);
   const p1 = c.agents.filter((a) => a.stage === 'P1').map((a) => a.agent_id).sort();
-  assert.equal(p1.length, 21, 'P1: 元の 3 Agent + 組織責務 Agent 9 種 + 土木専門 Agent 9 種');
+  assert.equal(p1.length, 22, 'P1: 元の 3 Agent + 組織責務 Agent 9 種 + 土木専門 Agent 9 種 + 相互レビュー Agent');
+  assert.equal(c.agents.filter((a) => a.layer === 'cross_review').length, 1);
+  assert.equal(findAgent('cross-review-agent').model_category, 'Independent Review');
   assert.equal(c.agents.filter((a) => a.layer === 'civil_expert').length, 9);
   assert.ok(c.agents.filter((a) => a.layer === 'civil_expert').every((a) => a.executable && /^T[1-6]$/.test(a.technical_risk_class) && a.required_conditions.length >= 2 && a.keywords.length >= 3 && a.org_code === null));
   for (const id of ['knowledge-quality', 'project-case-research', 'technology-selection', 'governance-support', 'external-dx-support']) assert.ok(p1.includes(id));

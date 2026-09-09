@@ -7,6 +7,7 @@
  */
 
 import { sanitizeUntrustedText, scanForInjection, scanForSecrets } from '../prompt-guard.js';
+import { ProviderNotConfiguredError } from '../provider-adapter.js';
 
 async function technologyCatalogSearch(ctx) {
   const result = await ctx.callTool('knowledge.search-approved', {
@@ -499,7 +500,99 @@ async function standardReferenceCheck(ctx) {
   return { references, issues, unknowns, requires_human_review: true, ...art };
 }
 
+// =============================================================================
+// 第 4 段: Cross Review（独立レビュー）。機械検査（決定的）+ Independent Review 分類のモデルによる横断レビュー。判定は機械検査より緩められない
+// =============================================================================
+
+const VERDICT_RANK = { PASS: 0, CONDITIONAL: 1, FAIL: 2 };
+const QUANTITY_RE = /([^\s、。，,:：\d]{1,20})\s*[:：=は]?\s*([-+]?\d[\d,]*(?:\.\d+)?)\s*(mm|cm|m3|m2|km|m|kN|tf|kPa|MPa|kg|t)(?![A-Za-z])/g;
+
+/** 機械検査: Agent 間の数値矛盾、単位・座標系・基準面の混在、根拠の無い事実。 */
+export function machineCrossCheck(priorContext) {
+  const ctxs = Array.isArray(priorContext) ? priorContext : [];
+  const contradictions = []; const unsupported = [];
+  const quantities = new Map(); // key: label|unit → [{ agent, value }]
+  for (const c of ctxs) {
+    const agent = String(c.agent_id || '?');
+    for (const f of c.findings || []) {
+      for (const m of String(f).matchAll(QUANTITY_RE)) {
+        const key = `${m[1].trim()}|${m[3]}`;
+        if (!quantities.has(key)) quantities.set(key, []);
+        quantities.get(key).push({ agent, value: Number(m[2].replace(/,/g, '')) });
+      }
+    }
+    if ((c.findings || []).length > 0 && (c.sources || []).length === 0) unsupported.push(`[${agent}] ${c.artifact_code || ''} の事実 ${(c.findings || []).length} 件に根拠（sources）が無い`);
+  }
+  for (const [key, vals] of quantities) {
+    const agents = new Set(vals.map((v) => v.agent)); const values = new Set(vals.map((v) => v.value));
+    if (agents.size > 1 && values.size > 1) {
+      const [label, unit] = key.split('|');
+      contradictions.push({ type: 'numbers', detail: `「${label}」の値が Agent 間で異なる: ${vals.map((v) => `${v.agent}=${v.value} ${unit}`).join(' / ')}`, agents: [...agents] });
+    }
+  }
+  const text = ctxs.flatMap((c) => c.findings || []).map(String).join('\n');
+  const units = [...new Set([...text.matchAll(UNIT_RE)].map((m) => m[1]))];
+  const crs = [...new Set([...text.matchAll(CRS_RE)].map((m) => m[1].replace(/\s+/g, '')))];
+  const datums = [...new Set([...text.matchAll(DATUM_RE)].map((m) => m[1].replace(/\./g, '').toUpperCase()))];
+  const agentsAll = [...new Set(ctxs.map((c) => String(c.agent_id || '?')))];
+  if (units.some((u) => IMPERIAL.has(u)) && units.some((u) => UNIT_FAMILY.length.includes(u) && !IMPERIAL.has(u))) contradictions.push({ type: 'units', detail: `長さの単位系が混在（${units.join(', ')}）`, agents: agentsAll });
+  if (units.some((u) => GRAVIMETRIC.has(u)) && units.some((u) => SI_FORCE.has(u))) contradictions.push({ type: 'units', detail: `力・荷重の単位系が混在（${units.join(', ')}）`, agents: agentsAll });
+  if (crs.length > 1) contradictions.push({ type: 'units', detail: `座標系が複数（${crs.join(', ')}）`, agents: agentsAll });
+  if (datums.length > 1) contradictions.push({ type: 'units', detail: `基準面が複数（${datums.join(', ')}）`, agents: agentsAll });
+  let verdict = 'PASS';
+  if (contradictions.some((c) => c.type === 'numbers')) verdict = 'FAIL';
+  else if (contradictions.length > 0 || unsupported.length > 0) verdict = 'CONDITIONAL';
+  return { contradictions, unsupported, verdict };
+}
+
+const CROSS_REVIEW_SCHEMA = { type: 'object', required: ['verdict', 'confidence', 'contradictions', 'unsupported_claims', 'minority_opinions', 'unknowns', 'reasons'], additionalProperties: false, properties: {
+  verdict: { type: 'string', enum: ['PASS', 'CONDITIONAL', 'FAIL'] }, confidence: { type: 'number', minimum: 0, maximum: 1 },
+  contradictions: { type: 'array', maxItems: 20, items: { type: 'object', required: ['type', 'detail', 'agents'], additionalProperties: false, properties: { type: { type: 'string', enum: ['numbers', 'units', 'assumptions', 'sources', 'risk', 'other'] }, detail: { type: 'string', maxLength: 300 }, agents: { type: 'array', items: { type: 'string' }, maxItems: 6 } } } },
+  unsupported_claims: { type: 'array', maxItems: 20, items: { type: 'string', maxLength: 300 } }, minority_opinions: { type: 'array', maxItems: 10, items: { type: 'string', maxLength: 300 } },
+  unknowns: { type: 'array', maxItems: 20, items: { type: 'string', maxLength: 300 } }, reasons: { type: 'array', maxItems: 10, items: { type: 'string', maxLength: 300 } } } };
+
+async function crossReview(ctx) {
+  const prior = Array.isArray(ctx.input.prior_context) ? ctx.input.prior_context : [];
+  const machine = machineCrossCheck(prior);
+  let verdict = machine.verdict; let confidence = 0.3; let source = 'machine_only';
+  let contradictions = [...machine.contradictions]; let unsupported = [...machine.unsupported]; let minority = []; let unknowns = []; let reasons = [];
+  if (prior.length === 0) {
+    verdict = 'CONDITIONAL'; confidence = 0; unknowns.push('レビュー対象の成果が無いため判定できません');
+  } else {
+    // K-002 / K-017: 一次 Agent とは別のモデル分類（Independent Review）。使えなければ機械検査だけで判定し、PASS にはしない
+    try {
+      const { data, degraded } = await ctx.structuredComplete({
+        instructions: 'あなたは一次 Agent とは独立した技術レビュアーです。複数 Agent の成果（事実・不明点・前提・出典 ID）を横断し、数値・単位・前提条件・出典・リスク評価の矛盾、根拠のない主張、少数意見（異論。消さずに残す）、未確認事項を列挙してください。' +
+          '同じ内容をそのまま追認せず、必ず疑って確認します。verdict は矛盾があれば FAIL、確認が必要なら CONDITIONAL、問題が見当たらなければ PASS。confidence は判断の確からしさ（0〜1）。技術的な合否や設計判断はしません。',
+        input: { query: ctx.input.query, agents: prior.map((p) => ({ agent_id: p.agent_id, artifact_code: p.artifact_code, findings: (p.findings || []).slice(0, 15), unknowns: (p.unknowns || []).slice(0, 10), assumptions: (p.assumptions || []).slice(0, 10), source_ids: (p.sources || []).map((s) => s.source_record_id).filter(Boolean) })), machine_check: machine },
+        schema: CROSS_REVIEW_SCHEMA, fallbackData: { verdict: machine.verdict === 'PASS' ? 'CONDITIONAL' : machine.verdict, confidence: 0.3, contradictions: [], unsupported_claims: [], minority_opinions: [], unknowns: ['独立レビュー（LLM）の出力を採用できず機械検査のみ'], reasons: [] },
+      });
+      if (!degraded) {
+        source = 'llm'; confidence = data.confidence; minority = data.minority_opinions; unknowns = data.unknowns; reasons = data.reasons;
+        contradictions = [...contradictions, ...data.contradictions]; unsupported = [...unsupported, ...data.unsupported_claims];
+        // 判定の強制: LLM は機械検査より緩められない
+        verdict = VERDICT_RANK[data.verdict] >= VERDICT_RANK[machine.verdict] ? data.verdict : machine.verdict;
+        if (verdict !== data.verdict) reasons.push(`LLM の判定 ${data.verdict} を機械検査の ${machine.verdict} へ引き上げ`);
+      } else {
+        unknowns.push('独立レビュー（LLM）の出力を採用できなかったため機械検査のみ');
+        if (verdict === 'PASS') verdict = 'CONDITIONAL';
+      }
+    } catch (err) {
+      if (!(err instanceof ProviderNotConfiguredError)) throw err;
+      unknowns.push('独立レビュー（LLM）が未設定のため機械検査のみ。PASS とは判定しない');
+      if (verdict === 'PASS') verdict = 'CONDITIONAL';
+    }
+  }
+  const humanForced = verdict === 'FAIL';
+  const findings = [`判定 ${verdict}（confidence ${confidence}、${source === 'llm' ? '独立レビュー + 機械検査' : '機械検査のみ'}）`, ...contradictions.map((c) => `[${c.type}] ${c.detail}`), ...unsupported.map((u) => `[根拠なし] ${u}`)];
+  const content = { verdict, confidence, contradictions, unsupported_claims: unsupported, minority_opinions: minority, reasons, review_source: source, human_review_forced: humanForced,
+    findings, unknowns, assumptions: [], sources: [], reviewed_agents: prior.map((p) => ({ agent_id: p.agent_id, artifact_code: p.artifact_code })) };
+  const art = await writeDraft(ctx, 'cross_review', `Run ${ctx.run.run_code} 相互レビュー（${verdict}）`, content);
+  return { verdict, confidence, contradictions, unsupported_claims: unsupported, minority_opinions: minority, unknowns, review_source: source, human_review_forced: humanForced, requires_human_review: true, ...art };
+}
+
 Object.assign(SKILL_HANDLERS, {
+  'cross-review': crossReview,
   'condition-gap-register': conditionGapRegister,
   'engineering-consistency-check': engineeringConsistencyCheck,
   'standard-reference-check': standardReferenceCheck,

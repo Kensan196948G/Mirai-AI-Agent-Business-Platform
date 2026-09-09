@@ -1,0 +1,28 @@
+schema_version: mirai.agent-definition/v1
+agent_id: cross-review-agent
+version: 1.0.0
+domain_pack: mirai-construction
+title: 相互レビュー Agent（独立）
+owner_role: 技術本部（独立レビュー）
+layer: cross_review
+technical_risk_class: T3
+purpose: 司令塔が集めた複数 Agent の成果を、一次 Agent とは別のモデル分類（Independent Review）で横断レビューし、矛盾・根拠なし・未確認事項と PASS / CONDITIONAL / FAIL の判定を Evidence として残す。同じ回答をそのまま追認しない。
+does_not: 技術的な合否判定、設計・施工の最終決定、一次 Agent の成果の書き換え。
+max_autonomy_level: A1
+input_contract:
+  type: object
+  properties:
+    query:
+      type: string
+      minLength: 1
+      maxLength: 4000
+keywords: []
+timeout_seconds: 600
+budget_usd: 0.5
+model_category: Independent Review
+skills:
+- skill_id: engineering-consistency-check
+  version: 1.0.0
+- skill_id: cross-review
+  version: 1.0.0
+output: '相互レビュー草案（cross_review: verdict / confidence / contradictions。FAIL は人間レビュー強制）'

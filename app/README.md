@@ -230,7 +230,7 @@ P1 の 3 Agent は A0〜A1（外部書き込みなし）のため既定ではゲ
 
 ## 🏢 組織責務 Agent 01〜09（第 2 段）
 
-`org-map.yaml` の 9 組織それぞれに実行可能な Agent（`agents/*.yaml`、layer=organization、技術リスク T2〜T4）を定義し、共通 Skill 9 種を Agent 契約の `params` で再利用する。P1 の 3 Agent、土木専門 Agent 9 種（第 3 段）と合わせて 21 Agent が Registry で承認・実行可能。
+`org-map.yaml` の 9 組織それぞれに実行可能な Agent（`agents/*.yaml`、layer=organization、技術リスク T2〜T4）を定義し、共通 Skill 9 種を Agent 契約の `params` で再利用する。P1 の 3 Agent、土木専門 Agent 9 種（第 3 段）、相互レビュー Agent（第 4 段）と合わせて 22 Agent が Registry で承認・実行可能。
 
 | 組織 | Agent | Skill（順に実行） | 主な入力 |
 |---|---|---|---|
@@ -253,13 +253,25 @@ P1 の 3 Agent は A0〜A1（外部書き込みなし）のため既定ではゲ
 | 入口 | 業務Agent 画面「司令塔に依頼」または `POST /api/orchestrations {request}`。ロール・同時実行・日次上限は Run 作成と同じ |
 | 計画 | LLM が要求文とカタログから意図・リスク・必要な Agent・順序（依存）・各 Agent への相談文を JSON Schema 付きで作る（`src/agent-runtime/orchestrator.js`）。LLM 未設定時はルールベース（語の一致）。**選べるのは Registry で承認済み・実行可能な Agent だけ**で、候補（P2/P3）・未承認・カタログに無い提案は理由付きで却下し、勝手に別経路へ迂回しない。合う Agent が無ければ `blocked` で止まり人間の判断に渡す |
 | 実行 | 依存が満たされた Step から Run を作り（Worker のポーリングと詳細 API で前進）、先行 Step の findings / unknowns を `prior_context` として渡す。各 Run の Policy / 承認待ち / 予算はそのまま効き、司令塔は上書きしない |
-| 上限 | Step 数 `ORCHESTRATION_MAX_STEPS`（6）、費用 `ORCHESTRATION_BUDGET_USD`（2.0、配下 Run の合計）。超過時は未着手 Step を blocked にして `partial` で止める |
+| 上限 | Step 数 `ORCHESTRATION_MAX_STEPS`（6、相互レビューは数えない）、費用 `ORCHESTRATION_BUDGET_USD`（2.0、配下 Run の合計）。超過時は未着手 Step を blocked にして `partial` で止める |
 | 統合 | 全 Step 終了後、Agent ごとの帰属付きで事実・不明点・根拠を 1 つの統合草案（`orchestration_summary`、人間レビュー必須）にまとめる。失敗した Agent の結果は「結果なし」として不足を明示し、成功扱いしない。部分成功は `partial` |
 | 記録 | 計画（選択理由・却下理由）と終了を監査ログに残し、Run / 成果物は `orchestration_id` で追跡できる |
 
 土木専門 Agent（layer=civil_expert）は、選ばれた組織責務 Agent の `delegates_to` に含まれ、かつ要求文が専門 Agent の `keywords` に一致する場合だけ、その組織 Agent の後段（`depends_on`）として起動する（B-005）。専門 Agent を先頭に置く LLM 提案は却下理由付きで不採用。Step 上限の既定は 6。統合草案には配下 Step の最大技術リスク（`technical_risk_class`）と専門技術者レビューの要否が付く。
 
-Cross Review（横断レビュー）は次段で司令塔の最終 Step として組み込む。
+## 🔍 Cross Review（相互レビュー、第 4 段）
+
+司令塔は成果の出る計画に、他の全 Step に依存する相互レビュー Step（`cross-review-agent`、layer=cross_review、T3）を最終 Step として必ず付ける（Step 上限に数えない）。相互レビュー Agent が Registry で未承認なら「未実施」を計画に残し、隠さない。
+
+| 項目 | 内容 |
+|---|---|
+| 独立性（K-002 / K-017） | Model Router の `Independent Review` 分類で解決したモデルを使い、一次 Agent（Research / Classification）と分離する。同じ回答をそのまま追認せず、機械検査の結果を入力に「必ず疑って確認する」 |
+| 機械検査（K-004〜K-006） | `machineCrossCheck`: Agent 間で同じ量（ラベル + 単位）の数値が異なれば **数値矛盾**、SI と ft / kN と tf / 座標系 / 基準面の混在は **単位矛盾**、sources の無い事実は **根拠なし** |
+| 独立レビュー（K-007〜K-011） | 前提条件・出典・リスク評価の矛盾、根拠のない主張、少数意見（消さずに残す）、未確認事項、reasons を JSON Schema 付きで抽出 |
+| 判定の強制（K-013 / K-014） | PASS / CONDITIONAL / FAIL + confidence。数値矛盾があれば FAIL、単位矛盾・根拠なしがあれば CONDITIONAL 以上で、LLM の判定は機械検査より緩められない。LLM 未設定・検証失敗時は機械検査のみで判定し、**PASS にはしない**。FAIL は `human_review_forced=true` で統合草案の `expert_review_required` を強制 |
+| 部分成功 | 他 Step が失敗しても、成果のある Step だけを対象にレビューする。成果が無ければ skipped |
+| Evidence（K-012 / K-016 / X-020） | 判定・confidence・矛盾・根拠なし・少数意見を成果物 `cross_review` に保存し、統合草案 `content.cross_review` と監査ログ `orchestration.cross_review` に残す。WebUI の司令塔詳細に判定を表示 |
+
 
 ## 🏗️ 土木専門 Agent 9 種（第 3 段）
 

@@ -196,3 +196,45 @@ test('standard-reference-check: 承認済み出典の版・発行日を referenc
   assert.ok(out.issues.some((i) => /複数の版/.test(i)));
   assert.ok(out.unknowns.some((u) => /社内基準.*未登録/.test(u)));
 });
+
+// ---------------------------------------------------------------------------
+// 第 4 段: Cross Review（機械検査 + 独立レビュー。判定は機械検査より緩められない）
+// ---------------------------------------------------------------------------
+import { machineCrossCheck } from '../src/agent-runtime/skills/index.js';
+import { ProviderNotConfiguredError } from '../src/agent-runtime/provider-adapter.js';
+
+const PRIOR = [
+  { agent_id: 'a', artifact_code: 'ART-1', findings: ['捨石: 100 m3', '天端 T.P.+3.0m'], unknowns: [], assumptions: ['前提 A'], sources: [{ source_record_id: 1 }] },
+  { agent_id: 'b', artifact_code: 'ART-2', findings: ['捨石: 120 m3', '既設 D.L.+1.5m'], unknowns: ['x'], assumptions: [], sources: [] },
+];
+
+test('machineCrossCheck: Agent 間の数値矛盾は FAIL、基準面の混在は units、根拠の無い事実を挙げる。矛盾が無ければ PASS', () => {
+  const r = machineCrossCheck(PRIOR);
+  assert.equal(r.verdict, 'FAIL');
+  assert.ok(r.contradictions.some((c) => c.type === 'numbers' && /捨石/.test(c.detail) && c.agents.length === 2));
+  assert.ok(r.contradictions.some((c) => c.type === 'units' && /基準面/.test(c.detail)));
+  assert.equal(r.unsupported.length, 1);
+  assert.equal(machineCrossCheck([{ agent_id: 'a', findings: ['捨石: 100 m3'], sources: [{ source_record_id: 1 }] }, { agent_id: 'b', findings: ['捨石: 100 m3'], sources: [{ source_record_id: 1 }] }]).verdict, 'PASS', '同じ値なら矛盾ではない');
+  assert.equal(machineCrossCheck([{ agent_id: 'a', findings: ['捨石: 100 m3', '捨石: 120 m3'], sources: [{ source_record_id: 1 }] }]).verdict, 'PASS', '同一 Agent 内の複数値は Agent 間矛盾に数えない');
+});
+
+test('cross-review: LLM 未設定では機械検査のみで PASS にせず（CONDITIONAL）、LLM の緩い判定は機械検査へ引き上げ、成果が無ければ判定不能', async () => {
+  const def = loadSkillDefinition(PACK, 'cross-review', '1.0.0');
+  // LLM 未設定 + 矛盾なし → CONDITIONAL（独立レビュー未実施を明示）
+  const ctxNoLlm = makeCtx(def, { query: 'q', prior_context: [{ agent_id: 'a', artifact_code: 'ART-1', findings: ['捨石: 100 m3'], unknowns: [], assumptions: [], sources: [{ source_record_id: 1 }] }] });
+  ctxNoLlm.structuredComplete = async () => { throw new ProviderNotConfiguredError('LLM未設定'); };
+  const o1 = await SKILL_HANDLERS['cross-review'](ctxNoLlm);
+  assert.ok(ajv.validate(def.outputSchema, o1), ajv.errorsText(ajv.errors));
+  assert.equal(o1.verdict, 'CONDITIONAL'); assert.equal(o1.review_source, 'machine_only'); assert.equal(o1.human_review_forced, false);
+  assert.ok(o1.unknowns.some((u) => /PASS とは判定しない/.test(u)));
+  // LLM が PASS と言っても機械検査が FAIL なら FAIL（同じ回答を追認しない）
+  const ctxLlm = makeCtx(def, { query: 'q', prior_context: PRIOR });
+  ctxLlm.structuredComplete = async () => ({ data: { verdict: 'PASS', confidence: 0.9, contradictions: [], unsupported_claims: [], minority_opinions: ['b は別工法を推奨'], unknowns: [], reasons: ['問題なし'] }, degraded: false, tokensIn: 1, tokensOut: 1, cost: 0 });
+  const o2 = await SKILL_HANDLERS['cross-review'](ctxLlm);
+  assert.equal(o2.verdict, 'FAIL'); assert.equal(o2.review_source, 'llm'); assert.equal(o2.human_review_forced, true);
+  assert.deepEqual(o2.minority_opinions, ['b は別工法を推奨'], '少数意見を消さない');
+  assert.ok(o2.contradictions.some((c) => c.type === 'numbers'));
+  // 成果なし
+  const o3 = await SKILL_HANDLERS['cross-review'](makeCtx(def, { query: 'q', prior_context: [] }));
+  assert.equal(o3.verdict, 'CONDITIONAL'); assert.equal(o3.confidence, 0);
+});

@@ -1173,13 +1173,14 @@ test('AI相談の IDEA 構造化: LLM 未設定でもルールベースで関係
   const cat = await call('/api/agent-catalog/org', { cookie: adminCookie });
   assert.equal(cat.status, 200);
   assert.equal(cat.data.organizations.length, 9);
-  assert.equal(cat.data.agents.length, 29);
+  assert.equal(cat.data.agents.length, 30);
   const ts = cat.data.agents.find((a) => a.agent_id === 'technology-selection');
   assert.equal(ts.runnable, true, '承認済み P1 は runnable');
   assert.ok(cat.data.agents.filter((a) => a.stage !== 'P1').every((a) => a.runnable === false));
 });
 
 test('司令塔（CTO Orchestrator）: 要求から計画を作り、複数 Agent Run を実行して統合草案を作る。候補は却下、失敗は部分完了、Viewer は不可', async () => {
+  await withTransaction((client) => syncAgent(client, 'mirai-construction', 'cross-review-agent', '1.0.0', { approvedByUserId: adminId, status: 'approved' }));
   const { advanceOrchestration } = await import('../src/agent-runtime/orchestrator.js');
   // Viewer は依頼できない
   const viewerCookie = await loginAs('e2e-viewer-agent@example.com', 'viewer-password'); // doc003-allow: 使い捨てテストDB専用の固定値
@@ -1206,8 +1207,16 @@ test('司令塔（CTO Orchestrator）: 要求から計画を作り、複数 Agen
   assert.ok(runs.every((r) => r.orchestration_step_id));
   // Worker 相当で Run を進める（決定的 Step は完走し、LLM Step で明示的に失敗する）→ 全 Run 終了 → 部分完了 or 失敗
   for (const r of runs) { let step; for (let i = 0; i < 6; i++) { step = await claimAndExecute(r.id); if (step.done) break; } }
-  const final = await withTransaction((client) => advanceOrchestration(client, orch.id));
+  // 第 4 段: 全 Step 終了後に相互レビュー Step の Run が作られるので、それも実行してから統合される
+  let final = await withTransaction((client) => advanceOrchestration(client, orch.id));
+  const { rows: crRuns } = await pool.query(`SELECT id FROM agent_runs WHERE orchestration_id = $1 AND status = 'queued'`, [orch.id]);
+  const { rows: doneOrg } = await pool.query(`SELECT count(*)::int AS n FROM orchestration_steps WHERE orchestration_id = $1 AND layer <> 'cross_review' AND status = 'completed'`, [orch.id]);
+  assert.equal(crRuns.length, doneOrg[0].n > 0 ? 1 : 0, '成果のある Step があれば相互レビュー Run が 1 件作られ、無ければ作られない');
+  for (const r of crRuns) for (let i = 0; i < 4; i++) { const step = await claimAndExecute(r.id); if (step.done) break; }
+  final = await withTransaction((client) => advanceOrchestration(client, orch.id));
   assert.ok(['partial', 'failed', 'completed'].includes(final.status), final.status);
+  const { rows: crStep } = await pool.query(`SELECT status FROM orchestration_steps WHERE orchestration_id = $1 AND layer = 'cross_review'`, [orch.id]);
+  assert.equal(crStep[0].status, doneOrg[0].n > 0 ? 'completed' : 'skipped');
   const d2 = await call(`/api/orchestrations/${orch.id}`, { cookie: adminCookie });
   assert.ok(d2.data.steps.every((s) => ['completed', 'failed', 'skipped', 'cancelled', 'blocked'].includes(s.status)));
   assert.ok(d2.data.final_artifact || d2.data.orchestration.error_message, '統合草案か、作れなかった理由が残る');
@@ -1346,7 +1355,79 @@ test('土木専門 Agent 9 種（第 3 段）: 技術リスク区分が Run と�
   // 他の組織責務 Step（LLM が必要）も終了扱いにして統合させる
   await pool.query(`UPDATE agent_runs SET status = 'completed', finished_at = now() WHERE orchestration_id = $1 AND status IN ('queued','running')`, [orc.data.orchestration.id]);
   od = await call(`/api/orchestrations/${orc.data.orchestration.id}`, { cookie: adminCookie });
+  // 相互レビュー Step（第 4 段）が最後に走る
+  const crs = od.data.steps.find((s) => s.layer === 'cross_review');
+  assert.ok(crs && crs.status === 'running', JSON.stringify(od.data.steps.map((s) => [s.agent_id, s.status])));
+  for (let i = 0; i < 4; i++) { step = await claimAndExecute(crs.run_id); if (step.done) break; }
+  od = await call(`/api/orchestrations/${orc.data.orchestration.id}`, { cookie: adminCookie });
   assert.ok(['partial', 'completed', 'failed'].includes(od.data.orchestration.status), od.data.orchestration.status);
   assert.ok(od.data.final_artifact && od.data.final_artifact.content.technical_risk_class === 'T3' && od.data.final_artifact.expert_review_required === true, JSON.stringify(od.data.final_artifact));
+  await pool.query(`UPDATE agent_runs SET status = 'cancelled', finished_at = now() WHERE status IN ('queued','running') AND requested_by = $1`, [adminId]);
+});
+
+test('Cross Review（第 4 段）: 司令塔の最終 Step として独立レビューが走り、数値矛盾は FAIL で人間レビューを強制、LLM 未設定では機械検査のみで PASS にせず、判定は監査に残る', async () => {
+  await withTransaction(async (client) => {
+    const { loadUnifiedCatalog } = await import('../src/agent-runtime/catalog.js');
+    for (const a of loadUnifiedCatalog('mirai-construction').agents.filter((x) => x.executable)) await syncAgent(client, 'mirai-construction', a.agent_id, '1.0.0', { approvedByUserId: adminId, status: 'approved' });
+  });
+  const cat = await call('/api/agent-catalog/org', { cookie: adminCookie });
+  const reviewer = cat.data.agents.find((a) => a.layer === 'cross_review');
+  assert.ok(reviewer && reviewer.runnable && reviewer.model_category === 'Independent Review', JSON.stringify(reviewer));
+  // 計画: 組織 Agent 2 件 + 専門 Agent + 相互レビュー（全 Step に依存、Step 上限に数えない）
+  const orc = await call('/api/orchestrations', { method: 'POST', cookie: adminCookie, body: { request: '委員会向けに今月の KPI を整理し、港湾の岸壁改良の施工計画と数量も確認したい' } });
+  assert.equal(orc.status, 201, JSON.stringify(orc.data));
+  let od = await call(`/api/orchestrations/${orc.data.orchestration.id}`, { cookie: adminCookie });
+  const cr = od.data.steps.find((s) => s.layer === 'cross_review');
+  assert.ok(cr && cr.status === 'pending' && cr.agent_id === 'cross-review-agent', JSON.stringify(od.data.steps.map((s) => [s.agent_id, s.layer, s.status])));
+  assert.equal(cr.depends_on.length, od.data.steps.length - 1, '相互レビューは他の全 Step に依存');
+  assert.equal(od.data.orchestration.plan_json.cross_review.status, 'planned');
+  // 組織 Agent の Run に、Agent 間で矛盾する数値の成果を用意して完了させる（相互レビューが FAIL を出すことを検証）
+  const orgSteps = od.data.steps.filter((s) => s.layer === 'organization');
+  assert.ok(orgSteps.length >= 2, JSON.stringify(orgSteps.map((s) => s.agent_id)));
+  const { nextArtifactCode } = await import('../src/lib/codes.js');
+  const { contentHash } = await import('../src/lib/artifact-lineage.js');
+  for (const [i, s] of orgSteps.entries()) {
+    const content = { findings: [`捨石: ${100 + i * 20} m3`, '天端 T.P.+3.0m'], unknowns: [], assumptions: [`前提 ${i}`], sources: [], requires_human_review: true };
+    await withTransaction(async (client) => {
+      const code = await nextArtifactCode(client);
+      await client.query(`INSERT INTO artifacts (artifact_code, run_id, kind, title, content, review_state, content_hash) VALUES ($1,$2,'test_draft','矛盾テスト',$3,'draft',$4)`, [code, s.run_id, JSON.stringify(content), contentHash(content)]);
+      await client.query(`UPDATE agent_runs SET status = 'completed', finished_at = now() WHERE id = $1`, [s.run_id]);
+    });
+  }
+  // 専門 Agent（あれば）は失敗扱いにして、部分成功でも相互レビューが実施されることを確認
+  await pool.query(`UPDATE agent_runs SET status = 'failed', error_message = 'test', finished_at = now() WHERE orchestration_id = $1 AND status IN ('queued','running')`, [orc.data.orchestration.id]);
+  od = await call(`/api/orchestrations/${orc.data.orchestration.id}`, { cookie: adminCookie });
+  let crs = od.data.steps.find((s) => s.layer === 'cross_review');
+  // 委譲された専門 Step は組織 Step の完了後に Run が作られるので、それも失敗扱いにして相互レビューまで進める
+  for (let i = 0; i < 4 && crs.status === 'pending'; i++) {
+    await pool.query(`UPDATE agent_runs SET status = 'failed', error_message = 'test', finished_at = now() WHERE orchestration_id = $1 AND status IN ('queued','running') AND id <> ALL($2::bigint[])`, [orc.data.orchestration.id, orgSteps.map((s) => s.run_id)]);
+    od = await call(`/api/orchestrations/${orc.data.orchestration.id}`, { cookie: adminCookie }); crs = od.data.steps.find((s) => s.layer === 'cross_review');
+  }
+  assert.equal(crs.status, 'running', JSON.stringify(od.data.steps.map((s) => [s.agent_id, s.status, s.error_message])));
+  const crRun = (await pool.query(`SELECT input_json FROM agent_runs WHERE id = $1`, [crs.run_id])).rows[0];
+  assert.equal(crRun.input_json.prior_context.length, orgSteps.length, '成果のある Step だけがレビュー対象');
+  assert.ok(crRun.input_json.prior_context.every((p) => Array.isArray(p.assumptions) && Array.isArray(p.sources)));
+  let step; for (let i = 0; i < 4; i++) { step = await claimAndExecute(crs.run_id); if (step.done) break; }
+  assert.equal(step.run.status, 'completed', step.run.error_message);
+  const crArt = (await pool.query(`SELECT content, expert_review_required FROM artifacts WHERE run_id = $1 AND kind = 'cross_review'`, [crs.run_id])).rows[0];
+  assert.equal(crArt.content.verdict, 'FAIL'); assert.equal(crArt.content.review_source, 'machine_only'); assert.equal(crArt.content.human_review_forced, true);
+  assert.ok(crArt.content.contradictions.some((c) => c.type === 'numbers' && /捨石/.test(c.detail)), JSON.stringify(crArt.content.contradictions));
+  assert.ok(crArt.content.unsupported_claims.length >= 2, '根拠（sources）の無い事実を挙げる');
+  assert.ok(crArt.content.unknowns.some((u) => /機械検査のみ/.test(u)), 'LLM 未設定を隠さない');
+  assert.equal(crArt.expert_review_required, true, '相互レビュー Agent は T3');
+  od = await call(`/api/orchestrations/${orc.data.orchestration.id}`, { cookie: adminCookie });
+  assert.ok(['partial', 'completed'].includes(od.data.orchestration.status), od.data.orchestration.status);
+  const fin = od.data.final_artifact;
+  assert.equal(fin.content.cross_review.verdict, 'FAIL'); assert.equal(fin.content.human_review_forced, true); assert.equal(fin.expert_review_required, true, 'FAIL は人間レビュー強制');
+  assert.match(fin.content.summary, /相互レビュー FAIL/);
+  const { rows: aud } = await pool.query(`SELECT detail FROM audit_log WHERE action = 'orchestration.cross_review' AND resource_id = $1`, [orc.data.orchestration.id]);
+  assert.equal(aud.length, 1); assert.equal(aud[0].detail.verdict, 'FAIL'); assert.equal(aud[0].detail.human_review_forced, true);
+  // 成果が無ければ相互レビューは skipped、統合草案には NOT_RUN として残る
+  const orc2 = await call('/api/orchestrations', { method: 'POST', cookie: adminCookie, body: { request: '委員会向けに今月の KPI を整理したい' } });
+  await pool.query(`UPDATE agent_runs SET status = 'failed', error_message = 'test', finished_at = now() WHERE orchestration_id = $1 AND status IN ('queued','running')`, [orc2.data.orchestration.id]);
+  let od2; for (let i = 0; i < 3; i++) od2 = await call(`/api/orchestrations/${orc2.data.orchestration.id}`, { cookie: adminCookie });
+  const cr2 = od2.data.steps.find((s) => s.layer === 'cross_review');
+  assert.equal(cr2.status, 'skipped', JSON.stringify(od2.data.steps));
+  assert.equal(od2.data.orchestration.status, 'failed');
   await pool.query(`UPDATE agent_runs SET status = 'cancelled', finished_at = now() WHERE status IN ('queued','running') AND requested_by = $1`, [adminId]);
 });

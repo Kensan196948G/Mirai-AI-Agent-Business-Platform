@@ -1,0 +1,99 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": [
+    "verdict",
+    "confidence",
+    "contradictions",
+    "unsupported_claims",
+    "minority_opinions",
+    "unknowns",
+    "review_source",
+    "human_review_forced",
+    "requires_human_review"
+  ],
+  "properties": {
+    "verdict": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "CONDITIONAL",
+        "FAIL"
+      ]
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "contradictions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "type",
+          "detail"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "numbers",
+              "units",
+              "assumptions",
+              "sources",
+              "risk",
+              "other"
+            ]
+          },
+          "detail": {
+            "type": "string"
+          },
+          "agents": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "unsupported_claims": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "minority_opinions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "unknowns": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "review_source": {
+      "type": "string",
+      "enum": [
+        "llm",
+        "machine_only"
+      ]
+    },
+    "human_review_forced": {
+      "type": "boolean"
+    },
+    "requires_human_review": {
+      "type": "boolean"
+    },
+    "artifact_id": {
+      "type": "integer"
+    },
+    "artifact_code": {
+      "type": "string"
+    }
+  }
+}
