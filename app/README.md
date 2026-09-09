@@ -228,6 +228,18 @@ curl -X POST http://127.0.0.1:<PORT>/api/agent-runs \
 
 P1 の 3 Agent は A0〜A1（外部書き込みなし）のため既定ではゲートを設定していない。P2/P3 で外部への確定書き込み（A2）を追加する Skill に `approval_gate` を付ける。正式な業務承認（desknet's NEO）とは別のアプリ内承認である（ADR-001）。
 
+## 🔀 モデル多重化と Model Router（C-19）
+
+| 項目 | 内容 |
+|---|---|
+| Provider | `deepseek`（既定）/ `openai` / `anthropic`。既定は従来どおり `LLM_PROVIDER` / `LLM_API_KEY` / `LLM_MODEL`。追加 Provider は `LLM_OPENAI_API_KEY` / `LLM_ANTHROPIC_API_KEY`（+ `_MODEL`、`_PRICE_*`）で有効化 |
+| Model Router | エージェント設定画面の Model Router（`model_router`: category → モデル名）を業務Agent が実際に参照する。Skill 契約の `model_category`（`execution.yaml`、既定 `Research / Classification`）で category を選ぶ |
+| 解決 | モデル名 → Provider / モデル ID は `src/lib/model-catalog.js`（DeepSeek-V3 → deepseek、Claude Opus / Sonnet → anthropic、Codex → openai）。API から呼べない名前（Claude Code / DeepSeek Harness）や API キー未設定の Provider は既定 Provider へフォールバックし、理由を表示・記録する |
+| 記録 | 各 LLM 呼び出しを `run_events`（`llm_call`: Provider / モデル / category / フォールバック理由 / トークン / 費用）に残し、Run 詳細に表示。月次上限は全 Provider 合算 |
+| AI相談（Chat） | 既定 Provider を使う（Model Router の対象外） |
+
+Anthropic は JSON モードを持たないため、構造化出力はプロンプトの指示と JSON Schema 検証（不適合なら再試行 → 縮退）で担保する。
+
 ## 🛡️ Prompt Injection 対策（C-18）
 
 出典本文・Tool 応答・利用者入力は「データ」であり「指示」ではない、を実装で保証する（`src/agent-runtime/prompt-guard.js`）。

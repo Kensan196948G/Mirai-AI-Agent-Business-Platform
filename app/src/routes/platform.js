@@ -7,6 +7,7 @@ import { getPool, withTransaction } from '../lib/db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { recordAudit } from '../lib/audit.js';
 import * as llm from '../lib/llm.js';
+import { describeRouter } from '../lib/model-catalog.js';
 
 const router = express.Router();
 
@@ -63,8 +64,9 @@ router.get('/skills', requireAuth, async (_req, res) => {
 });
 
 router.get('/router', requireAuth, async (_req, res) => {
-  const { rows } = await getPool().query(`SELECT * FROM model_router ORDER BY sort_order`);
-  res.json({ router: rows });
+  // 各 category の解決結果（Provider / モデル / 設定状況 / フォールバック理由）を添える。秘密は含まない
+  const rows = await describeRouter(getPool());
+  res.json({ router: rows, providers: llm.providerInfo() });
 });
 
 // category はスラッシュ等を含む自由記述の値のためURLパスではなくボディで受け取る。
@@ -88,7 +90,7 @@ router.get('/usage', requireAuth, async (_req, res) => {
   const llmSpent = llm.isConfigured() ? await llm.currentMonthSpend(getPool()) : 0;
   res.json({
     usage: rows,
-    llm: { configured: llm.isConfigured(), monthlySpent: llmSpent, monthlyCap: llm.monthlyCapUsd() },
+    llm: { configured: llm.isConfigured(), monthlySpent: llmSpent, monthlyCap: llm.monthlyCapUsd(), defaultProvider: llm.defaultProvider() || null, providers: llm.configuredProviders() },
   });
 });
 
