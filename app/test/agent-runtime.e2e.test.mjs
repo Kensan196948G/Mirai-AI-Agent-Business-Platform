@@ -601,6 +601,63 @@ test('出典取り込み（B-8〜B-12）: pending は検索されず、承認（
   await pool.query(`UPDATE agent_runs SET status = 'cancelled', finished_at = now() WHERE id = $1`, [run.id]);
 });
 
+test('承認の期限・差戻し・理由必須（J-006〜J-010）: 申請は期限を持ち、理由なしの判定は 422、差戻しは Run を理由付きで終端、期限切れは expired と Run 中断が監査に残る', async () => {
+  await pool.query(`UPDATE skill_versions SET approval_gate = '{"required":true,"role":"Approver","reason":"E2E 期限"}' WHERE skill_id = 'technology-catalog-search'`);
+  await createUser('e2e-approver-deadline@example.com', 'E2E Approver Deadline', 'Approver', 'approver-password'); // doc003-allow: 使い捨てテストDB専用の固定値
+  const approverCookie = await loginAs('e2e-approver-deadline@example.com', 'approver-password'); // doc003-allow: 使い捨てテストDB専用の固定値
+  try {
+    // 1. 差戻し（returned）
+    const c1 = await call('/api/agent-runs', { method: 'POST', cookie: adminCookie, body: { agentId: 'technology-selection', input: { query: 'MC-Wake 差戻し' } } });
+    await claimAndExecute(c1.data.run.id);
+    const d1 = await call(`/api/agent-runs/${c1.data.run.id}`, { cookie: adminCookie });
+    const apr1 = d1.data.approval;
+    assert.equal(apr1.status, 'pending');
+    const { rows: ex } = await pool.query(`SELECT expires_at, created_at FROM approval_requests WHERE id = $1`, [apr1.id]);
+    const hours = (new Date(ex[0].expires_at) - new Date(ex[0].created_at)) / 3600000;
+    assert.ok(hours > 71 && hours < 73, `期限は作成から 72 時間（${hours}）`);
+    const steps1 = (await call(`/api/approvals/${apr1.id}`, { cookie: adminCookie })).data.steps;
+    const noReason = await call(`/api/approvals/${apr1.id}/steps/${steps1[0].id}/decide`, { method: 'POST', cookie: approverCookie, body: { decision: 'approved' } });
+    assert.equal(noReason.status, 422, JSON.stringify(noReason.data));
+    const bad = await call(`/api/approvals/${apr1.id}/steps/${steps1[0].id}/decide`, { method: 'POST', cookie: approverCookie, body: { decision: 'nope', reason: 'x' } });
+    assert.equal(bad.status, 400);
+    const ret = await call(`/api/approvals/${apr1.id}/steps/${steps1[0].id}/decide`, { method: 'POST', cookie: approverCookie, body: { decision: 'returned', reason: '対象範囲の指定が不足。案件を指定して再申請' } });
+    assert.equal(ret.status, 200, JSON.stringify(ret.data)); assert.equal(ret.data.status, 'returned');
+    const run1 = (await pool.query(`SELECT status, error_message FROM agent_runs WHERE id = $1`, [c1.data.run.id])).rows[0];
+    assert.equal(run1.status, 'failed'); assert.match(run1.error_message, /差戻し.*対象範囲/);
+    assert.equal((await pool.query(`SELECT status, comment FROM approval_requests WHERE id = $1`, [apr1.id])).rows[0].status, 'returned');
+    assert.equal((await pool.query(`SELECT count(*)::int AS n FROM run_events WHERE run_id = $1 AND type = 'returned'`, [c1.data.run.id])).rows[0].n, 1);
+    const { rows: audR } = await pool.query(`SELECT action, detail FROM audit_log WHERE action IN ('approval.returned','agent_run.returned') AND resource_id IN ($1, $2) ORDER BY id`, [apr1.id, c1.data.run.id]);
+    assert.equal(audR.length, 2); assert.ok(audR.every((a) => /対象範囲/.test(a.detail.reason)));
+    // 差戻し後の申請は再利用されず、再実行は新しい申請を作る
+    const again = await call(`/api/agent-runs/${c1.data.run.id}/rerun`, { method: 'POST', cookie: adminCookie });
+    assert.equal(again.status, 201, JSON.stringify(again.data));
+    await claimAndExecute(again.data.run.id);
+    const d1b = await call(`/api/agent-runs/${again.data.run.id}`, { cookie: adminCookie });
+    assert.ok(d1b.data.approval && Number(d1b.data.approval.id) !== Number(apr1.id) && d1b.data.approval.status === 'pending');
+    await pool.query(`UPDATE agent_runs SET status = 'cancelled', finished_at = now() WHERE id = $1`, [again.data.run.id]);
+    // 2. 期限切れ: 一覧 API（と Worker）が expired にし、待機中の Run を理由付きで中断する
+    const c2 = await call('/api/agent-runs', { method: 'POST', cookie: adminCookie, body: { agentId: 'technology-selection', input: { query: 'MC-Wake 期限' } } });
+    await claimAndExecute(c2.data.run.id);
+    const apr2 = (await call(`/api/agent-runs/${c2.data.run.id}`, { cookie: adminCookie })).data.approval;
+    await pool.query(`UPDATE approval_requests SET expires_at = now() - interval '1 hour' WHERE id = $1`, [apr2.id]);
+    const steps2 = (await call(`/api/approvals/${apr2.id}`, { cookie: adminCookie })).data.steps;
+    const late = await call(`/api/approvals/${apr2.id}/steps/${steps2[0].id}/decide`, { method: 'POST', cookie: approverCookie, body: { decision: 'approved', reason: '遅い承認' } });
+    assert.ok([409, 422].includes(late.status), JSON.stringify(late.data));
+    const listed = await call('/api/approvals', { cookie: approverCookie });
+    const l2 = listed.data.approvals.find((a) => Number(a.id) === Number(apr2.id));
+    assert.equal(l2.status, 'expired'); assert.ok(l2.expired_at);
+    const run2 = (await pool.query(`SELECT status, error_message FROM agent_runs WHERE id = $1`, [c2.data.run.id])).rows[0];
+    assert.equal(run2.status, 'cancelled'); assert.match(run2.error_message, /期限切れ/);
+    const { rows: audE } = await pool.query(`SELECT detail FROM audit_log WHERE action = 'approval.expired' AND resource_id = $1`, [apr2.id]);
+    assert.equal(audE.length, 1); assert.equal(Number(audE[0].detail.agentRunId), Number(c2.data.run.id));
+    // 期限切れ後の判定は 409（既に expired）
+    const after = await call(`/api/approvals/${apr2.id}/steps/${steps2[0].id}/decide`, { method: 'POST', cookie: approverCookie, body: { decision: 'approved', reason: '遅い承認' } });
+    assert.equal(after.status, 409);
+  } finally {
+    await pool.query(`UPDATE skill_versions SET approval_gate = NULL WHERE skill_id = 'technology-catalog-search'`);
+  }
+});
+
 test('採番: 草案を削除した後も artifact_code / run_code が既存と衝突しない（MAX+1 方式）', async () => {
   const { nextArtifactCode, nextRunCode, nextKcCode, nextApprovalCode, nextTaskCode } = await import('../src/lib/codes.js');
   const { rows: before } = await pool.query(`SELECT artifact_code FROM artifacts ORDER BY id`);
@@ -681,7 +738,7 @@ test('承認拘束（C-13）: approval_gate のある Step で waiting_approval 
     assert.equal((await claimAndExecute(runId3)).run.status, 'waiting_approval');
     const d3 = await call(`/api/agent-runs/${runId3}`, { cookie: adminCookie });
     const apr3 = await call(`/api/approvals/${d3.data.approval.id}`, { cookie: approverCookie });
-    await call(`/api/approvals/${d3.data.approval.id}/steps/${apr3.data.steps[0].id}/decide`, { method: 'POST', cookie: approverCookie, body: { decision: 'approved' } });
+    await call(`/api/approvals/${d3.data.approval.id}/steps/${apr3.data.steps[0].id}/decide`, { method: 'POST', cookie: approverCookie, body: { decision: 'approved', reason: '再申請を確認' } });
     await pool.query(`UPDATE agent_runs SET input_json = '{"query":"CPG 改ざん"}' WHERE id = $1`, [runId3]);
     const s3 = await claimAndExecute(runId3);
     assert.equal(s3.run.status, 'waiting_approval', '入力が変わると承認は無効で再申請');

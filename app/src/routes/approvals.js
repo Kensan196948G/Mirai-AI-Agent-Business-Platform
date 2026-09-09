@@ -5,6 +5,7 @@ import { recordAudit } from '../lib/audit.js';
 import { nextApprovalCode } from '../lib/codes.js';
 import * as jobStore from '../agent-runtime/job-store.js';
 import { runtimeStatus } from '../integrations/connectors.js';
+import { approvalDeadlineHours, expirePendingApprovals } from '../agent-runtime/run-approvals.js';
 
 const router = express.Router();
 
@@ -12,7 +13,7 @@ const router = express.Router();
  * Agent Run の Step 承認（type=agent_run_step）が確定したら Run を再開（queued）または中断する。
  * 再開時の再検証（Skill 版・入力の一致）は Worker 側の ensureStepApproval が行う。
  */
-async function syncRunOnDecision(client, approval, decision, actor) {
+async function syncRunOnDecision(client, approval, decision, actor, reason = '') {
   if (approval.type !== 'agent_run_step' || !approval.agent_run_id) return;
   const { rows } = await client.query(`SELECT id, run_code, status FROM agent_runs WHERE id = $1 FOR UPDATE`, [approval.agent_run_id]);
   const run = rows[0];
@@ -20,14 +21,18 @@ async function syncRunOnDecision(client, approval, decision, actor) {
   if (decision === 'approved') {
     await jobStore.resumeRun(client, run.id);
     await jobStore.appendEvent(client, run.id, { type: 'resumed', status: 'ok', detail: { by: 'approval', approval_id: Number(approval.id) } });
+  } else if (decision === 'returned') {
+    // 差戻し（J-008）: 却下ではなく「入力・前提を修正して再申請」を求める。Run は再開できないため failed（理由付き）で終端し、再実行で新しい申請を作る
+    await jobStore.appendEvent(client, run.id, { type: 'returned', status: 'returned', detail: { by: 'approval_returned', approval_id: Number(approval.id), reason: reason || '' } });
+    await jobStore.finishRun(client, run.id, { status: 'failed', errorMessage: `承認者による差戻し（approval ${approval.id}）: ${reason || ''}。入力・前提を修正して再実行（再申請）してください` });
   } else {
-    await jobStore.appendEvent(client, run.id, { type: 'cancelled', status: 'cancelled', detail: { by: 'approval_rejected', approval_id: Number(approval.id) } });
-    await jobStore.finishRun(client, run.id, { status: 'cancelled', errorMessage: `承認却下により中断（approval ${approval.id}）` });
+    await jobStore.appendEvent(client, run.id, { type: 'cancelled', status: 'cancelled', detail: { by: 'approval_rejected', approval_id: Number(approval.id), reason: reason || '' } });
+    await jobStore.finishRun(client, run.id, { status: 'cancelled', errorMessage: `承認却下により中断（approval ${approval.id}）: ${reason || ''}` });
   }
   await recordAudit(client, {
     actorId: actor.id, actorType: 'user', actorName: actor.name,
-    action: decision === 'approved' ? 'agent_run.resume' : 'agent_run.cancelled', resourceType: 'agent_run', resourceId: run.id,
-    detail: { runCode: run.run_code, via: 'approval', approvalId: Number(approval.id) },
+    action: decision === 'approved' ? 'agent_run.resume' : decision === 'returned' ? 'agent_run.returned' : 'agent_run.cancelled', resourceType: 'agent_run', resourceId: run.id,
+    detail: { runCode: run.run_code, via: 'approval', approvalId: Number(approval.id), reason: reason || null },
   });
 }
 
@@ -42,10 +47,10 @@ const STEP_PLANS = {
 export async function createApprovalWithSteps(client, { projectId, requestedBy, type, risk, target, targetStatus }) {
   const approvalCode = await nextApprovalCode(client);
   const { rows: aprRows } = await client.query(
-    `INSERT INTO approval_requests (approval_code, project_id, requested_by, type, risk, target, target_status)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
-     RETURNING id, approval_code, type, risk, target, status, target_status, created_at`,
-    [approvalCode, projectId, requestedBy, type, risk, target, targetStatus ?? null],
+    `INSERT INTO approval_requests (approval_code, project_id, requested_by, type, risk, target, target_status, expires_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, now() + make_interval(hours => $8))
+     RETURNING id, approval_code, type, risk, target, status, target_status, created_at, expires_at`,
+    [approvalCode, projectId, requestedBy, type, risk, target, targetStatus ?? null, approvalDeadlineHours()],
   );
   const approval = aprRows[0];
   const roles = STEP_PLANS[type] || ['Approver'];
@@ -61,8 +66,10 @@ export async function createApprovalWithSteps(client, { projectId, requestedBy, 
 // 一覧は全件返す（pending/approved/rejected）。ダッシュボードの「承認待ち」表示は
 // フロント側で status='pending' のものだけを絞り込む（他の一覧APIと同じ設計に揃える）。
 router.get('/', requireAuth, async (_req, res) => {
+  // J-007: 一覧のたびに期限切れを反映する（Worker のポーリングでも行うが、API 側でも遅延なく見せる）
+  await withTransaction((client) => expirePendingApprovals(client)).catch(() => {});
   const { rows } = await getPool().query(
-    `SELECT ar.id, ar.approval_code, ar.type, ar.risk, ar.target, ar.status, ar.created_at, ar.decided_at, ar.target_status,
+    `SELECT ar.id, ar.approval_code, ar.type, ar.risk, ar.target, ar.status, ar.created_at, ar.decided_at, ar.target_status, ar.expires_at, ar.expired_at,
             ar.external_ref, ar.external_ref_status,
             p.id AS project_id, p.project_code, p.title, u.name AS requested_by_name
      , ar.agent_run_id, r.run_code
@@ -115,14 +122,15 @@ router.post('/:id/steps/:stepId/decide', requireAuth, async (req, res) => {
   const stepId = Number(req.params.stepId);
   const { decision, reason } = req.body || {};
   if (!Number.isInteger(approvalId) || !Number.isInteger(stepId)) return res.status(400).json({ error: '不正な id' });
-  if (!['approved', 'rejected'].includes(decision)) {
-    return res.status(400).json({ error: 'decision は approved / rejected のいずれか' });
+  if (!['approved', 'rejected', 'returned'].includes(decision)) {
+    return res.status(400).json({ error: 'decision は approved / rejected / returned（差戻し）のいずれか' });
   }
+  const reasonText = typeof reason === 'string' ? reason.trim() : '';
 
   try {
     const result = await withTransaction(async (client) => {
       const { rows: aprRows } = await client.query(
-        `SELECT id, project_id, status, target_status, requested_by, type, agent_run_id FROM approval_requests WHERE id = $1 FOR UPDATE`,
+        `SELECT id, project_id, status, target_status, requested_by, type, agent_run_id, expires_at FROM approval_requests WHERE id = $1 FOR UPDATE`,
         [approvalId],
       );
       if (aprRows.length === 0) throw Object.assign(new Error('approval が見つかりません'), { status: 404 });
@@ -151,34 +159,41 @@ router.post('/:id/steps/:stepId/decide', requireAuth, async (req, res) => {
       if (req.user.role !== step.role && req.user.role !== 'Administrator') {
         throw Object.assign(new Error(`このstepの権限がありません（必要ロール: ${step.role}）`), { status: 403 });
       }
+      // J-009 / J-010: 判定には理由（Evidence）が必須。期限切れの申請は判定できない
+      if (aprRows[0].expires_at && new Date(aprRows[0].expires_at) < new Date()) {
+        throw Object.assign(new Error('この申請は期限切れです（一覧で expired に更新されます）。再申請が必要です'), { status: 409 });
+      }
+      if (reasonText.length < 2) {
+        throw Object.assign(new Error('判定には理由（reason、2 文字以上）が必須です。確認した根拠・判断理由を記録してください'), { status: 422 });
+      }
 
       await client.query(
         `UPDATE approval_steps SET status = $1, decided_at = now(), reason = $2, assigned_user_id = $3 WHERE id = $4`,
-        [decision, reason || null, req.user.id, stepId],
+        [decision, reasonText, req.user.id, stepId],
       );
 
-      if (decision === 'rejected') {
-        await client.query(`UPDATE approval_requests SET status = 'rejected', decided_by = $1, decided_at = now() WHERE id = $2`, [req.user.id, approvalId]);
-        await syncRunOnDecision(client, aprRows[0], 'rejected', req.user);
+      if (decision === 'rejected' || decision === 'returned') {
+        await client.query(`UPDATE approval_requests SET status = $3, decided_by = $1, decided_at = now(), comment = $4 WHERE id = $2`, [req.user.id, approvalId, decision, reasonText]);
+        await syncRunOnDecision(client, aprRows[0], decision, req.user, reasonText);
         await recordAudit(client, {
           actorId: req.user.id, actorType: 'user', actorName: req.user.name,
-          action: 'approval.rejected', resourceType: 'approval', resourceId: approvalId, detail: { step: step.role, reason },
+          action: decision === 'rejected' ? 'approval.rejected' : 'approval.returned', resourceType: 'approval', resourceId: approvalId, detail: { step: step.role, reason: reasonText },
         });
-        return { approval_id: approvalId, status: 'rejected' };
+        return { approval_id: approvalId, status: decision };
       }
 
       const remaining = steps.slice(stepIdx + 1);
       if (remaining.length === 0) {
         // 最終stepの承認 → approval確定 + Projectへ反映
-        await client.query(`UPDATE approval_requests SET status = 'approved', decided_by = $1, decided_at = now() WHERE id = $2`, [req.user.id, approvalId]);
+        await client.query(`UPDATE approval_requests SET status = 'approved', decided_by = $1, decided_at = now(), comment = $3 WHERE id = $2`, [req.user.id, approvalId, reasonText]);
         if (aprRows[0].target_status && aprRows[0].project_id) {
           await client.query(`UPDATE projects SET status = $1 WHERE id = $2`, [aprRows[0].target_status, aprRows[0].project_id]);
         }
-        await syncRunOnDecision(client, aprRows[0], 'approved', req.user);
+        await syncRunOnDecision(client, aprRows[0], 'approved', req.user, reasonText);
         await recordAudit(client, {
           actorId: req.user.id, actorType: 'user', actorName: req.user.name,
           action: 'approval.approved', resourceType: 'approval', resourceId: approvalId,
-          detail: { step: step.role, target_status: aprRows[0].target_status },
+          detail: { step: step.role, target_status: aprRows[0].target_status, reason: reasonText },
         });
         return { approval_id: approvalId, status: 'approved', project_status: aprRows[0].target_status };
       }
@@ -186,7 +201,7 @@ router.post('/:id/steps/:stepId/decide', requireAuth, async (req, res) => {
       await recordAudit(client, {
         actorId: req.user.id, actorType: 'user', actorName: req.user.name,
         action: 'approval.step_approved', resourceType: 'approval', resourceId: approvalId,
-        detail: { step: step.role, next_step: remaining[0].role },
+        detail: { step: step.role, next_step: remaining[0].role, reason: reasonText },
       });
       return { approval_id: approvalId, status: 'in_review', next_step: remaining[0].role };
     });

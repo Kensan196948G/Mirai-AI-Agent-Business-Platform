@@ -209,13 +209,13 @@ test('多段階承認: production_release は Reviewer→Approver の2段', asyn
 
   const reviewerCookie = await loginAs('e2e-reviewer@example.com', 'reviewer-password'); // doc003-allow: 使い捨てテストDB専用の固定値
   const reviewed = await call(`/api/approvals/${approvalId}/steps/${reviewerStep.id}/decide`, {
-    method: 'POST', cookie: reviewerCookie, body: { decision: 'approved' },
+    method: 'POST', cookie: reviewerCookie, body: { decision: 'approved', reason: 'Reviewer 確認済み' },
   });
   assert.equal(reviewed.status, 200);
   assert.equal(reviewed.data.status, 'in_review');
 
   const finalDecision = await call(`/api/approvals/${approvalId}/steps/${approverStep.id}/decide`, {
-    method: 'POST', cookie: approverCookie, body: { decision: 'approved' },
+    method: 'POST', cookie: approverCookie, body: { decision: 'approved', reason: 'Approver 承認' },
   });
   assert.equal(finalDecision.status, 200);
   assert.equal(finalDecision.data.status, 'approved');
