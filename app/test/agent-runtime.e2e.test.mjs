@@ -35,7 +35,7 @@ if (!process.env.DATABASE_URL || !process.env.SESSION_SECRET) {
 assertTestDatabaseUrl(process.env.DATABASE_URL); // F-34: DB 名・ロールの許可リスト
 
 const ALL_TABLES = [
-  'artifact_checks', 'skill_evaluations', 'artifact_revisions', 'worker_heartbeats', 'artifact_citations', 'artifacts', 'effect_ledger', 'budget_reservations', 'run_events', 'agent_runs',
+  'orchestration_steps', 'orchestrations', 'artifact_checks', 'skill_evaluations', 'artifact_revisions', 'worker_heartbeats', 'artifact_citations', 'artifacts', 'effect_ledger', 'budget_reservations', 'run_events', 'agent_runs',
   'source_records', 'agent_skill_bindings', 'skill_versions', 'agent_versions',
   'chat_messages', 'chat_conversations', 'task_tool_calls', 'tasks', 'knowledge_candidates',
   'approval_steps', 'approval_requests', 'project_kpis', 'projects', 'requests',
@@ -1175,4 +1175,53 @@ test('AI相談の IDEA 構造化: LLM 未設定でもルールベースで関係
   const ts = cat.data.agents.find((a) => a.agent_id === 'technology-selection');
   assert.equal(ts.runnable, true, '承認済み P1 は runnable');
   assert.ok(cat.data.agents.filter((a) => a.stage !== 'P1').every((a) => a.runnable === false));
+});
+
+test('司令塔（CTO Orchestrator）: 要求から計画を作り、複数 Agent Run を実行して統合草案を作る。候補は却下、失敗は部分完了、Viewer は不可', async () => {
+  const { advanceOrchestration } = await import('../src/agent-runtime/orchestrator.js');
+  // Viewer は依頼できない
+  const viewerCookie = await loginAs('e2e-viewer-agent@example.com', 'viewer-password'); // doc003-allow: 使い捨てテストDB専用の固定値
+  assert.equal((await call('/api/orchestrations', { method: 'POST', cookie: viewerCookie, body: { request: 'x' } })).status, 403);
+  assert.equal((await call('/api/orchestrations', { method: 'POST', cookie: adminCookie, body: { request: '' } })).status, 400);
+  // 合う Agent が無い要求 → blocked（勝手に別経路へ迂回しない）
+  const blocked = await call('/api/orchestrations', { method: 'POST', cookie: adminCookie, body: { request: '過去のヘルプデスク状況を参照したい' } });
+  assert.equal(blocked.status, 201);
+  assert.equal(blocked.data.orchestration.status, 'blocked');
+  // 2 つの P1 Agent に分解される要求（LLM 未設定 → ルールベース計画）
+  const created = await call('/api/orchestrations', { method: 'POST', cookie: adminCookie, body: { request: '港湾のケーソン据付工事の実績を提案に使いたい。地盤改良の工法も比較したい' } });
+  assert.equal(created.status, 201);
+  const orch = created.data.orchestration;
+  assert.equal(orch.plan_source, 'scripted');
+  assert.ok(['planned', 'running'].includes(orch.status));
+  const d1 = await call(`/api/orchestrations/${orch.id}`, { cookie: adminCookie });
+  assert.equal(d1.status, 200);
+  assert.ok(d1.data.steps.length >= 1);
+  assert.ok(d1.data.steps.every((s) => s.reason && s.run_code), '各 Step に理由と Run が付く');
+  assert.ok(d1.data.orchestration.plan_json.rejected.some((r) => /候補/.test(r.reason)), '候補 Agent は却下理由を残す');
+  const { rows: runs } = await pool.query(`SELECT id, orchestration_id, orchestration_step_id, status FROM agent_runs WHERE orchestration_id = $1 ORDER BY id`, [orch.id]);
+  assert.equal(runs.length, d1.data.steps.length);
+  assert.ok(runs.every((r) => r.orchestration_step_id));
+  // Worker 相当で Run を進める（決定的 Step は完走し、LLM Step で明示的に失敗する）→ 全 Run 終了 → 部分完了 or 失敗
+  for (const r of runs) { let step; for (let i = 0; i < 6; i++) { step = await claimAndExecute(r.id); if (step.done) break; } }
+  const final = await withTransaction((client) => advanceOrchestration(client, orch.id));
+  assert.ok(['partial', 'failed', 'completed'].includes(final.status), final.status);
+  const d2 = await call(`/api/orchestrations/${orch.id}`, { cookie: adminCookie });
+  assert.ok(d2.data.steps.every((s) => ['completed', 'failed', 'skipped', 'cancelled', 'blocked'].includes(s.status)));
+  assert.ok(d2.data.final_artifact || d2.data.orchestration.error_message, '統合草案か、作れなかった理由が残る');
+  if (d2.data.final_artifact) {
+    assert.equal(d2.data.final_artifact.content.requires_human_review, true);
+    assert.ok(d2.data.final_artifact.content.unknowns.some((u) => /結果なし|不明|不足/.test(u)) || d2.data.final_artifact.content.findings.length >= 0);
+  }
+  const { rows: audit } = await pool.query(`SELECT action FROM audit_log WHERE action IN ('orchestration.create','orchestration.finish') AND resource_id = $1 ORDER BY id`, [String(orch.id)]);
+  assert.deepEqual(audit.map((a) => a.action), ['orchestration.create', 'orchestration.finish']);
+  // 中断: 新しい依頼を作って中断 → cancelled、配下の Run にも伝播
+  // 先行テストで project-case-research は draft に戻されているため、承認済みの technology-selection に合う要求を使う
+  const c2 = await call('/api/orchestrations', { method: 'POST', cookie: adminCookie, body: { request: '軟弱地盤の液状化対策の工法を比較したい' } });
+  assert.equal(c2.data.orchestration.status !== 'blocked', true, JSON.stringify(c2.data.orchestration.plan_json));
+  const cancel = await call(`/api/orchestrations/${c2.data.orchestration.id}/cancel`, { method: 'POST', cookie: adminCookie });
+  assert.equal(cancel.status, 200);
+  const { rows: cRuns } = await pool.query(`SELECT cancel_requested FROM agent_runs WHERE orchestration_id = $1`, [c2.data.orchestration.id]);
+  assert.ok(cRuns.length >= 1 && cRuns.every((r) => r.cancel_requested));
+  assert.equal((await call(`/api/orchestrations/${c2.data.orchestration.id}/cancel`, { method: 'POST', cookie: viewerCookie })).status, 403);
+  await pool.query(`UPDATE agent_runs SET status = 'cancelled', finished_at = now() WHERE status IN ('queued','running') AND orchestration_id IS NOT NULL`);
 });
