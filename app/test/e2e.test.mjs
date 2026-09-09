@@ -360,6 +360,33 @@ test('ユーザーCRUD: 作成・PWリセット・無効化でログイン不可
   const deleted = await call(`/api/users/${newbieId}`, { method: 'DELETE', cookie });
   assert.equal(deleted.status, 200);
   assert.equal(deleted.data.user.active, false);
+
+  // 回帰確認: PATCH/DELETE は未指定フィールドを明示的な undefined として Audit の detail に含めるため、
+  // DB へ保存 → 読み戻した後に hash を再計算しても Hash Chain が壊れないことを確認する（audit.js の canonicalize）。
+  const verifyAfterUserOps = await call('/api/audit/verify', { cookie });
+  assert.equal(verifyAfterUserOps.status, 200);
+  assert.equal(verifyAfterUserOps.data.ok, true, JSON.stringify(verifyAfterUserOps.data.breaks));
+  assert.deepEqual(verifyAfterUserOps.data.breaks, []);
+});
+
+test('案件情報の部分更新（PATCH /api/projects/:id）は未指定フィールドが監査ログの Hash Chain を壊さない', async () => {
+  const adminId = await createUser('e2e-admin6@example.com', 'E2E Admin6', 'Administrator', 'admin-password6'); // doc003-allow: 使い捨てテストDB専用の固定値
+  const cookie = await loginAs('e2e-admin6@example.com', 'admin-password6'); // doc003-allow: 使い捨てテストDB専用の固定値
+  const { rows } = await pool.query(
+    `INSERT INTO projects (project_code, title, description, request_id, created_by, owner_id)
+     VALUES ('AGENTOS-9999-0003', 'テスト案件3（部分更新）', 'x', (SELECT id FROM requests LIMIT 1), $1, $1) RETURNING id`,
+    [adminId],
+  );
+  const projectId = rows[0].id;
+
+  // risk だけを指定する部分更新（ownerId/repo/notionRef/slackRef は未指定＝route内では undefined になる）
+  const patched = await call(`/api/projects/${projectId}`, { method: 'PATCH', cookie, body: { risk: 'R3' } });
+  assert.equal(patched.status, 200, JSON.stringify(patched.data));
+
+  const verify = await call('/api/audit/verify', { cookie });
+  assert.equal(verify.status, 200);
+  assert.equal(verify.data.ok, true, JSON.stringify(verify.data.breaks));
+  assert.deepEqual(verify.data.breaks, []);
 });
 
 test('Dashboard 集約エンドポイント', async () => {

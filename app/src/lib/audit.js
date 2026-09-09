@@ -26,9 +26,18 @@ export function hash(str) {
 function stableStringify(value) {
   // Date 等（toJSON を持つ値）は JSON.stringify と同じ表現（ISO 文字列）にする。素のキー走査だと {} になり、DB 往復後の hash が再現できない
   if (value !== null && typeof value === 'object' && !Array.isArray(value) && typeof value.toJSON === 'function') return stableStringify(value.toJSON());
-  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
+  // undefined / function / symbol は JSON.stringify と同じ扱いにする: 配列要素なら null、object のキーなら省略。
+  // detail オブジェクトはルート側で `{ role, dept, name, email, active }` のように未指定フィールドを
+  // 明示的な undefined 値として渡すことが多く、PostgreSQL の JSONB へ保存する時点（pg ドライバの
+  // JSON.stringify 相当）ではそのキー自体が失われる。ここで先に同じ規則を適用しないと、
+  // INSERT 時の hash と DB 往復後に再計算した hash が一致せず、Hash Chain の検証が壊れる。
+  if (value === undefined || typeof value === 'function' || typeof value === 'symbol') return undefined;
+  if (Array.isArray(value)) return `[${value.map((v) => stableStringify(v) ?? 'null').join(',')}]`;
   if (value !== null && typeof value === 'object') {
-    const keys = Object.keys(value).sort();
+    const keys = Object.keys(value).filter((k) => {
+      const v = value[k];
+      return v !== undefined && typeof v !== 'function' && typeof v !== 'symbol';
+    }).sort();
     return `{${keys.map((k) => `${JSON.stringify(k)}:${stableStringify(value[k])}`).join(',')}}`;
   }
   return JSON.stringify(value);
