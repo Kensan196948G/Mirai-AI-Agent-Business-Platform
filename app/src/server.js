@@ -1,5 +1,7 @@
 import express from 'express';
 import { PORT, PUBLIC_DIR } from './lib/config.js';
+import { getPool } from './lib/db.js';
+import { collectHealth, evaluateHealth } from './lib/health.js';
 
 import authRoutes from './routes/auth.js';
 import requestRoutes from './routes/requests.js';
@@ -22,7 +24,17 @@ app.disable('x-powered-by');
 app.use(express.json({ limit: '64kb' }));
 app.use(express.static(PUBLIC_DIR));
 
-app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
+// status は API プロセス自身の生存（従来どおり常に ok）。worker/queue/runs は Agent Runtime の稼働状況で、
+// 問題があれば degraded に理由を列挙する（API 自体は 200 を返す。監視は degraded を見る）。
+app.get('/api/health', async (_req, res) => {
+  try {
+    const h = await collectHealth(getPool());
+    const degraded = evaluateHealth(h);
+    res.json({ status: 'ok', ...h, degraded });
+  } catch (err) {
+    res.json({ status: 'ok', worker: null, queue: null, runs: null, degraded: [`health集計エラー: ${err.message}`] });
+  }
+});
 
 app.use('/api/auth', authRoutes);
 app.use('/api/requests', requestRoutes);

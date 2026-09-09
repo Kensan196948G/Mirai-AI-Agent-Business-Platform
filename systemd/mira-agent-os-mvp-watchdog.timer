@@ -1,0 +1,9 @@
+# /etc/systemd/system/mira-agent-os-mvp-watchdog.timer — 5 分ごとに稼働監視を実行
+[Unit]
+Description=Run mira-agent-os-mvp-watchdog every 5 minutes
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+Unit=mira-agent-os-mvp-watchdog.service
+[Install]
+WantedBy=timers.target
