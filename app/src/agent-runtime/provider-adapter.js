@@ -20,8 +20,8 @@ const STRUCTURED_SYSTEM_PROMPT =
   'あなたは建設・土木の業務Agentの構造化出力エンジンです。与えられた入力と JSON Schema に基づき、' +
   'Schema に厳密に適合する JSON オブジェクトのみを出力してください。根拠のない断定はせず、不明な点は unknowns に列挙します。';
 
-export function isConfigured() {
-  return llm.isConfigured();
+export function isConfigured(provider) {
+  return llm.isConfigured(provider);
 }
 
 /**
@@ -30,10 +30,13 @@ export function isConfigured() {
  * 戻り値: { data, tokensIn, tokensOut, cost, degraded }
  *   degraded=true の場合、LLM出力の検証に失敗し fallbackData を使ったことを示す。
  */
-export async function structuredComplete({ instructions, input, schema, fallbackData, maxAttempts = 2 }) {
-  if (!isConfigured()) {
+export async function structuredComplete({ instructions, input, schema, fallbackData, maxAttempts = 2, routing = null }) {
+  // routing: { provider, model }（Model Router の解決結果）。省略時は既定 Provider
+  const provider = routing?.provider || llm.defaultProvider();
+  if (!provider || !isConfigured(provider)) {
     throw new ProviderNotConfiguredError('LLM_PROVIDER/LLM_API_KEY が未設定のため実行できません');
   }
+  const model = routing?.model || llm.modelFor(provider);
   const validate = ajv.compile(schema);
   const prepared = prepareUntrustedInput(input);
   const basePrompt = buildPrompt({ instructions, input: prepared.input, schema });
@@ -54,7 +57,7 @@ export async function structuredComplete({ instructions, input, schema, fallback
 
     let completion;
     try {
-      completion = await llm.complete(messages, { maxTokens: llm.structuredMaxTokens(), jsonMode: true, systemPrompt: STRUCTURED_SYSTEM_PROMPT });
+      completion = await llm.complete(messages, { provider, model, maxTokens: llm.structuredMaxTokens(), jsonMode: true, systemPrompt: STRUCTURED_SYSTEM_PROMPT });
     } catch (err) {
       lastError = { message: err.message, rawText: '' };
       continue;
@@ -80,7 +83,7 @@ export async function structuredComplete({ instructions, input, schema, fallback
       lastError = { message: ajv.errorsText(validate.errors), rawText: completion.text };
       continue;
     }
-    return { data: parsed, tokensIn: totalTokensIn, tokensOut: totalTokensOut, cost: totalCost, degraded: false, injectionSignals: prepared.signals };
+    return { data: parsed, tokensIn: totalTokensIn, tokensOut: totalTokensOut, cost: totalCost, degraded: false, injectionSignals: prepared.signals, provider, model, attempts: attempt };
   }
 
   // maxAttempts回失敗 → 「根拠なし・要人手確認」の安全な既定値へ縮退する（偽の成功ではなく明示的な保留）。
@@ -88,7 +91,7 @@ export async function structuredComplete({ instructions, input, schema, fallback
   return {
     data: fallbackData, tokensIn: totalTokensIn, tokensOut: totalTokensOut, cost: totalCost, degraded: true,
     degradedReason: lastError ? lastError.message : '不明', rawHead: (lastError && lastError.rawText ? lastError.rawText : '').slice(0, 300), attempts: maxAttempts,
-    injectionSignals: prepared.signals,
+    injectionSignals: prepared.signals, provider, model,
   };
 }
 

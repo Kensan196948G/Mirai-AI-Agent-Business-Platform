@@ -32,9 +32,17 @@ test('isConfigured: deepseek + API_KEY があれば true', async () => {
   assert.equal(llm.isConfigured(), true);
 });
 
-test('isConfigured: provider が deepseek 以外なら false', async () => {
-  const llm = await loadLlm({ LLM_PROVIDER: 'openai', LLM_API_KEY: 'sk-test' });
-  assert.equal(llm.isConfigured(), false);
+test('isConfigured: 未対応 provider は false、openai / anthropic は API キーがあれば true。追加 Provider は個別の環境変数で有効化', async () => {
+  const bad = await loadLlm({ LLM_PROVIDER: 'foo', LLM_API_KEY: 'sk-test' });
+  assert.equal(bad.isConfigured(), false);
+  const oa = await loadLlm({ LLM_PROVIDER: 'openai', LLM_API_KEY: 'sk-test' });
+  assert.equal(oa.isConfigured(), true);
+  const multi = await loadLlm({ LLM_PROVIDER: 'deepseek', LLM_API_KEY: 'sk-test', LLM_ANTHROPIC_API_KEY: 'ak-test', LLM_OPENAI_API_KEY: '' });
+  assert.deepEqual(multi.configuredProviders(), ['deepseek', 'anthropic']);
+  assert.equal(multi.isConfigured('anthropic'), true);
+  assert.equal(multi.isConfigured('openai'), false);
+  assert.deepEqual(multi.providerInfo().map((p) => [p.provider, p.configured, p.is_default]), [['deepseek', true, true], ['openai', false, false], ['anthropic', true, false]]);
+  assert.ok(!JSON.stringify(multi.providerInfo()).includes('sk-test'), 'providerInfo に秘密を含めない');
 });
 
 test('estimateCost: 既定単価でトークン数からコストを概算する', async () => {
@@ -92,4 +100,36 @@ test('complete: 構造化出力向けオプション（maxTokens / jsonMode / sy
   } finally {
     globalThis.fetch = savedFetch;
   }
+});
+
+test('complete: Provider ごとに API 形式が異なる（OpenAI 互換は chat/completions、Anthropic は messages）', async () => {
+  const llm = await loadLlm({ LLM_PROVIDER: 'deepseek', LLM_API_KEY: 'sk-ds', LLM_ANTHROPIC_API_KEY: 'ak-an', LLM_OPENAI_API_KEY: 'sk-oa', LLM_ANTHROPIC_PRICE_INPUT_PER_1M: '3', LLM_ANTHROPIC_PRICE_OUTPUT_PER_1M: '15' });
+  const calls = [];
+  const savedFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    const body = JSON.parse(init.body); calls.push({ url, headers: init.headers, body });
+    if (url.includes('anthropic')) return { ok: true, json: async () => ({ content: [{ type: 'text', text: '{"a":1}' }], usage: { input_tokens: 1000000, output_tokens: 100000 }, stop_reason: 'max_tokens' }) };
+    return { ok: true, json: async () => ({ choices: [{ message: { content: 'ok' }, finish_reason: 'stop' }], usage: { prompt_tokens: 10, completion_tokens: 5 } }) };
+  };
+  try {
+    const an = await llm.complete([{ role: 'user', content: 'JSON で' }], { provider: 'anthropic', model: 'claude-test', jsonMode: true, systemPrompt: 'SYS', maxTokens: 123 });
+    assert.ok(calls[0].url.includes('api.anthropic.com/v1/messages'));
+    assert.equal(calls[0].headers['x-api-key'], 'ak-an');
+    assert.equal(calls[0].headers['anthropic-version'], '2023-06-01');
+    assert.equal(calls[0].body.system, 'SYS');
+    assert.equal(calls[0].body.max_tokens, 123);
+    assert.equal(calls[0].body.response_format, undefined, 'Anthropic に response_format は送らない');
+    assert.deepEqual(calls[0].body.messages, [{ role: 'user', content: 'JSON で' }]);
+    assert.equal(an.provider, 'anthropic'); assert.equal(an.model, 'claude-test'); assert.equal(an.finishReason, 'length');
+    assert.equal(an.cost, 3 + 1.5, 'Provider ごとの単価で概算');
+    const oa = await llm.complete([{ role: 'user', content: 'hi' }], { provider: 'openai' });
+    assert.ok(calls[1].url.includes('api.openai.com'));
+    assert.equal(calls[1].headers.Authorization, 'Bearer sk-oa');
+    assert.equal(calls[1].body.model, 'gpt-4o-mini');
+    assert.equal(oa.provider, 'openai');
+    const ds = await llm.complete([{ role: 'user', content: 'hi' }]);
+    assert.ok(calls[2].url.includes('api.deepseek.com'));
+    assert.equal(ds.provider, 'deepseek');
+    await assert.rejects(llm.complete([{ role: 'user', content: 'x' }], { provider: 'foo' }), /未対応/);
+  } finally { globalThis.fetch = savedFetch; }
 });

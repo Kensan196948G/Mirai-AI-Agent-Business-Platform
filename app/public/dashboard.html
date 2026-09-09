@@ -344,7 +344,7 @@ input::placeholder,textarea::placeholder{color:var(--muted)}
             <tbody><sc-for list="{{ agentRows }}" as="a" hint-placeholder-count="7"><tr style-hover="background:var(--hover)"><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);font-weight:600;white-space:nowrap">{{ a.name }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);color:var(--ink-2)">{{ a.duty }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);font-family:var(--mono);font-size:11.5px;color:var(--ink-2)">{{ a.skills }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2)"><select value="{{ a.model }}" onChange="{{ a.setModel }}" style="width:auto;padding:5px 26px 5px 8px;font-size:12px"><sc-for list="{{ models }}" as="m" hint-placeholder-count="6"><option value="{{ m }}">{{ m }}</option></sc-for></select></td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2)"><button onClick="{{ a.toggle }}" title="有効 / 無効" style="width:38px;height:22px;border-radius:11px;border:none;cursor:pointer;background:{{ a.togBg }};position:relative;padding:0"><span style="position:absolute;top:3px;left:{{ a.knob }};width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 2px rgba(0,0,0,.25)"></span></button></td></tr></sc-for></tbody></table>
           </section>
           <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden;grid-column:1 / -1"><div style="padding:15px 18px;border-bottom:1px solid var(--line-2)"><div style="font-size:14px;font-weight:600">Model Router ルール</div><div style="font-size:11.5px;color:var(--muted)">Capability / Cost / Latency / Independence / Data Policy</div></div>
-            <div style="padding:8px 0"><sc-for list="{{ routerRows }}" as="r" hint-placeholder-count="5"><div style="display:flex;align-items:center;gap:12px;padding:9px 18px"><span style="flex:1;font-size:12.5px;font-weight:500">{{ r.cat }}</span><span style="color:var(--muted)">→</span><select value="{{ r.model }}" onChange="{{ r.set }}" style="width:180px;padding:6px 26px 6px 9px;font-size:12px"><sc-for list="{{ models }}" as="m" hint-placeholder-count="6"><option value="{{ m }}">{{ m }}</option></sc-for></select></div></sc-for></div>
+            <div style="padding:8px 0"><sc-for list="{{ routerRows }}" as="r" hint-placeholder-count="5"><div style="display:flex;align-items:center;gap:12px;padding:9px 18px"><span style="flex:1;font-size:12.5px;font-weight:500">{{ r.cat }}<span style="display:block;font-size:11px;font-family:var(--mono);color:{{ r.noteFg }}">{{ r.note }}</span></span><span style="color:var(--muted)">→</span><select value="{{ r.model }}" onChange="{{ r.set }}" style="width:180px;padding:6px 26px 6px 9px;font-size:12px"><sc-for list="{{ models }}" as="m" hint-placeholder-count="6"><option value="{{ m }}">{{ m }}</option></sc-for></select></div></sc-for></div>
             <div style="padding:12px 18px;border-top:1px solid var(--line-2);font-size:12px;color:{{ routerWarnColor }}">{{ routerWarn }}</div>
           </section>
           <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:auto;grid-column:1 / -1"><div style="padding:15px 18px;border-bottom:1px solid var(--line-2)"><div style="font-size:14px;font-weight:600">Skill Registry</div><div style="font-size:11.5px;color:var(--muted)">status: draft → approved → deprecated · risk_ceiling</div></div>
@@ -975,7 +975,7 @@ class Component extends DCLogic {
     const llmPct = llm.monthlyCap > 0 ? Math.min(100, (llm.monthlySpent / llm.monthlyCap) * 100) : 0;
     const llmBudget = {
       configured: llm.configured,
-      statusLabel: llm.configured ? 'DeepSeek 接続中' : '未接続（ルールベース応答のみ）',
+      statusLabel: llm.configured ? `接続中: ${(llm.providers || [llm.defaultProvider || 'deepseek']).join(', ')}（既定 ${llm.defaultProvider || 'deepseek'}）` : '未接続（ルールベース応答のみ）',
       spentFmt: this.fmtCost(llm.monthlySpent), capFmt: this.fmtCost(llm.monthlyCap),
       pct: llmPct, color: llmPct >= 90 ? 'var(--red)' : llmPct >= 70 ? 'var(--amber)' : 'var(--green)',
     };
@@ -1177,7 +1177,7 @@ class Component extends DCLogic {
       setModel: () => this.toast('モデル変更UIは現バージョンでは未対応です', 'amber'),
     }));
     const routerRows = s.router.map((r) => ({
-      cat: r.cat, model: r.model,
+      cat: r.cat, model: r.model, note: r.note, noteFg: r.noteFg,
       set: (e) => {
         const v = e.target.value;
         if (!canA) return this.deny('agents', 'Model Router変更');
@@ -1245,7 +1245,7 @@ class Component extends DCLogic {
       at: r.created_at ? fmtDate(r.created_at) : '', open: () => this.arOpenRun(r.id), rowBg: ar.selRun === r.id ? 'var(--subtle)' : 'transparent',
     }, runSt(r.status)));
     const d = ar.detail;
-    const EV_TONE = { step_started: 'blue', step_completed: 'green', tool_call: 'purple', error: 'red', cancelled: 'muted', waiting_approval: 'amber', paused: 'amber', resumed: 'blue', approval_verified: 'green', llm_degraded: 'amber' };
+    const EV_TONE = { step_started: 'blue', step_completed: 'green', tool_call: 'purple', error: 'red', cancelled: 'muted', waiting_approval: 'amber', paused: 'amber', resumed: 'blue', approval_verified: 'green', llm_degraded: 'amber', llm_call: 'purple', injection_suspected: 'amber', policy_enforced: 'amber', lease_reclaimed: 'muted' };
     const evText = (e) => {
       const det = e.detail || {};
       if (e.type === 'tool_call') return `${e.tool_name} → ${e.status}${det.error ? '：' + det.error : ''}`;
@@ -1257,6 +1257,10 @@ class Component extends DCLogic {
       if (e.type === 'resumed') return det.by === 'approval' ? '承認により再開' : `再開（${det.from || ''}）`;
       if (e.type === 'paused') return det.reason || '一時停止';
       if (e.type === 'llm_degraded') return `LLM 出力を採用できず保留: ${det.reason || ''}`;
+      if (e.type === 'llm_call') return `LLM ${det.provider || '?'} / ${det.model || '?'}（${det.category || ''}: ${det.requested || '未設定'}${det.fallback_reason ? '、フォールバック: ' + det.fallback_reason : ''}）${e.cost ? ' $' + Number(e.cost).toFixed(4) : ''}`;
+      if (e.type === 'injection_suspected') return `データ内に指示文の疑い（無視して続行）: ${(det.signals || []).map((s) => s.path).join(', ')}`;
+      if (e.type === 'policy_enforced') return `ポリシー強制: ${(det.rules || []).map((r) => r.rule).join(', ')}`;
+      if (e.type === 'lease_reclaimed') return `Lease を引き継ぎ（前: ${det.previous_owner || '?'}）`;
       return JSON.stringify(det).slice(0, 160);
     };
     const artifactBody = (a) => {
@@ -1395,7 +1399,7 @@ class Component extends DCLogic {
       arSetQuery: (e) => this.arSetForm({ query: e.target.value }),
       arSetKnowledge: (e) => this.arSetForm({ knowledgeId: e.target.value }),
       arStart: () => this.arStart(),
-      arLlmNote: (s.llm && s.llm.configured) ? 'DeepSeek 接続中：構造化Stepで実際にAPI課金が発生します' : 'LLM未設定：構造化Stepは「LLM未設定」で明示的に失敗します（偽の成功にはなりません）',
+      arLlmNote: (s.llm && s.llm.configured) ? `LLM 接続中（${(s.llm.providers || []).join(', ')}）：構造化Stepで実際にAPI課金が発生します。モデルは Model Router（エージェント設定）で決まります` : 'LLM未設定：構造化Stepは「LLM未設定」で明示的に失敗します（偽の成功にはなりません）',
       arRunRows, arNoRuns: arRunRows.length === 0, arHasRun: !!d, arRun,
       arVersionRows, arVersionNote: arDraftCount > 0 ? `未承認 ${arDraftCount} 件` : '未承認の版はありません',
       resetAll: () => this.refreshAllWithToast(),
@@ -1520,7 +1524,11 @@ function mapSkill(s) {
   return [s.name, s.version, s.owner_role, s.risk, s.status];
 }
 function mapRouterRow(r) {
-  return { cat: r.category, model: r.model };
+  const x = r.resolved || {};
+  const note = x.configured
+    ? (x.fallback_reason ? `→ ${x.provider}/${x.model}（${x.fallback_reason}）` : `→ ${x.provider}/${x.model}`)
+    : `未設定（${x.fallback_reason || 'Provider の API キーがありません'}）`;
+  return { cat: r.category, model: r.model, note, noteFg: x.configured && !x.fallback_reason ? 'var(--green)' : (x.configured ? 'var(--amber)' : 'var(--red)') };
 }
 function mapUsage(u) {
   return { p: u.provider, tok: Number(u.tokens), cost: Number(u.cost), runs: u.runs, color: providerColor(u.provider) };

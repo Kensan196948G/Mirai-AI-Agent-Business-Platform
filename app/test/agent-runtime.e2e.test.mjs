@@ -984,3 +984,23 @@ test('Prompt Injection 否定系（C-18）: 出典に埋め込まれた指示は
     SKILL_HANDLERS['evidence-backed-draft'] = original.d;
   }
 });
+
+test('Model Router（C-19）: /api/router は各 category の解決結果を返し、LLM 未設定の環境では configured=false と理由を示す', async () => {
+  await pool.query(`INSERT INTO model_router (category, model, sort_order) VALUES ('Research / Classification', 'DeepSeek-V3', 0), ('Architecture / Docs', 'Claude Opus', 1), ('Repository Development', 'Claude Code', 2) ON CONFLICT (category) DO NOTHING`);
+  const r = await call('/api/router', { cookie: adminCookie });
+  assert.equal(r.status, 200);
+  assert.ok(r.data.router.length >= 3);
+  assert.ok(Array.isArray(r.data.providers) && r.data.providers.every((p) => !('apiKey' in p) && !('api_key' in p)), '秘密を含まない');
+  for (const row of r.data.router) {
+    assert.ok(row.resolved, `${row.category} に resolved がある`);
+    assert.equal(row.resolved.configured, false, 'E2E は LLM 未設定');
+    assert.ok(row.resolved.fallback_reason, '理由が付く');
+  }
+  const patched = await call('/api/router', { method: 'PATCH', cookie: adminCookie, body: { category: 'Research / Classification', model: 'Claude Opus' } });
+  assert.equal(patched.status, 200);
+  const again = await call('/api/router', { cookie: adminCookie });
+  const row = again.data.router.find((x) => x.category === 'Research / Classification');
+  assert.equal(row.model, 'Claude Opus');
+  assert.match(row.resolved.fallback_reason, /anthropic/);
+  await call('/api/router', { method: 'PATCH', cookie: adminCookie, body: { category: 'Research / Classification', model: 'DeepSeek-V3' } });
+});

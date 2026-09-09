@@ -15,6 +15,7 @@ import { authorizeBudget, PolicyDeniedError } from './policy-engine.js';
 import { SKILL_HANDLERS } from './skills/index.js';
 import { ensureStepApproval } from './run-approvals.js';
 import { enforceOutputPolicy, collectSourceIds } from './prompt-guard.js';
+import { resolveModelForCategory, DEFAULT_CATEGORY } from '../lib/model-catalog.js';
 
 const ajv = new Ajv({ allErrors: true, strict: false });
 
@@ -110,7 +111,17 @@ export async function executeNextStep(runId, { workerId }) {
           throw new PolicyDeniedError(`月次のLLM利用上限（$${monthlyCapUsd()}）に達しているため実行を保留します`);
         }
         const reservation = await jobStore.getActiveReservation(client, run.id);
-        const result = await structuredComplete(opts);
+        // Model Router: Skill 契約の model_category（既定 Research / Classification）から Provider / モデルを決める
+        const routing = await resolveModelForCategory(client, skillDef.execution.model_category || DEFAULT_CATEGORY);
+        const result = await structuredComplete({ ...opts, routing: routing.provider ? routing : null });
+        await jobStore.appendEvent(client, run.id, {
+          type: 'llm_call', skillId: skillDef.skillId, skillVersion: freshSkillVersion.version, status: result.degraded ? 'degraded' : 'ok',
+          detail: {
+            category: routing.category, requested: routing.label, provider: result.provider, model: result.model,
+            fallback_reason: routing.fallback_reason, attempts: result.attempts || null,
+          },
+          tokensIn: result.tokensIn || null, tokensOut: result.tokensOut || null, cost: result.cost || null,
+        });
         if (result.injectionSignals && result.injectionSignals.length > 0) {
           // データ内の指示文は無視して処理を続けるが、疑いがあった事実は監査可能にする
           await jobStore.appendEvent(client, run.id, {
