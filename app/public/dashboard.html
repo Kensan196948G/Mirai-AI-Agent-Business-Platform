@@ -368,11 +368,13 @@ input::placeholder,textarea::placeholder{color:var(--muted)}
               <div style="padding:16px 18px;border-bottom:1px solid var(--line-2)"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="font-family:var(--mono);font-size:11.5px;color:var(--muted)">{{ arRun.code }}</span><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:{{ arRun.fg }};background:{{ arRun.bg }}">{{ arRun.st }}</span><span style="flex:1"></span><button onClick="{{ arRun.refresh }}" style="border:1px solid var(--line);background:var(--surface);color:var(--ink-2);padding:4px 9px;border-radius:7px;font-size:11.5px;font-weight:600;cursor:pointer" style-hover="background:var(--subtle)">更新</button></div><div style="font-size:15px;font-weight:600;line-height:1.35">{{ arRun.agent }}</div><div style="font-size:12px;color:var(--muted);margin-top:4px">Step {{ arRun.step }} · {{ arRun.by }} · {{ arRun.at }}</div></div>
               <div style="padding:16px 18px;display:flex;flex-direction:column;gap:16px">
                 <sc-if value="{{ arRun.hasErr }}" hint-placeholder-val="{{ false }}"><div style="padding:10px 12px;border-radius:8px;background:var(--red-bg);color:var(--red);font-size:12.5px">{{ arRun.err }}</div></sc-if>
+                <sc-if value="{{ arRun.isWaiting }}" hint-placeholder-val="{{ false }}"><div style="padding:10px 12px;border-radius:8px;background:var(--amber-bg);color:var(--amber);font-size:12.5px;line-height:1.5">{{ arRun.waitText }}</div></sc-if>
+                <sc-if value="{{ arRun.hasApproval }}" hint-placeholder-val="{{ false }}"><button onClick="{{ arRun.openApproval }}" style="padding:9px 12px;border-radius:8px;border:1px solid var(--line);background:var(--surface);font-size:12.5px;text-align:left;cursor:pointer;color:var(--ink)" style-hover="background:var(--subtle)">承認申請: {{ arRun.approvalText }}（クリックで承認画面へ）</button></sc-if>
                 <div><div style="font-size:11.5px;font-weight:600;color:var(--ink-2);margin-bottom:8px">入力</div><div style="font-size:12.5px;background:var(--subtle);border-radius:7px;padding:8px 10px;white-space:pre-wrap">{{ arRun.input }}</div></div>
                 <div><div style="font-size:11.5px;font-weight:600;color:var(--ink-2);margin-bottom:8px">実行イベント（Step / Tool / Policy）</div><div style="display:flex;flex-direction:column;gap:6px"><sc-for list="{{ arRun.events }}" as="e" hint-placeholder-count="3"><div style="display:flex;align-items:flex-start;gap:8px;font-size:12px;background:var(--subtle);border-radius:7px;padding:7px 10px"><span style="font-family:var(--mono);font-size:11px;color:var(--muted);flex-shrink:0">#{{ e.seq }}</span><span style="font-family:var(--mono);font-size:11px;padding:1px 7px;border-radius:5px;font-weight:600;color:{{ e.fg }};background:{{ e.bg }};flex-shrink:0">{{ e.type }}</span><span style="flex:1;min-width:0;word-break:break-word">{{ e.text }}</span></div></sc-for></div></div>
                 <div><div style="font-size:11.5px;font-weight:600;color:var(--ink-2);margin-bottom:8px">成果物（草案）</div><div style="display:flex;flex-direction:column;gap:6px"><sc-for list="{{ arRun.artifacts }}" as="ar" hint-placeholder-count="1"><div style="border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:8px"><span style="font-family:var(--mono);font-size:11px;color:var(--muted)">{{ ar.code }}</span><span style="flex:1;font-size:12.5px;font-weight:600">{{ ar.title }}</span><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:{{ ar.fg }};background:{{ ar.bg }}">{{ ar.st }}</span></div><div style="font-size:12px;white-space:pre-wrap;line-height:1.55">{{ ar.body }}</div><sc-if value="{{ ar.canReview }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:8px;align-items:center"><input value="{{ ar.note }}" onChange="{{ ar.setNote }}" placeholder="レビューコメント（Auditに記録）" style="flex:1;font-size:12px"><button onClick="{{ ar.review }}" style="background:var(--green);color:#fff;border:1px solid var(--green);padding:6px 11px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">レビュー済みにする</button></div></sc-if></div></sc-for><sc-if value="{{ arRun.noArtifacts }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px;color:var(--muted)">成果物はまだありません（最終Stepの完了後に作成されます）</div></sc-if></div></div>
               </div>
-              <sc-if value="{{ arRun.canCancel }}" hint-placeholder-val="{{ false }}"><div style="padding:13px 18px;border-top:1px solid var(--line-2);display:flex;gap:8px"><button onClick="{{ arRun.cancel }}" style="border:1px solid var(--line);background:var(--surface);color:var(--red);padding:7px 12px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--red-bg)">Cancel（中断要求）</button></div></sc-if>
+              <sc-if value="{{ arRun.canCancel }}" hint-placeholder-val="{{ false }}"><div style="padding:13px 18px;border-top:1px solid var(--line-2);display:flex;gap:8px;flex-wrap:wrap"><sc-if value="{{ arRun.canPause }}" hint-placeholder-val="{{ false }}"><button onClick="{{ arRun.pause }}" style="border:1px solid var(--line);background:var(--surface);color:var(--amber);padding:7px 12px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--amber-bg)">一時停止</button></sc-if><sc-if value="{{ arRun.canResume }}" hint-placeholder-val="{{ false }}"><button onClick="{{ arRun.resume }}" style="border:1px solid var(--line);background:var(--surface);color:var(--green);padding:7px 12px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--green-bg)">再開</button></sc-if><button onClick="{{ arRun.cancel }}" style="border:1px solid var(--line);background:var(--surface);color:var(--red);padding:7px 12px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--red-bg)">Cancel（中断要求）</button></div></sc-if>
             </aside>
           </sc-if>
           <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:auto;grid-column:1 / -1">
@@ -802,7 +804,23 @@ class Component extends DCLogic {
     this.guarded('agent-run-detail', async () => {
       const [d, ev] = await Promise.all([this.api(`/api/agent-runs/${id}`), this.api(`/api/agent-runs/${id}/events`)]);
       const artifacts = await Promise.all((d.artifacts || []).map((a) => this.api(`/api/artifacts/${a.id}`).then((r) => r.artifact)));
-      this.arPatch({ selRun: id, detail: { run: d.run, events: ev.events || [], artifacts } });
+      this.arPatch({ selRun: id, detail: { run: d.run, events: ev.events || [], artifacts, approval: d.approval || null } });
+    });
+  }
+  arPause(id) {
+    this.guarded('agent-run-pause', async () => {
+      const r = await this.api(`/api/agent-runs/${id}/pause`, { method: 'POST' });
+      await this.refreshAll();
+      this.arOpenRun(id);
+      this.toast(r.status === 'paused' ? '一時停止しました' : '一時停止を要求しました（実行中のStep完了後に停止します）', 'amber');
+    });
+  }
+  arResume(id) {
+    this.guarded('agent-run-resume', async () => {
+      await this.api(`/api/agent-runs/${id}/resume`, { method: 'POST' });
+      await this.refreshAll();
+      this.arOpenRun(id);
+      this.toast('再開しました（権限・承認済み版を再検証してキューへ戻しました）', 'green');
     });
   }
   arCancel(id) {
@@ -1190,13 +1208,18 @@ class Component extends DCLogic {
       at: r.created_at ? fmtDate(r.created_at) : '', open: () => this.arOpenRun(r.id), rowBg: ar.selRun === r.id ? 'var(--subtle)' : 'transparent',
     }, runSt(r.status)));
     const d = ar.detail;
-    const EV_TONE = { step_started: 'blue', step_completed: 'green', tool_call: 'purple', error: 'red', cancelled: 'muted', waiting_approval: 'amber' };
+    const EV_TONE = { step_started: 'blue', step_completed: 'green', tool_call: 'purple', error: 'red', cancelled: 'muted', waiting_approval: 'amber', paused: 'amber', resumed: 'blue', approval_verified: 'green', llm_degraded: 'amber' };
     const evText = (e) => {
       const det = e.detail || {};
       if (e.type === 'tool_call') return `${e.tool_name} → ${e.status}${det.error ? '：' + det.error : ''}`;
       if (e.type === 'error') return det.error || '';
       if (e.type === 'step_completed') return `${e.skill_id}@${e.skill_version} 完了${det.unknowns && det.unknowns.length ? `（不明点 ${det.unknowns.length}件）` : ''}`;
       if (e.type === 'step_started') return `${e.skill_id}@${e.skill_version} 開始${e.status === 'error' ? '：' + (det.error || '') : ''}`;
+      if (e.type === 'waiting_approval') return det.reason || `承認待ち ${det.approval_code || ''}`;
+      if (e.type === 'approval_verified') return `承認 ${det.approval_code || ''} を検証して実行`;
+      if (e.type === 'resumed') return det.by === 'approval' ? '承認により再開' : `再開（${det.from || ''}）`;
+      if (e.type === 'paused') return det.reason || '一時停止';
+      if (e.type === 'llm_degraded') return `LLM 出力を採用できず保留: ${det.reason || ''}`;
       return JSON.stringify(det).slice(0, 160);
     };
     const artifactBody = (a) => {
@@ -1225,6 +1248,14 @@ class Component extends DCLogic {
       }, a.review_state === 'reviewed' ? { st: 'レビュー済', fg: 'var(--green)', bg: 'var(--green-bg)' } : { st: '草案', fg: 'var(--amber)', bg: 'var(--amber-bg)' })),
       noArtifacts: (d.artifacts || []).length === 0,
       canCancel: ['queued', 'running', 'waiting_approval', 'paused'].includes(d.run.status),
+      canPause: ['queued', 'running'].includes(d.run.status),
+      canResume: d.run.status === 'paused' || (d.run.status === 'waiting_approval' && d.approval && d.approval.status === 'approved'),
+      isWaiting: ['waiting_approval', 'paused'].includes(d.run.status),
+      waitText: d.run.waiting_reason || '',
+      hasApproval: !!d.approval,
+      approvalText: d.approval ? `${d.approval.approval_code} · ${d.approval.target} · ${({ pending: '承認待ち', approved: '承認済み', rejected: '却下' })[d.approval.status] || d.approval.status}` : '',
+      openApproval: () => { if (d.approval) { this.setState({ selApproval: d.approval.approval_code }); this.go('approvals'); } },
+      pause: () => this.arPause(d.run.id), resume: () => this.arResume(d.run.id),
       cancel: () => this.arCancel(d.run.id), refresh: () => this.arOpenRun(d.run.id),
     }, runSt(d.run.status)) : {};
     const canApproveVer = this.can('users');
@@ -1388,7 +1419,7 @@ function deriveApprovalStatus(a) {
 }
 function mapApproval(a) {
   return {
-    id: a.approval_code, _id: a.id, pk: a.project_code, type: a.type, title: a.target, risk: a.risk,
+    id: a.approval_code, _id: a.id, pk: a.project_code || (a.run_code ? `Run ${a.run_code}` : '—'), type: a.type, title: a.target, risk: a.risk,
     status: deriveApprovalStatus(a), by: a.requested_by_name, at: fmtDate(a.created_at), target: a.target, evidence: [],
     steps: (a.steps || []).map((s) => ({ _id: s.id, role: s.role, who: s.assigned_user_name || `${s.role}ロール担当`, st: s.status, at: s.decided_at ? fmtDate(s.decided_at) : '' })),
     log: (a.steps || []).filter((s) => s.status !== 'pending').map((s) => ({ at: s.decided_at ? fmtDate(s.decided_at) : '', who: s.assigned_user_name || s.role, action: s.status, reason: s.reason || '' })),

@@ -216,6 +216,18 @@ curl -X POST http://127.0.0.1:<PORT>/api/agent-runs \
 | A-6 | バックアップとリストア訓練 | `bin/pg-backup.sh`（`systemd/mira-agent-os-backup.timer` で毎日 03:15、保持 14 日）、`bin/pg-restore-drill.sh [mira_agent_os|mira_agent_os_mvp]`（使い捨て DB へ復元し件数確認後に削除）。両スクリプトはサーバーと同じ PostgreSQL 16 の `pg_dump` / `pg_restore`（`PG_BIN`、既定 `/usr/lib/postgresql/16/bin`）を使う。初回訓練 2026-09-09 実施済み | 直近 dump の存在と、訓練スクリプトの件数出力 |
 | A-7 | 本チェックリストの維持 | 手順変更時に本節を更新 | — |
 
+## ⏸️ Run の承認拘束・一時停止・再開（C-13）
+
+| 仕組み | 動作 |
+|---|---|
+| 承認ゲート | Skill の `execution.yaml` に `approval_gate: { required: true, role: Approver, reason: "..." }` を書くと、その Step の実行前にアプリ内承認（`approval_requests`, type `agent_run_step`）が必要になる。Run は `waiting_approval` で待ち、Worker を占有しない |
+| 拘束 | 承認は Agent 版・Skill 版（内容ハッシュ）・Step・入力ハッシュに拘束される。承認後に版や入力が変われば承認は無効で再申請になる |
+| 承認 | Approvals 画面の多段階承認と同じ。起案者本人は判定できない（職務分離）。承認で Run は自動的にキューへ戻り、却下で `cancelled` |
+| 一時停止 | `POST /api/agent-runs/:id/pause`（画面の「一時停止」）。queued なら即時、running なら現在の Step を終えてから `paused` |
+| 再開 | `POST /api/agent-runs/:id/resume`（「再開」）。起案者か Administrator のみ。承認済み版の存在と、承認待ちなら承認の確定を再検証してからキューへ戻す |
+
+P1 の 3 Agent は A0〜A1（外部書き込みなし）のため既定ではゲートを設定していない。P2/P3 で外部への確定書き込み（A2）を追加する Skill に `approval_gate` を付ける。正式な業務承認（desknet's NEO）とは別のアプリ内承認である（ADR-001）。
+
 ## 📚 出典（source_records）の取り込みと版管理（B-8〜B-12）
 
 Agent が根拠にできるのは **承認済み（`approved`）かつ有効期限内** の出典だけです。取り込みは人が起動するバッチで行い、Agent には URL 取得の Tool を与えません。

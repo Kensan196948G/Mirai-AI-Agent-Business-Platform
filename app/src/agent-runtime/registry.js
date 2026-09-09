@@ -6,7 +6,7 @@
  * 本セッションでは sync 実行自体を暫定的な承認行為として扱う（approvedBy を記録する）。
  * 将来的にはWebUI上の正式な承認フローに置き換える（Backlog）。
  */
-import { loadAgentDefinition, loadSkillDefinition } from './skill-loader.js';
+import { loadAgentDefinition, loadSkillDefinition, validateApprovalGate } from './skill-loader.js';
 
 /**
  * status: 'draft' | 'approved'
@@ -19,10 +19,11 @@ async function upsertSkillVersion(client, packId, skillId, version, { approvedBy
   const approve = status === 'approved';
   const { rows } = await client.query(
     `INSERT INTO skill_versions
-       (skill_id, version, content_hash, domain_pack, owner_role, risk, status, definition_path, allowed_tools, approved_by, approved_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, CASE WHEN $7 = 'approved' THEN now() ELSE NULL END)
+       (skill_id, version, content_hash, domain_pack, owner_role, risk, status, definition_path, allowed_tools, approved_by, approved_at, approval_gate)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, CASE WHEN $7 = 'approved' THEN now() ELSE NULL END, $11)
      ON CONFLICT (skill_id, version) DO UPDATE SET
        allowed_tools = EXCLUDED.allowed_tools,
+       approval_gate = EXCLUDED.approval_gate,
        content_hash  = EXCLUDED.content_hash,
        status = CASE
          WHEN $7 = 'approved' THEN 'approved'
@@ -40,6 +41,7 @@ async function upsertSkillVersion(client, packId, skillId, version, { approvedBy
       /* owner_role は execution.yaml に持たせていないため pack.yaml の owner_role を既定値にする */
       'IT/DX', def.execution.risk || 'R1', approve ? 'approved' : 'draft', def.definitionPath,
       JSON.stringify(def.execution.allowed_tools || []), approve ? approvedByUserId : null,
+      def.execution.approval_gate ? JSON.stringify(validateApprovalGate(def.execution.approval_gate)) : null,
     ],
   );
   return { row: rows[0], def };
@@ -126,7 +128,7 @@ export async function getApprovedAgentVersion(client, agentId) {
 
   const { rows: bindings } = await client.query(
     `SELECT sv.id, sv.skill_id, sv.version, sv.content_hash, sv.status, sv.risk, sv.definition_path,
-            sv.allowed_tools, b.sort_order
+            sv.allowed_tools, sv.approval_gate, b.sort_order
      FROM agent_skill_bindings b JOIN skill_versions sv ON sv.id = b.skill_version_id
      WHERE b.agent_version_id = $1 AND sv.status = 'approved'
      ORDER BY b.sort_order`,
