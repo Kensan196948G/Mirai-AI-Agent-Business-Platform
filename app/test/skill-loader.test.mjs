@@ -76,3 +76,13 @@ test('loadAgentDefinition: backlog/ 配下のP2/P3候補は agents/ に存在せ
     assert.throws(() => loadAgentDefinition('mirai-construction', id), SkillLoaderError, `${id} はロードできてはならない`);
   }
 });
+
+test('validateApprovalGate: 形式を検証し、role 既定値 Approver を補う', async () => {
+  const { validateApprovalGate, SkillLoaderError } = await import('../src/agent-runtime/skill-loader.js');
+  assert.equal(validateApprovalGate(undefined, 'x'), null);
+  assert.deepEqual(validateApprovalGate({ required: true }, 'x'), { required: true, role: 'Approver', reason: '' });
+  assert.deepEqual(validateApprovalGate({ required: true, role: 'Reviewer', reason: '外部送信' }, 'x'), { required: true, role: 'Reviewer', reason: '外部送信' });
+  assert.throws(() => validateApprovalGate({ required: 'yes' }, 'x'), SkillLoaderError);
+  assert.throws(() => validateApprovalGate({ required: true, role: 'Viewer' }, 'x'), SkillLoaderError);
+  assert.throws(() => validateApprovalGate('true', 'x'), SkillLoaderError);
+});

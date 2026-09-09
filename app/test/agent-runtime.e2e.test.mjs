@@ -618,3 +618,102 @@ test('採番: 草案を削除した後も artifact_code / run_code が既存と�
   assert.match(await nextApprovalCode(pool), /^APR-\d{4}$/);
   assert.match(await nextTaskCode(pool), /^T-\d{4,}$/);
 });
+
+test('承認拘束（C-13）: approval_gate のある Step で waiting_approval になり、承認で再開・却下で中断・入力変更で再申請となる', async () => {
+  // technology-catalog-search（決定的 Step）に承認ゲートを付ける（Registry の契約キャッシュを直接更新）
+  await pool.query(`UPDATE skill_versions SET approval_gate = '{"required":true,"role":"Approver","reason":"E2E ゲート"}' WHERE skill_id = 'technology-catalog-search'`);
+  await createUser('e2e-approver-gate@example.com', 'E2E Approver', 'Approver', 'approver-password'); // doc003-allow: 使い捨てテストDB専用の固定値
+  const approverCookie = await loginAs('e2e-approver-gate@example.com', 'approver-password'); // doc003-allow: 使い捨てテストDB専用の固定値
+  try {
+    // 1. 起動 → 最初の Step で承認待ちになり、Lease を手放し、承認申請が作られる
+    const created = await call('/api/agent-runs', { method: 'POST', cookie: adminCookie, body: { agentId: 'technology-selection', input: { query: 'MC-Wake' } } });
+    assert.equal(created.status, 201);
+    const runId = created.data.run.id;
+    const s1 = await claimAndExecute(runId);
+    assert.equal(s1.done, true);
+    assert.equal(s1.run.status, 'waiting_approval');
+    assert.equal(s1.run.lease_owner, null, 'Worker を占有しない');
+    assert.match(s1.run.waiting_reason, /Approver の承認が必要/);
+    const detail = await call(`/api/agent-runs/${runId}`, { cookie: adminCookie });
+    assert.equal(detail.data.approval.status, 'pending');
+    assert.match(detail.data.approval.target, /step 1: technology-catalog-search/);
+    const approvalId = detail.data.approval.id;
+    // 承認待ちの Run は Worker に拾われない
+    const claimed = await withTransaction((client) => claimNextRun(client, { workerId: 'w2', leaseSeconds: 60 }));
+    assert.ok(!claimed || Number(claimed.id) !== Number(runId), '承認待ちの Run は claim されない');
+    // 2. 承認前の手動再開は拒否。起案者本人（Administrator でも）は判定できない（職務分離）
+    assert.equal((await call(`/api/agent-runs/${runId}/resume`, { method: 'POST', cookie: adminCookie })).status, 409);
+    const apr = await call(`/api/approvals/${approvalId}`, { cookie: adminCookie });
+    assert.equal(apr.status, 200);
+    assert.equal(apr.data.approval.run_code, created.data.run.run_code);
+    const stepId = apr.data.steps[0].id;
+    assert.equal((await call(`/api/approvals/${approvalId}/steps/${stepId}/decide`, { method: 'POST', cookie: adminCookie, body: { decision: 'approved' } })).status, 403);
+    const listed = await call('/api/approvals', { cookie: approverCookie });
+    assert.ok(listed.data.approvals.some((a) => Number(a.id) === Number(approvalId) && a.run_code === created.data.run.run_code), '案件なしの Run 承認も一覧に出る');
+    // 3. Approver が承認 → Run は自動で queued に戻り、次の実行で拘束一致を検証して Step が進む
+    const decided = await call(`/api/approvals/${approvalId}/steps/${stepId}/decide`, { method: 'POST', cookie: approverCookie, body: { decision: 'approved', reason: 'OK' } });
+    assert.equal(decided.status, 200);
+    const afterApprove = (await pool.query(`SELECT status, waiting_reason FROM agent_runs WHERE id = $1`, [runId])).rows[0];
+    assert.equal(afterApprove.status, 'queued');
+    assert.equal(afterApprove.waiting_reason, null);
+    const s2 = await claimAndExecute(runId);
+    assert.equal(s2.run.current_step, 1, '承認済み Step が実行された');
+    const { rows: ev } = await pool.query(`SELECT type FROM run_events WHERE run_id = $1 ORDER BY seq`, [runId]);
+    assert.deepEqual(ev.filter((e) => ['waiting_approval', 'resumed', 'approval_verified'].includes(e.type)).map((e) => e.type), ['waiting_approval', 'resumed', 'approval_verified']);
+    await pool.query(`UPDATE agent_runs SET status = 'cancelled', finished_at = now() WHERE id = $1`, [runId]);
+
+    // 4. 却下 → Run は cancelled
+    const created2 = await call('/api/agent-runs', { method: 'POST', cookie: adminCookie, body: { agentId: 'technology-selection', input: { query: 'MC-Caisson' } } });
+    const runId2 = created2.data.run.id;
+    assert.equal((await claimAndExecute(runId2)).run.status, 'waiting_approval');
+    const d2 = await call(`/api/agent-runs/${runId2}`, { cookie: adminCookie });
+    const apr2 = await call(`/api/approvals/${d2.data.approval.id}`, { cookie: approverCookie });
+    const rej = await call(`/api/approvals/${d2.data.approval.id}/steps/${apr2.data.steps[0].id}/decide`, { method: 'POST', cookie: approverCookie, body: { decision: 'rejected', reason: 'NG' } });
+    assert.equal(rej.status, 200);
+    const afterReject = (await pool.query(`SELECT status, error_message FROM agent_runs WHERE id = $1`, [runId2])).rows[0];
+    assert.equal(afterReject.status, 'cancelled');
+    assert.match(afterReject.error_message, /承認却下/);
+
+    // 5. 承認後に入力（拘束）が変わっていれば承認は使い回されず、新しい申請になる
+    const created3 = await call('/api/agent-runs', { method: 'POST', cookie: adminCookie, body: { agentId: 'technology-selection', input: { query: 'CPG' } } });
+    const runId3 = created3.data.run.id;
+    assert.equal((await claimAndExecute(runId3)).run.status, 'waiting_approval');
+    const d3 = await call(`/api/agent-runs/${runId3}`, { cookie: adminCookie });
+    const apr3 = await call(`/api/approvals/${d3.data.approval.id}`, { cookie: approverCookie });
+    await call(`/api/approvals/${d3.data.approval.id}/steps/${apr3.data.steps[0].id}/decide`, { method: 'POST', cookie: approverCookie, body: { decision: 'approved' } });
+    await pool.query(`UPDATE agent_runs SET input_json = '{"query":"CPG 改ざん"}' WHERE id = $1`, [runId3]);
+    const s3 = await claimAndExecute(runId3);
+    assert.equal(s3.run.status, 'waiting_approval', '入力が変わると承認は無効で再申請');
+    assert.notEqual(Number(s3.run.approval_request_id), Number(d3.data.approval.id));
+    await pool.query(`UPDATE agent_runs SET status = 'cancelled', finished_at = now() WHERE id = $1`, [runId3]);
+  } finally {
+    await pool.query(`UPDATE skill_versions SET approval_gate = NULL WHERE skill_id = 'technology-catalog-search'`);
+  }
+});
+
+test('一時停止・再開（C-13）: pause は Step 境界で paused になり、resume で queued へ戻る。Viewer/他人は操作できない', async () => {
+  const created = await call('/api/agent-runs', { method: 'POST', cookie: adminCookie, body: { agentId: 'technology-selection', input: { query: 'MC-Wake' } } });
+  const runId = created.data.run.id;
+  // queued のうちは即座に paused
+  const p1 = await call(`/api/agent-runs/${runId}/pause`, { method: 'POST', cookie: adminCookie });
+  assert.equal(p1.status, 200);
+  assert.equal(p1.data.status, 'paused');
+  const claimed = await withTransaction((client) => claimNextRun(client, { workerId: 'w3', leaseSeconds: 60 }));
+  assert.ok(!claimed || Number(claimed.id) !== Number(runId), 'paused は claim されない');
+  const viewerCookie = await loginAs('e2e-viewer-agent@example.com', 'viewer-password'); // doc003-allow: 使い捨てテストDB専用の固定値
+  assert.equal((await call(`/api/agent-runs/${runId}/resume`, { method: 'POST', cookie: viewerCookie })).status, 403);
+  const r1 = await call(`/api/agent-runs/${runId}/resume`, { method: 'POST', cookie: adminCookie });
+  assert.equal(r1.status, 200);
+  assert.equal(r1.data.status, 'queued');
+  // running 中の pause 要求は次の Step 境界で反映される（Step 1 は完了してから止まる）
+  await withTransaction((client) => claimNextRun(client, { workerId: 'w4', leaseSeconds: 60 }));
+  const p2 = await call(`/api/agent-runs/${runId}/pause`, { method: 'POST', cookie: adminCookie });
+  assert.equal(p2.data.status, 'running');
+  const s = await executeNextStep(runId, { workerId: 'w4' });
+  assert.equal(s.done, true);
+  assert.equal(s.run.status, 'paused');
+  assert.equal(s.run.lease_owner, null);
+  const { rows: ev } = await pool.query(`SELECT type FROM run_events WHERE run_id = $1 ORDER BY seq`, [runId]);
+  assert.deepEqual(ev.map((e) => e.type), ['paused', 'resumed', 'paused']);
+  await pool.query(`UPDATE agent_runs SET status = 'cancelled', finished_at = now() WHERE id = $1`, [runId]);
+});
