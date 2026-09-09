@@ -7,7 +7,8 @@
  */
 import express from 'express';
 import { getPool, withTransaction } from '../lib/db.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, canViewAll } from '../middleware/auth.js';
+import { parsePage, pageInfo } from '../lib/pagination.js';
 import { recordAudit } from '../lib/audit.js';
 import { authorizeRunStart, PolicyDeniedError } from '../agent-runtime/policy-engine.js';
 import { createOrchestration, advanceOrchestration } from '../agent-runtime/orchestrator.js';
@@ -31,19 +32,27 @@ router.post('/', requireAuth, async (req, res) => {
   }
 });
 
-router.get('/', requireAuth, async (_req, res) => {
+router.get('/', requireAuth, async (req, res) => {
+  let page;
+  try { page = parsePage(req.query, { defaultLimit: 100 }); } catch (err) { return res.status(400).json({ error: err.message }); }
+  const scope = canViewAll(req.user) ? 'true' : 'o.requested_by = $3';
+  const params = [page.limit, page.offset, ...(canViewAll(req.user) ? [] : [req.user.id])];
   const { rows } = await getPool().query(
     `SELECT o.id, o.orchestration_code, o.request_text, o.intent, o.risk, o.plan_source, o.status, o.cost_usd, o.budget_usd, o.created_at, o.finished_at,
-            u.name AS requested_by_name, (SELECT count(*)::int FROM orchestration_steps s WHERE s.orchestration_id = o.id) AS step_count
-     FROM orchestrations o JOIN users u ON u.id = o.requested_by ORDER BY o.created_at DESC LIMIT 100`,
+            u.name AS requested_by_name, (SELECT count(*)::int FROM orchestration_steps s WHERE s.orchestration_id = o.id) AS step_count, count(*) OVER() AS total
+     FROM orchestrations o JOIN users u ON u.id = o.requested_by WHERE ${scope} ORDER BY o.created_at DESC LIMIT $1 OFFSET $2`, params,
   );
-  res.json({ orchestrations: rows });
+  const total = rows[0]?.total ?? (await getPool().query(`SELECT count(*)::int AS n FROM orchestrations o WHERE ${scope.replace('$3', '$1')}`, params.slice(2))).rows[0].n;
+  res.json({ orchestrations: rows.map(({ total: _t, ...r }) => r), page: pageInfo(page, total) });
 });
 
 router.get('/:id', requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) return res.status(400).json({ error: '不正な id' });
   // 進行中なら最新状態へ前進させてから返す（Worker のポーリングを待たない）
+  // IDOR スコープ: 監督系ロール以外は自分が依頼した司令塔だけ（他人のものは存在を漏らさず 404）
+  const { rows: own } = await getPool().query(`SELECT requested_by FROM orchestrations WHERE id = $1`, [id]);
+  if (own.length === 0 || (!canViewAll(req.user) && Number(own[0].requested_by) !== Number(req.user.id))) return res.status(404).json({ error: 'orchestration が見つかりません' });
   const orch = await withTransaction((client) => advanceOrchestration(client, id));
   if (!orch) return res.status(404).json({ error: 'orchestration が見つかりません' });
   const { rows: steps } = await getPool().query(

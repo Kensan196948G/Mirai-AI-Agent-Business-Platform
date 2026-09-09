@@ -6,6 +6,7 @@
 import express from 'express';
 import { getPool, withTransaction } from '../lib/db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { parsePage, pageInfo } from '../lib/pagination.js';
 import { listSources, approveSource, quarantineSource, retireSource, REVIEW_ROLES, SOURCE_STATUSES } from '../lib/source-ops.js';
 
 const router = express.Router();
@@ -13,9 +14,12 @@ const router = express.Router();
 router.get('/', requireAuth, async (req, res) => {
   const { status, source_type: sourceType } = req.query;
   if (status && !SOURCE_STATUSES.includes(String(status))) return res.status(400).json({ error: '不正な status' });
-  const rows = await listSources(getPool(), { status: status ? String(status) : null, sourceType: sourceType ? String(sourceType) : null });
+  let page;
+  try { page = parsePage(req.query, { defaultLimit: 200 }); } catch (err) { return res.status(400).json({ error: err.message }); }
+  const rows = await listSources(getPool(), { status: status ? String(status) : null, sourceType: sourceType ? String(sourceType) : null, limit: page.limit, offset: page.offset });
   const { rows: counts } = await getPool().query(`SELECT status, count(*)::int AS n FROM source_records GROUP BY status`);
-  res.json({ sources: rows, counts: Object.fromEntries(counts.map((c) => [c.status, c.n])) });
+  const { rows: tot } = await getPool().query(`SELECT count(*)::int AS n FROM source_records WHERE ($1::text IS NULL OR status = $1) AND ($2::text IS NULL OR source_type = $2)`, [status ? String(status) : null, sourceType ? String(sourceType) : null]);
+  res.json({ sources: rows, counts: Object.fromEntries(counts.map((c) => [c.status, c.n])), page: pageInfo(page, tot[0].n) });
 });
 
 router.get('/:id', requireAuth, async (req, res) => {

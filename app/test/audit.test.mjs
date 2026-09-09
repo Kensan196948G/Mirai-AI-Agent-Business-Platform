@@ -91,3 +91,11 @@ test('F-30: 新規行は SHA-256（hash_version=2）で、旧行（version 1）�
   assert.equal(a1.length, 64);
   assert.notEqual(a1, computeAnchorHash({ prevAnchorHash: a1, lastAuditId: 2, lastHash: h2, entryCount: 2 }));
 });
+
+test('canonicalize: detail に Date が含まれても JSON.stringify と同じ ISO 文字列で安定化する（DB 往復後に hash が再現できる）', () => {
+  const d = new Date('2026-09-09T00:00:00.000Z');
+  const a = canonicalize({ actor_type: 'service', actor_name: 'x', action: 'y', resource_type: 'z', resource_id: 1, detail: { at: d, nested: { when: d } } });
+  const b = canonicalize({ actor_type: 'service', actor_name: 'x', action: 'y', resource_type: 'z', resource_id: 1, detail: JSON.parse(JSON.stringify({ at: d, nested: { when: d } })) });
+  assert.equal(a, b);
+  assert.ok(a.includes('2026-09-09T00:00:00.000Z'));
+});

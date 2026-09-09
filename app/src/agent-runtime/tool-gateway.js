@@ -3,6 +3,7 @@
  * LLMへ一切与えない。呼び出しは常に authorizeToolCall を経由し、許可・拒否どちらも
  * run_events へ記録する。
  */
+import Ajv from 'ajv';
 import { technicalRiskPolicy } from './skill-loader.js';
 import { authorizeToolCall, authorizeSourceAccess, PolicyDeniedError } from './policy-engine.js';
 import { extractSearchTokens } from '../lib/search-tokens.js';
@@ -138,6 +139,29 @@ async function toolArtifactWriteDraft(client, { run, kind, title, content: rawCo
   return { artifact: { ...artifact, id: Number(artifact.id) } };
 }
 
+/** H-020: Tool 結果の契約。不適合な戻り値は Step を失敗させ、偽の成功にしない（pg の BIGINT 文字列化や列の欠落を検出する）。 */
+const ajv = new Ajv({ allErrors: true, strict: false });
+
+const TOOL_RESULT_SCHEMAS = {
+  'knowledge.search-approved': { type: 'object', required: ['candidates'], properties: { candidates: { type: 'array', maxItems: 50, items: { type: 'object', required: ['source_record_id', 'title', 'summary', 'evidence_type'], properties: { source_record_id: { type: 'integer', minimum: 1 }, title: { type: 'string' }, summary: { type: 'string' }, evidence_type: { type: 'string' } } } } } },
+  'knowledge.search-promoted': { type: 'object', required: ['candidates'], properties: { candidates: { type: 'array', maxItems: 50, items: { type: 'object', required: ['knowledge_id', 'title', 'summary'], properties: { knowledge_id: { type: 'integer', minimum: 1 }, title: { type: 'string' }, summary: { type: 'string' } } } } } },
+  'source.read-approved-snapshot': { type: 'object', required: ['source'], properties: { source: { type: 'object', required: ['id', 'title', 'status', 'source_type'], properties: { title: { type: 'string' }, status: { type: 'string', enum: ['approved'] } } } } },
+  'artifact.write-draft': { type: 'object', required: ['artifact'], properties: { artifact: { type: 'object', required: ['id', 'artifact_code', 'kind', 'title', 'review_state'], properties: { id: { type: 'integer', minimum: 0 }, artifact_code: { type: 'string', pattern: '^ART-' }, kind: { type: 'string' }, title: { type: 'string' }, review_state: { type: 'string', enum: ['draft', 'reviewed'] } } } } },
+};
+const resultValidators = new Map();
+
+export class ToolResultError extends Error {}
+
+/** Tool 結果を契約で検証する。不適合なら ToolResultError（理由付き）。 */
+export function validateToolResult(toolName, result) {
+  const schema = TOOL_RESULT_SCHEMAS[toolName];
+  if (!schema) throw new ToolResultError(`Tool「${toolName}」の結果契約が定義されていません`);
+  if (!resultValidators.has(toolName)) resultValidators.set(toolName, ajv.compile(schema));
+  const validate = resultValidators.get(toolName);
+  if (!validate(result)) throw new ToolResultError(`Tool「${toolName}」の結果が契約に適合しません: ${ajv.errorsText(validate.errors)}`);
+  return result;
+}
+
 const TOOL_HANDLERS = {
   'knowledge.search-approved': (client, args) => toolKnowledgeSearchApproved(client, args),
   'knowledge.search-promoted': (client, args) => toolKnowledgeSearchPromoted(client, args),
@@ -155,7 +179,7 @@ export async function invokeToolForEvaluation(client, toolName, args) {
   }
   const handler = TOOL_HANDLERS[toolName];
   if (!handler) throw new PolicyDeniedError(`Tool「${toolName}」は登録されていません`);
-  return handler(client, args);
+  return validateToolResult(toolName, await handler(client, args));
 }
 
 /**
@@ -181,6 +205,7 @@ export async function callTool(client, { run, skillVersion, toolName, args }) {
   if (!handler) throw new PolicyDeniedError(`Tool「${toolName}」の実装がありません`);
   try {
     const result = await handler(client, { run, ...args });
+    validateToolResult(toolName, result); // H-020: 結果契約に合わなければ error として記録し Step を失敗させる
     return result;
   } catch (err) {
     await appendEvent(client, run.id, {

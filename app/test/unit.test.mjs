@@ -70,3 +70,14 @@ test('generateInitialPassword: 十分な長さでランダム', () => {
   assert.ok(a.length >= 20);
   assert.notEqual(a, b);
 });
+
+// S-015 pagination
+import { parsePage, pageInfo, MAX_LIMIT } from '../src/lib/pagination.js';
+test('parsePage: 既定 limit、上限 200、不正値は 400 エラー、pageInfo は has_more を計算する', () => {
+  assert.deepEqual(parsePage({}, { defaultLimit: 100 }), { limit: 100, offset: 0 });
+  assert.deepEqual(parsePage({ limit: '10', offset: '20' }), { limit: 10, offset: 20 });
+  assert.equal(parsePage({ limit: '9999' }).limit, MAX_LIMIT);
+  for (const q of [{ limit: '0' }, { limit: 'abc' }, { offset: '-1' }, { limit: '1.5' }]) assert.throws(() => parsePage(q), (e) => e.status === 400);
+  assert.deepEqual(pageInfo({ limit: 10, offset: 20 }, '35'), { limit: 10, offset: 20, total: 35, has_more: true });
+  assert.equal(pageInfo({ limit: 10, offset: 30 }, 35).has_more, false);
+});

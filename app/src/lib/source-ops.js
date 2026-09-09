@@ -125,7 +125,7 @@ export async function retireSource(client, { id, reviewer, effectiveTo, reason }
   return { id: Number(id) };
 }
 
-export async function listSources(client, { status, sourceType, limit = 200 } = {}) {
+export async function listSources(client, { status, sourceType, limit = 200, offset = 0 } = {}) {
   const { rows } = await client.query(
     `SELECT s.id, s.source_code, s.canonical_url, s.title, s.source_type, s.evidence_type, s.category, s.summary, s.attributes,
             s.version, s.status, s.effective_from, s.effective_to, s.fetched_at, s.reviewed_at, s.review_note, s.supersedes_id,
@@ -133,8 +133,8 @@ export async function listSources(client, { status, sourceType, limit = 200 } = 
             u.name AS ingested_by_name, r.name AS reviewer_name
      FROM source_records s LEFT JOIN users u ON u.id = s.ingested_by LEFT JOIN users r ON r.id = s.reviewer_id
      WHERE ($1::text IS NULL OR s.status = $1) AND ($2::text IS NULL OR s.source_type = $2)
-     ORDER BY s.id DESC LIMIT $3`,
-    [status || null, sourceType || null, limit],
+     ORDER BY s.id DESC LIMIT $3 OFFSET $4`,
+    [status || null, sourceType || null, limit, offset],
   );
   return rows;
 }

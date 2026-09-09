@@ -11,6 +11,7 @@ import { getPool, withTransaction } from '../lib/db.js';
 import * as jobStore from './job-store.js';
 import { executeNextStep } from './workflow-engine.js';
 import { advanceAllOrchestrations } from './orchestrator.js';
+import { expirePendingApprovals } from './run-approvals.js';
 
 const WORKER_ID = `worker-${process.pid}-${randomUUID().slice(0, 8)}`;
 const POLL_INTERVAL_MS = Number(process.env.AGENT_WORKER_POLL_MS || 2000);
@@ -31,6 +32,11 @@ async function beat(claimed = 0) {
 }
 
 async function tick() {
+  // 承認期限（J-007）: 期限切れの申請を expired にし、待機中の Run を理由付きで中断する
+  await withTransaction((client) => expirePendingApprovals(client)).catch((err) => {
+    // eslint-disable-next-line no-console
+    console.error(`[${WORKER_ID}] 承認期限の処理でエラー:`, err.message);
+  });
   // 司令塔: 依存が満たされた Step の Run を作り、終わった Run を統合する（Run の実行自体は下の claim で行う）
   await withTransaction((client) => advanceAllOrchestrations(client)).catch((err) => {
     // eslint-disable-next-line no-console

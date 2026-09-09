@@ -4,7 +4,7 @@
 
 1. 🖥️ ログインすると **11個の画面**（ダッシュボード・AI相談・案件・タスク・承認など）が使える社内向けアプリ
 2. 🗄️ 画面のデータは全部 **本物の PostgreSQL データベース**に保存される（ブラウザを変えても消えない）
-3. 🤖 「AI」と名の付く機能（相談・タスク実行・外部連携）は、**実際にAIが自動で動くわけではない**部分が多い（下記「🧩 何が本物で、何がまだ人手か」参照）— ただし **AI相談だけは、設定すれば実際のAI（DeepSeek）に接続できる**
+3. 🤖 AI相談・司令塔（CTO Orchestrator）・組織責務 Agent 01〜09・土木専門 Agent 9 種・相互レビューは **実際の Agent Runtime で動く**（LLM は設定時に本物、未設定なら決定的な Step だけ）。外部連携（Notion / Slack / Gmail / GitHub write）だけは **承認拘束付きの仕様・状態管理のみ**で自動同期はしない（下記「🧩 何が本物で、何がまだ人手か」参照）
 
 <details>
 <summary>🧸 もっとやさしく：受付カウンターに例えると</summary>
@@ -26,16 +26,21 @@
 | ログイン・ログアウト | 🟢 本物 | 実際のパスワード認証・実データベース |
 | 案件・承認・タスク・Knowledge・監査ログ | 🟢 本物 | 全部 PostgreSQL に保存され、ブラウザを変えても同じ内容が見える |
 | AI相談（Chat） | 🟡 設定次第 | `LLM_API_KEY` を設定すれば本物のAI（DeepSeek）が応答。未設定なら決まった台本（シナリオ）で応答（下記「🤖 AI相談への実LLM接続」参照） |
-| Notion / Slack / Gmail / GitHub 連携 | 🔴 人手 | 「つながっているか」のステータスを人が画面で手動更新するだけ。実際の自動同期はしない |
-| タスクの実行 | 🔴 人手 | AIエージェントが自動で作業するのではなく、実行ログを記録する台帳。Retry/Cancelは状態を書き換えるのみ |
-| Model Router（AIの使い分け） | 🔴 人手 | 「このカテゴリにはこのモデルを使う」という設定を保存するだけ。実行時に自動で使い分けはしない |
-| 業務Agent（技術選定・施工実績調査・Knowledge品質） | 🟡 設定次第 | 実行基盤（P0）+ みらい建設向け3Agent・12Skill（P1）+ WebUI「業務Agent」画面。実行できるのは検索・比較・草案作成まで。構造化StepはDeepSeek設定時のみ本物のAIが動く（下記「🧩 業務Agent Runtime」参照） |
+| Notion / Slack / Gmail / GitHub 連携 | 🟡 状態管理のみ | 環境変数の有無で接続状態を示す実状態 + 承認拘束付きのコネクタ仕様。**実際の自動同期・外部送信はしない**（実接続は Approval PR で個別に判断） |
+| タスクの実行（Tasks 画面） | 🔴 台帳 | 実行ログを記録する台帳。業務 Agent の実行は下記の Agent Runtime（Agent Runs 画面）で行う |
+| Model Router（AIの使い分け） | 🟢 本物 | category → モデルの設定を **実行時に解決**して Provider を切り替える（Research / Classification、Independent Review 等。llm_call イベントに記録） |
+| 業務Agent Runtime | 🟢 本物 | Registry / Skill Loader / Policy / Tool Gateway / Worker / 承認拘束 / 予算 / 監査。**22 Agent・25 Skill** が承認済み（P1 3 + 組織責務 01〜09 + 土木専門 9 + 相互レビュー 1）。構造化 Step は LLM 設定時のみ本物の AI が動き、未設定なら決定的 Step だけ完走して LLM Step は明示的に失敗する |
+| 司令塔（CTO Orchestrator） | 🟢 本物 | 要求 → 計画（Agent 選択理由・却下理由）→ 組織責務 Agent → 土木専門 Agent へ委譲 → 相互レビュー → 統合草案。本番で一気通貫に稼働（ORC-1001） |
+| 技術リスク T1〜T6 / 専門技術者レビュー | 🟢 本物 | T3 以上は専門技術者の確認宣言、T5/T6 は所見が無いとレビュー済みにできない（サーバ側強制・監査） |
+| 相互レビュー（Cross Review） | 🟢 本物 | 独立モデル分類 + 機械検査で PASS / CONDITIONAL / FAIL。FAIL は人間レビュー強制。**本番は単一 Provider（DeepSeek）のため Provider 多様性は未達** |
 
 `doc/` の要件定義書・技術設計概要が定義する Agentic Operating System の中で、上表が
 「本格実装フェーズ（2026-09-08〜）」として実 PostgreSQL・実認証まで作り込んだ範囲。
-Intent Router / Planner / Agent Orchestrator といった、AIが自律的に判断・実行する部分の
-一部（技術選定支援等の限定Agent）はP0/P1として実装したが、P2（港湾・地盤等の業務拡張）・
-P3（専門システムとの外部連携）は無効なBacklogのまま（`docs/decisions/ADR-001-agent-skill-runtime.md` 参照）。
+期待アーキテクチャ（User → CTO Orchestrator → Organization Agents 01〜09 → Civil Expert Agents → Skills →
+Knowledge + Tools → Cross Review → Human Review & Approval）は第 1〜5 段で実装し、全項目判定・実装率・残存リスクは
+`docs/reviews/agent-skill-full-verification-report.md` に記録した。P2 の業務別候補（港湾施工計画・地盤改良等の
+9 候補）は組織責務 Agent と土木専門 Agent に吸収され、P3（専門システムとの外部連携）は承認拘束付きの Backlog のまま
+（`docs/decisions/ADR-001-agent-skill-runtime.md` 参照）。
 
 > ℹ️ **命名について**：公開ドメインは `mirai-agent-os(-mvp).mirai-dx-platform.com`（2026-09-08 訂正済み）。
 > 一方、内部識別子は初期実装時の `mira-agent-os`（"i" 抜け）系列のまま据え置いている：

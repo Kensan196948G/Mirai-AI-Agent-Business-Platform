@@ -24,6 +24,8 @@ export function hash(str) {
  * 往復後も同一ハッシュを再計算できるようにする。
  */
 function stableStringify(value) {
+  // Date 等（toJSON を持つ値）は JSON.stringify と同じ表現（ISO 文字列）にする。素のキー走査だと {} になり、DB 往復後の hash が再現できない
+  if (value !== null && typeof value === 'object' && !Array.isArray(value) && typeof value.toJSON === 'function') return stableStringify(value.toJSON());
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
   if (value !== null && typeof value === 'object') {
     const keys = Object.keys(value).sort();

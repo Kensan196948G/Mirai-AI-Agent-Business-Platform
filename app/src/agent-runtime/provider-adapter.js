@@ -10,11 +10,13 @@
  */
 import Ajv from 'ajv';
 import * as llm from '../lib/llm.js';
+import { assertClosed, recordFailure, recordSuccess, CircuitOpenError as _CircuitOpenError, circuitOpenSeconds } from './circuit-breaker.js';
 import { prepareUntrustedInput } from './prompt-guard.js';
 
 const ajv = new Ajv({ allErrors: true, strict: false });
 
 export class ProviderNotConfiguredError extends Error {}
+export { CircuitOpenError } from './circuit-breaker.js';
 
 const STRUCTURED_SYSTEM_PROMPT =
   'あなたは建設・土木の業務Agentの構造化出力エンジンです。与えられた入力と JSON Schema に基づき、' +
@@ -36,6 +38,7 @@ export async function structuredComplete({ instructions, input, schema, fallback
   if (!provider || !isConfigured(provider)) {
     throw new ProviderNotConfiguredError('LLM_PROVIDER/LLM_API_KEY が未設定のため実行できません');
   }
+  assertClosed(provider); // H-017: 連続失敗で open の間は呼ばない（CircuitOpenError）
   const model = routing?.model || llm.modelFor(provider);
   const validate = ajv.compile(schema);
   const prepared = prepareUntrustedInput(input);
@@ -58,8 +61,11 @@ export async function structuredComplete({ instructions, input, schema, fallback
     let completion;
     try {
       completion = await llm.complete(messages, { provider, model, maxTokens: llm.structuredMaxTokens(), jsonMode: true, systemPrompt: STRUCTURED_SYSTEM_PROMPT });
+      recordSuccess(provider);
     } catch (err) {
       lastError = { message: err.message, rawText: '' };
+      // API 呼び出しの失敗だけを Circuit Breaker に数える。open になったら残りの試行はせず明示的に止める
+      if (recordFailure(provider, err)) throw new _CircuitOpenError(provider, new Date(Date.now() + 1000 * circuitOpenSeconds()));
       continue;
     }
     totalTokensIn += completion.tokensIn;

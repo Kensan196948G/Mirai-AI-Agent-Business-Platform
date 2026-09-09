@@ -2,6 +2,10 @@ import { getPool } from '../lib/db.js';
 import { verifySessionToken, parseCookies } from '../lib/auth.js';
 import { SESSION_SECRET } from '../lib/config.js';
 
+/** 他人の Run / 成果物 / 司令塔を閲覧・操作できるロール（監督・レビュー・承認・ナレッジ担当）。それ以外は自分が起案したものだけ。 */
+export const WIDE_VIEW_ROLES = new Set(['Administrator', 'Reviewer', 'Approver', 'Knowledge Curator']);
+export function canViewAll(user) { return WIDE_VIEW_ROLES.has(user?.role); }
+
 export async function requireAuth(req, res, next) {
   const cookies = parseCookies(req.headers.cookie);
   const claims = verifySessionToken(cookies.session, SESSION_SECRET);

@@ -22,6 +22,7 @@ import { contentHash } from '../lib/artifact-lineage.js';
 
 export const ORCHESTRATION_MAX_STEPS = () => Number(process.env.ORCHESTRATION_MAX_STEPS || '6');
 export const ORCHESTRATION_BUDGET_USD = () => Number(process.env.ORCHESTRATION_BUDGET_USD || '2.0');
+export const ORCHESTRATION_TIMEOUT_SECONDS = () => Number(process.env.ORCHESTRATION_TIMEOUT_SECONDS || '3600');
 
 const PLAN_SCHEMA = {
   type: 'object', required: ['intent', 'risk', 'steps', 'rejected', 'summary'], additionalProperties: false,
@@ -185,10 +186,19 @@ export async function advanceOrchestration(client, orchestrationId, { user = nul
   const { rows: steps } = await client.query(`SELECT * FROM orchestration_steps WHERE orchestration_id = $1 ORDER BY seq`, [orchestrationId]);
   const requester = user || (await client.query(`SELECT id, name, role FROM users WHERE id = $1`, [orch.requested_by])).rows[0];
 
+  // B-018: 司令塔全体のタイムアウト。作成からの経過が上限を超えたら、未完了の Run を中断要求し、未着手 Step を blocked にして failed（理由 timeout）で終える
+  const elapsedS = (Date.now() - new Date(orch.created_at).getTime()) / 1000;
+  if (!orch.cancel_requested && elapsedS > ORCHESTRATION_TIMEOUT_SECONDS()) {
+    const reason = `司令塔のタイムアウト（${ORCHESTRATION_TIMEOUT_SECONDS()} 秒）を超えたため中断`;
+    await client.query(`UPDATE orchestrations SET cancel_requested = true, error_message = COALESCE(error_message, $2), plan_json = plan_json || '{"timed_out": true}'::jsonb, updated_at = now() WHERE id = $1`, [orch.id, reason]);
+    orch.cancel_requested = true; orch.error_message = orch.error_message || reason; orch.plan_json = { ...(orch.plan_json || {}), timed_out: true };
+    await recordAudit(client, { actorId: null, actorType: 'service', actorName: 'orchestrator-timeout', action: 'orchestration.timeout', resourceType: 'orchestration', resourceId: orch.id, detail: { code: orch.orchestration_code, elapsed_s: Math.round(elapsedS), timeout_s: ORCHESTRATION_TIMEOUT_SECONDS() } });
+  }
+
   if (orch.cancel_requested) {
     for (const s of steps) {
       if (s.run_id && ['pending', 'running', 'waiting_approval'].includes(s.status)) await client.query(`UPDATE agent_runs SET cancel_requested = true WHERE id = $1 AND status IN ('queued','running','waiting_approval','paused')`, [s.run_id]);
-      if (s.status === 'pending') await client.query(`UPDATE orchestration_steps SET status = 'cancelled', finished_at = now() WHERE id = $1`, [s.id]);
+      if (s.status === 'pending') await client.query(`UPDATE orchestration_steps SET status = $2, error_message = $3, finished_at = now() WHERE id = $1`, [s.id, orch.plan_json?.timed_out ? 'blocked' : 'cancelled', orch.plan_json?.timed_out ? 'タイムアウトのため実行しない' : null]);
     }
   }
 
@@ -255,7 +265,7 @@ export async function advanceOrchestration(client, orchestrationId, { user = nul
   if (allDone) {
     const completed = steps.filter((s) => s.status === 'completed').length;
     const allBlocked = steps.every((s) => s.status === 'blocked');
-    status = orch.cancel_requested ? 'cancelled' : completed === steps.length ? 'completed' : completed > 0 ? 'partial' : allBlocked ? 'blocked' : 'failed';
+    status = orch.cancel_requested ? (orch.plan_json?.timed_out ? 'failed' : 'cancelled') : completed === steps.length ? 'completed' : completed > 0 ? 'partial' : allBlocked ? 'blocked' : 'failed';
   }
   if (cost + total > Number(orch.budget_usd) && status === 'running') {
     // 予算超過: 未着手の Step は blocked にし、全体を partial で止める（隠さない）

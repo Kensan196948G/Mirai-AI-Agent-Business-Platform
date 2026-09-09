@@ -1,10 +1,11 @@
 import express from 'express';
 import { getPool, withTransaction } from '../lib/db.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, canViewAll } from '../middleware/auth.js';
+import { parsePage, pageInfo } from '../lib/pagination.js';
 import { recordAudit } from '../lib/audit.js';
 import * as registry from '../agent-runtime/registry.js';
 import * as jobStore from '../agent-runtime/job-store.js';
-import { PolicyDeniedError } from '../agent-runtime/policy-engine.js';
+import { PolicyDeniedError, authorizeRunStart } from '../agent-runtime/policy-engine.js';
 import { createRunForUser, inputKeysFor } from '../agent-runtime/run-create.js';
 
 const router = express.Router();
@@ -24,16 +25,32 @@ router.post('/', requireAuth, async (req, res) => {
   }
 });
 
-router.get('/', requireAuth, async (_req, res) => {
+router.get('/', requireAuth, async (req, res) => {
+  let page;
+  try { page = parsePage(req.query, { defaultLimit: 100 }); } catch (err) { return res.status(400).json({ error: err.message }); }
+  // IDOR スコープ: 監督系ロール以外は自分が起案した Run だけ
+  const scope = canViewAll(req.user) ? 'true' : 'ar.requested_by = $3';
+  const params = [page.limit, page.offset, ...(canViewAll(req.user) ? [] : [req.user.id])];
   const { rows } = await getPool().query(
     `SELECT ar.id, ar.run_code, ar.agent_id, ar.status, ar.current_step, ar.max_steps, ar.project_id,
-            ar.created_at, ar.finished_at, ar.error_message, u.name AS requested_by_name, p.project_code
+            ar.created_at, ar.finished_at, ar.error_message, u.name AS requested_by_name, p.project_code,
+            count(*) OVER() AS total
      FROM agent_runs ar JOIN users u ON u.id = ar.requested_by
      LEFT JOIN projects p ON p.id = ar.project_id
-     ORDER BY ar.created_at DESC LIMIT 100`,
+     WHERE ${scope}
+     ORDER BY ar.created_at DESC LIMIT $1 OFFSET $2`, params,
   );
-  res.json({ runs: rows });
+  const total = rows[0]?.total ?? (await getPool().query(`SELECT count(*)::int AS n FROM agent_runs ar WHERE ${scope.replace('$3', '$1')}`, params.slice(2))).rows[0].n;
+  res.json({ runs: rows.map(({ total: _t, ...r }) => r), page: pageInfo(page, total) });
 });
+
+/** 個別取得のスコープ判定: 監督系ロール以外は自分の Run だけ。存在を漏らさないため他人のものは 404。 */
+async function loadScopedRun(client, id, user, columns = 'id, requested_by') {
+  const { rows } = await client.query(`SELECT ${columns} FROM agent_runs WHERE id = $1`, [id]);
+  if (rows.length === 0) return null;
+  if (!canViewAll(user) && Number(rows[0].requested_by) !== Number(user.id)) return null;
+  return rows[0];
+}
 
 /**
  * 業務Agent の実測 KPI（C-17）。推定値や係数は使わず、agent_runs / run_events / artifacts の実データだけを集計する。
@@ -110,7 +127,7 @@ router.get('/:id', requireAuth, async (req, res) => {
      WHERE ar.id = $1`,
     [id],
   );
-  if (rows.length === 0) return res.status(404).json({ error: 'run が見つかりません' });
+  if (rows.length === 0 || (!canViewAll(req.user) && Number(rows[0].requested_by) !== Number(req.user.id))) return res.status(404).json({ error: 'run が見つかりません' });
   const { rows: artifacts } = await getPool().query(
     `SELECT id, artifact_code, kind, title, review_state, created_at, expert_review_required, ai_completion_prohibited FROM artifacts WHERE run_id = $1 ORDER BY id`,
     [id],
@@ -129,6 +146,7 @@ router.get('/:id', requireAuth, async (req, res) => {
 router.get('/:id/events', requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) return res.status(400).json({ error: '不正な id' });
+  if (!(await loadScopedRun(getPool(), id, req.user))) return res.status(404).json({ error: 'run が見つかりません' });
   const { rows } = await getPool().query(
     `SELECT seq, type, skill_id, skill_version, tool_name, status, detail, tokens_in, tokens_out, cost, created_at
      FROM run_events WHERE run_id = $1 ORDER BY seq`,
@@ -169,7 +187,9 @@ router.post('/:id/rerun', requireAuth, async (req, res) => {
   if (!Number.isInteger(id)) return res.status(400).json({ error: '不正な id' });
   try {
     const result = await withTransaction(async (client) => {
-      const { rows } = await client.query(`SELECT id, run_code, agent_id, project_id, input_json, status FROM agent_runs WHERE id = $1`, [id]);
+      authorizeRunStart({ user: req.user }); // ロール上 Run を開始できない利用者は対象の有無に関係なく 403
+      const { rows } = await client.query(`SELECT id, run_code, agent_id, project_id, input_json, status, requested_by FROM agent_runs WHERE id = $1`, [id]);
+      if (rows.length > 0 && !canViewAll(req.user) && Number(rows[0].requested_by) !== Number(req.user.id)) throw Object.assign(new Error('run が見つかりません'), { status: 404 });
       if (rows.length === 0) throw Object.assign(new Error('run が見つかりません'), { status: 404 });
       if (!['completed', 'failed', 'cancelled'].includes(rows[0].status)) {
         throw Object.assign(new Error(`終了した Run のみ再実行できます（現在: ${rows[0].status}）`), { status: 409 });
