@@ -3,6 +3,11 @@ import { getPool, withTransaction } from '../lib/db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { recordAudit } from '../lib/audit.js';
 import { diffArtifacts, lineageOf, integrityOf, contentHash } from '../lib/artifact-lineage.js';
+import { createHash } from 'node:crypto';
+
+const REVIEW_ROLES = ['Administrator', 'Knowledge Curator', 'Reviewer', 'Approver'];
+const CHECK_KINDS = new Set(['unknown', 'assumption', 'finding', 'flag']);
+const itemHash = (text) => createHash('sha256').update(String(text)).digest('hex');
 
 const router = express.Router();
 
@@ -36,7 +41,54 @@ router.get('/:id', requireAuth, async (req, res) => {
     }
   }
   const { rows: revs } = await getPool().query(`SELECT count(*)::int AS n FROM artifact_revisions WHERE artifact_id = $1`, [id]);
-  res.json({ artifact: rows[0], citations, previous, diff, revisions: revs[0].n, integrity: integrityOf(rows[0]) });
+  // 項目別チェック（不明点ごとの「確認済み」）。本文の項目テキストと item_hash で突き合わせる
+  const { rows: checks } = await getPool().query(
+    `SELECT c.item_kind, c.item_hash, c.item_text, c.checked, c.note, c.checked_at, u.name AS checked_by_name
+     FROM artifact_checks c LEFT JOIN users u ON u.id = c.checked_by WHERE c.artifact_id = $1`,
+    [id],
+  );
+  const content = rows[0].content || {};
+  const unknowns = Array.isArray(content.unknowns) ? content.unknowns : [];
+  const checkedUnknowns = unknowns.filter((u) => checks.some((c) => c.item_kind === 'unknown' && c.item_hash === itemHash(u) && c.checked)).length;
+  res.json({ artifact: rows[0], citations, previous, diff, revisions: revs[0].n, integrity: integrityOf(rows[0]), checks, check_summary: { unknowns_total: unknowns.length, unknowns_checked: checkedUnknowns } });
+});
+
+/**
+ * 項目別チェックの更新（G-36）。不明点・仮定・事実・要注意の各項目を「確認済み」にし、メモを残す。
+ * 成果物本体は変更しない（レビュー済みの版固定に影響しない）。監査に記録。
+ */
+router.put('/:id/checks', requireAuth, requireRole(...REVIEW_ROLES), async (req, res) => {
+  const id = Number(req.params.id);
+  const { kind, text, checked, note } = req.body || {};
+  if (!Number.isInteger(id)) return res.status(400).json({ error: '不正な id' });
+  if (!CHECK_KINDS.has(kind) || typeof text !== 'string' || !text.trim()) return res.status(400).json({ error: 'kind（unknown/assumption/finding/flag）と text は必須' });
+  try {
+    const result = await withTransaction(async (client) => {
+      const { rows: art } = await client.query(`SELECT id, content FROM artifacts WHERE id = $1`, [id]);
+      if (art.length === 0) throw Object.assign(new Error('artifact が見つかりません'), { status: 404 });
+      const listKey = { unknown: 'unknowns', assumption: 'assumptions', finding: 'findings', flag: 'flags' }[kind];
+      const items = Array.isArray(art[0].content?.[listKey]) ? art[0].content[listKey] : [];
+      if (!items.includes(text)) throw Object.assign(new Error('その項目は成果物に存在しません'), { status: 409 });
+      const isChecked = checked === true;
+      const { rows } = await client.query(
+        `INSERT INTO artifact_checks (artifact_id, item_kind, item_hash, item_text, checked, note, checked_by, checked_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7, CASE WHEN $5 THEN now() ELSE NULL END)
+         ON CONFLICT (artifact_id, item_kind, item_hash) DO UPDATE SET
+           checked = EXCLUDED.checked, note = COALESCE(EXCLUDED.note, artifact_checks.note), checked_by = EXCLUDED.checked_by,
+           checked_at = CASE WHEN EXCLUDED.checked THEN now() ELSE NULL END, updated_at = now()
+         RETURNING item_kind, item_hash, checked, note, checked_at`,
+        [id, kind, itemHash(text), text, isChecked, note ?? null, req.user.id],
+      );
+      await recordAudit(client, {
+        actorId: req.user.id, actorType: 'user', actorName: req.user.name,
+        action: 'artifact.check', resourceType: 'artifact', resourceId: id, detail: { kind, item_hash: rows[0].item_hash, checked: isChecked, note: note ?? null },
+      });
+      return rows[0];
+    });
+    res.json({ check: result });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
 });
 
 /** 系譜（同じ相談の再実行で作られた成果物の連なり）と、この成果物の書き直し履歴。 */

@@ -379,7 +379,14 @@ input::placeholder,textarea::placeholder{color:var(--muted)}
                 <sc-if value="{{ arRun.hasApproval }}" hint-placeholder-val="{{ false }}"><button onClick="{{ arRun.openApproval }}" style="padding:9px 12px;border-radius:8px;border:1px solid var(--line);background:var(--surface);font-size:12.5px;text-align:left;cursor:pointer;color:var(--ink)" style-hover="background:var(--subtle)">承認申請: {{ arRun.approvalText }}（クリックで承認画面へ）</button></sc-if>
                 <div><div style="font-size:11.5px;font-weight:600;color:var(--ink-2);margin-bottom:8px">入力</div><div style="font-size:12.5px;background:var(--subtle);border-radius:7px;padding:8px 10px;white-space:pre-wrap">{{ arRun.input }}</div></div>
                 <div><div style="font-size:11.5px;font-weight:600;color:var(--ink-2);margin-bottom:8px">実行イベント（Step / Tool / Policy）</div><div style="display:flex;flex-direction:column;gap:6px"><sc-for list="{{ arRun.events }}" as="e" hint-placeholder-count="3"><div style="display:flex;align-items:flex-start;gap:8px;font-size:12px;background:var(--subtle);border-radius:7px;padding:7px 10px"><span style="font-family:var(--mono);font-size:11px;color:var(--muted);flex-shrink:0">#{{ e.seq }}</span><span style="font-family:var(--mono);font-size:11px;padding:1px 7px;border-radius:5px;font-weight:600;color:{{ e.fg }};background:{{ e.bg }};flex-shrink:0">{{ e.type }}</span><span style="flex:1;min-width:0;word-break:break-word">{{ e.text }}</span></div></sc-for></div></div>
-                <div><div style="font-size:11.5px;font-weight:600;color:var(--ink-2);margin-bottom:8px">成果物（草案）</div><div style="display:flex;flex-direction:column;gap:6px"><sc-for list="{{ arRun.artifacts }}" as="ar" hint-placeholder-count="1"><div style="border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:8px"><span style="font-family:var(--mono);font-size:11px;color:var(--muted)">{{ ar.code }}</span><span style="flex:1;font-size:12.5px;font-weight:600">{{ ar.title }}</span><span style="font-family:var(--mono);font-size:10.5px;color:var(--muted)">{{ ar.ver }}</span><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:{{ ar.fg }};background:{{ ar.bg }}">{{ ar.st }}</span></div><sc-if value="{{ ar.pinned }}" hint-placeholder-val="{{ false }}"><div style="font-family:var(--mono);font-size:10.5px;color:var(--muted)">{{ ar.pinned }}</div></sc-if><div style="font-size:12px;white-space:pre-wrap;line-height:1.55">{{ ar.body }}</div><sc-if value="{{ ar.hasDiff }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;white-space:pre-wrap;line-height:1.55;background:var(--subtle);border-radius:7px;padding:8px 10px">{{ ar.diffText }}</div></sc-if><sc-if value="{{ ar.canReview }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:8px;align-items:center"><input value="{{ ar.note }}" onChange="{{ ar.setNote }}" placeholder="レビューコメント（Auditに記録）" style="flex:1;font-size:12px"><button onClick="{{ ar.review }}" style="background:var(--green);color:#fff;border:1px solid var(--green);padding:6px 11px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">レビュー済みにする</button></div></sc-if></div></sc-for><sc-if value="{{ arRun.noArtifacts }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px;color:var(--muted)">成果物はまだありません（最終Stepの完了後に作成されます）</div></sc-if></div></div>
+                <div><div style="font-size:11.5px;font-weight:600;color:var(--ink-2);margin-bottom:8px">成果物（草案）</div><div style="display:flex;flex-direction:column;gap:6px"><sc-for list="{{ arRun.artifacts }}" as="ar" hint-placeholder-count="1"><div style="border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:8px"><span style="font-family:var(--mono);font-size:11px;color:var(--muted)">{{ ar.code }}</span><span style="flex:1;font-size:12.5px;font-weight:600">{{ ar.title }}</span><span style="font-family:var(--mono);font-size:10.5px;color:var(--muted)">{{ ar.ver }}</span><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:{{ ar.fg }};background:{{ ar.bg }}">{{ ar.st }}</span></div><sc-if value="{{ ar.pinned }}" hint-placeholder-val="{{ false }}"><div style="font-family:var(--mono);font-size:10.5px;color:var(--muted)">{{ ar.pinned }}</div></sc-if><div style="display:flex;flex-direction:column;gap:8px;font-size:12px;line-height:1.55">
+  <sc-if value="{{ ar.sec.hasFindings }}" hint-placeholder-val="{{ false }}"><div><div style="font-weight:600;color:var(--ink-2);margin-bottom:3px">確認できた事実</div><sc-for list="{{ ar.sec.findings }}" as="it" hint-placeholder-count="2"><div style="display:flex;gap:6px;align-items:flex-start"><span>・</span><span style="flex:1;{{ it.style }}">{{ it.text }}</span></div></sc-for></div></sc-if>
+  <sc-if value="{{ ar.sec.hasUnknowns }}" hint-placeholder-val="{{ false }}"><div><div style="font-weight:600;color:var(--amber);margin-bottom:3px">不明点・要確認 <span style="font-weight:500;color:var(--muted);font-family:var(--mono);font-size:11px">{{ ar.sec.progress }}</span></div><sc-for list="{{ ar.sec.unknowns }}" as="it" hint-placeholder-count="3"><div style="display:flex;gap:6px;align-items:flex-start"><sc-if value="{{ it.canCheck }}" hint-placeholder-val="{{ true }}"><input type="checkbox" checked="{{ it.checked }}" onChange="{{ it.toggle }}" title="確認済みにする（Audit に記録）" style="margin-top:3px"></sc-if><span style="flex:1;{{ it.style }}">{{ it.text }}<sc-if value="{{ it.who }}" hint-placeholder-val="{{ false }}"><span style="font-size:10.5px;color:var(--muted);margin-left:6px">確認: {{ it.who }}</span></sc-if></span></div></sc-for></div></sc-if>
+  <sc-if value="{{ ar.sec.hasAssumptions }}" hint-placeholder-val="{{ false }}"><div><div style="font-weight:600;color:var(--ink-2);margin-bottom:3px">仮定</div><sc-for list="{{ ar.sec.assumptions }}" as="it" hint-placeholder-count="1"><div style="display:flex;gap:6px;align-items:flex-start"><sc-if value="{{ it.canCheck }}" hint-placeholder-val="{{ true }}"><input type="checkbox" checked="{{ it.checked }}" onChange="{{ it.toggle }}" style="margin-top:3px"></sc-if><span style="flex:1;{{ it.style }}">{{ it.text }}</span></div></sc-for></div></sc-if>
+  <sc-if value="{{ ar.sec.hasFlags }}" hint-placeholder-val="{{ false }}"><div><div style="font-weight:600;color:var(--red);margin-bottom:3px">要注意（機密等）</div><sc-for list="{{ ar.sec.flags }}" as="it" hint-placeholder-count="1"><div style="display:flex;gap:6px"><span>・</span><span style="flex:1">{{ it.text }}</span></div></sc-for></div></sc-if>
+  <sc-if value="{{ ar.sec.hasCites }}" hint-placeholder-val="{{ false }}"><div><div style="font-weight:600;color:var(--ink-2);margin-bottom:3px">根拠（出典）</div><sc-for list="{{ ar.sec.cites }}" as="ci" hint-placeholder-count="2"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button onClick="{{ ci.open }}" style="border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:3px 9px;border-radius:6px;font-size:11.5px;cursor:pointer" style-hover="background:var(--subtle)">本文を見る</button><span style="flex:1;min-width:0">{{ ci.title }} <span style="color:var(--muted);font-size:11px">（{{ ci.evidence }}）</span></span><sc-if value="{{ ci.hasUrl }}" hint-placeholder-val="{{ true }}"><a href="{{ ci.url }}" target="_blank" rel="noopener noreferrer" style="font-size:11.5px;color:var(--blue)">公式ページ ↗</a></sc-if></div></sc-for></div></sc-if>
+  <sc-if value="{{ ar.sec.empty }}" hint-placeholder-val="{{ false }}"><div style="color:var(--muted)">（内容なし）</div></sc-if>
+</div><sc-if value="{{ ar.hasDiff }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;white-space:pre-wrap;line-height:1.55;background:var(--subtle);border-radius:7px;padding:8px 10px">{{ ar.diffText }}</div></sc-if><sc-if value="{{ ar.canReview }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:8px;align-items:center"><input value="{{ ar.note }}" onChange="{{ ar.setNote }}" placeholder="レビューコメント（Auditに記録）" style="flex:1;font-size:12px"><button onClick="{{ ar.review }}" style="background:var(--green);color:#fff;border:1px solid var(--green);padding:6px 11px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">レビュー済みにする</button></div></sc-if></div></sc-for><sc-if value="{{ arRun.noArtifacts }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px;color:var(--muted)">成果物はまだありません（最終Stepの完了後に作成されます）</div></sc-if></div></div>
               </div>
               <sc-if value="{{ arRun.canRerun }}" hint-placeholder-val="{{ false }}"><div style="padding:13px 18px;border-top:1px solid var(--line-2);display:flex;gap:8px"><button onClick="{{ arRun.rerun }}" style="border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:7px 12px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--subtle)">同じ入力で再実行（前回との差分を表示）</button></div></sc-if>
               <sc-if value="{{ arRun.canCancel }}" hint-placeholder-val="{{ false }}"><div style="padding:13px 18px;border-top:1px solid var(--line-2);display:flex;gap:8px;flex-wrap:wrap"><sc-if value="{{ arRun.canPause }}" hint-placeholder-val="{{ false }}"><button onClick="{{ arRun.pause }}" style="border:1px solid var(--line);background:var(--surface);color:var(--amber);padding:7px 12px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--amber-bg)">一時停止</button></sc-if><sc-if value="{{ arRun.canResume }}" hint-placeholder-val="{{ false }}"><button onClick="{{ arRun.resume }}" style="border:1px solid var(--line);background:var(--surface);color:var(--green);padding:7px 12px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--green-bg)">再開</button></sc-if><button onClick="{{ arRun.cancel }}" style="border:1px solid var(--line);background:var(--surface);color:var(--red);padding:7px 12px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--red-bg)">Cancel（中断要求）</button></div></sc-if>
@@ -404,6 +411,15 @@ input::placeholder,textarea::placeholder{color:var(--muted)}
     </div>
   </main>
 
+  <sc-if value="{{ arSourceOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ arCloseSource }}" style="position:fixed;inset:0;background:var(--overlay);display:flex;align-items:center;justify-content:center;z-index:60;padding:24px">
+      <div onClick="{{ stop }}" style="background:var(--surface);border:1px solid var(--line);border-radius:12px;width:min(860px,100%);max-height:86vh;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(16,24,40,.25)">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--line-2);display:flex;align-items:center;gap:10px"><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">{{ arSourceTitle }}</div><div style="font-size:11.5px;color:var(--muted);font-family:var(--mono)">{{ arSourceMeta }}</div></div><sc-if value="{{ arSourceHasUrl }}" hint-placeholder-val="{{ true }}"><a href="{{ arSourceUrl }}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:var(--blue)">公式ページを開く ↗</a></sc-if><button onClick="{{ arCloseSource }}" style="border:1px solid var(--line);background:var(--surface);padding:5px 10px;border-radius:7px;font-size:12px;cursor:pointer">閉じる</button></div>
+        <div style="padding:14px 18px;overflow:auto;font-size:12.5px;line-height:1.7;white-space:pre-wrap">{{ arSourceText }}</div>
+        <div style="padding:10px 18px;border-top:1px solid var(--line-2);font-size:11px;color:var(--muted)">承認済み出典のスナップショット（取り込み時点の本文）。公式ページの最新内容と異なる場合があります</div>
+      </div>
+    </div>
+  </sc-if>
   <sc-if value="{{ modalNew }}" hint-placeholder-val="{{ false }}">
     <div onClick="{{ closeModal }}" style="position:fixed;inset:0;background:var(--overlay);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px">
       <div onClick="{{ stop }}" style="width:100%;max-width:520px;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 40px rgba(16,24,40,.2);overflow:hidden">
@@ -814,7 +830,7 @@ class Component extends DCLogic {
     this.arPatch({ selRun: id, detail: null });
     this.guarded('agent-run-detail', async () => {
       const [d, ev] = await Promise.all([this.api(`/api/agent-runs/${id}`), this.api(`/api/agent-runs/${id}/events`)]);
-      const artifacts = await Promise.all((d.artifacts || []).map((a) => this.api(`/api/artifacts/${a.id}`).then((r) => Object.assign({}, r.artifact, { citations: r.citations, previous: r.previous, diff: r.diff, revisions: r.revisions, integrity: r.integrity }))));
+      const artifacts = await Promise.all((d.artifacts || []).map((a) => this.api(`/api/artifacts/${a.id}`).then((r) => Object.assign({}, r.artifact, { citations: r.citations, previous: r.previous, diff: r.diff, revisions: r.revisions, integrity: r.integrity, checks: r.checks || [], check_summary: r.check_summary }))));
       this.arPatch({ selRun: id, detail: { run: d.run, events: ev.events || [], artifacts, approval: d.approval || null } });
     });
   }
@@ -857,6 +873,20 @@ class Component extends DCLogic {
       this.setState({ arMetrics });
     });
   }
+  arToggleCheck(artifactId, runId, kind, text, checked) {
+    this.guarded('artifact-check', async () => {
+      await this.api(`/api/artifacts/${artifactId}/checks`, { method: 'PUT', body: { kind, text, checked } });
+      this.arOpenRun(runId);
+    });
+  }
+  arOpenSource(sourceId) {
+    this.setState({ arSource: { loading: true } });
+    this.guarded('source-view', async () => {
+      const r = await this.api(`/api/sources/${sourceId}`);
+      this.setState({ arSource: r.source });
+    });
+  }
+  arCloseSource() { this.setState({ arSource: null }); }
   arRerun(id) {
     this.guarded('agent-run-rerun', async () => {
       const r = await this.api(`/api/agent-runs/${id}/rerun`, { method: 'POST' });
@@ -1294,16 +1324,32 @@ class Component extends DCLogic {
       if (e.type === 'lease_reclaimed') return `Lease を引き継ぎ（前: ${det.previous_owner || '?'}）`;
       return JSON.stringify(det).slice(0, 160);
     };
-    const artifactBody = (a) => {
+    // 成果物カード: 項目ごとに確認済みチェック（G-36）。本文は変更せず artifact_checks に記録する
+    const checkOf = (a, kind, text) => (a.checks || []).find((c) => c.item_kind === kind && c.item_text === text);
+    const itemRows = (a, kind, list, runId) => (Array.isArray(list) ? list : []).map((text) => {
+      const c = checkOf(a, kind, text);
+      const canCheck = this.can('review');
+      return {
+        text, checked: !!(c && c.checked), who: c && c.checked ? `${c.checked_by_name || ''} ${c.checked_at ? fmtDate(c.checked_at) : ''}`.trim() : '',
+        canCheck, toggle: () => this.arToggleCheck(a.id, runId, kind, text, !(c && c.checked)),
+        style: c && c.checked ? 'text-decoration:line-through;color:var(--muted)' : '',
+      };
+    });
+    const artifactSections = (a, runId) => {
       const c = a.content || {};
-      const lines = [];
-      if (c.findings && c.findings.length) lines.push('【確認できた事実】\n' + c.findings.map((x) => '・' + x).join('\n'));
-      if (c.unknowns && c.unknowns.length) lines.push('【不明点・要確認】\n' + c.unknowns.map((x) => '・' + x).join('\n'));
-      if (c.assumptions && c.assumptions.length) lines.push('【仮定】\n' + c.assumptions.map((x) => '・' + x).join('\n'));
-      if (c.flags && c.flags.length) lines.push('【要注意（機密等）】\n' + c.flags.map((x) => '・' + x).join('\n'));
-      if (c.sources && c.sources.length) lines.push('【根拠】source_record ' + c.sources.map((x) => '#' + x.source_record_id).join(', '));
-      if (a.citations && a.citations.length) lines.push(a.citations.map((x) => `  - ${x.title}（${x.evidence_type}）${x.canonical_url ? ' ' + x.canonical_url : ''}`).join('\n'));
-      return lines.join('\n\n') || '（内容なし）';
+      const cites = (a.citations || []).map((x) => ({
+        title: x.title, evidence: x.evidence_type, url: x.canonical_url || '', hasUrl: !!x.canonical_url, locator: x.locator || '',
+        open: () => this.arOpenSource(x.source_record_id),
+      }));
+      return {
+        findings: itemRows(a, 'finding', c.findings, runId), hasFindings: (c.findings || []).length > 0,
+        unknowns: itemRows(a, 'unknown', c.unknowns, runId), hasUnknowns: (c.unknowns || []).length > 0,
+        assumptions: itemRows(a, 'assumption', c.assumptions, runId), hasAssumptions: (c.assumptions || []).length > 0,
+        flags: itemRows(a, 'flag', c.flags, runId), hasFlags: (c.flags || []).length > 0,
+        cites, hasCites: cites.length > 0,
+        progress: a.check_summary ? `不明点の確認 ${a.check_summary.unknowns_checked} / ${a.check_summary.unknowns_total}` : '',
+        empty: !(c.findings || []).length && !(c.unknowns || []).length && !(c.assumptions || []).length && !cites.length,
+      };
     };
     const diffBody = (a) => {
       const d = a.diff; if (!d || !a.previous) return '';
@@ -1319,10 +1365,11 @@ class Component extends DCLogic {
       input: JSON.stringify(d.run.input_json || {}, null, 1).replace(/[{}"]/g, '').trim(),
       events: (d.events || []).map((e) => Object.assign({ seq: e.seq, type: e.type, text: evText(e) }, this.tone(EV_TONE[e.type] || 'muted'))),
       artifacts: (d.artifacts || []).map((a) => Object.assign({
-        id: a.id, code: a.artifact_code, title: a.title, body: artifactBody(a),
+        id: a.id, code: a.artifact_code, title: a.title,
         ver: `v${a.lineage_version || 1}${a.revisions ? `（書き直し ${a.revisions} 回）` : ''}`,
         hasDiff: !!(a.diff && a.previous), diffText: diffBody(a),
         pinned: a.review_state === 'reviewed' && a.reviewed_content_hash ? `版固定 ${String(a.reviewed_content_hash).slice(0, 12)}${a.integrity === false ? ' ⚠ 内容がレビュー時から変わっています' : ''}` : '',
+        sec: artifactSections(a, d.run.id),
         canReview: a.review_state === 'draft' && this.can('review'),
         note: (ar.notes || {})[a.id] || '',
         setNote: (e) => this.arPatch({ notes: Object.assign({}, ar.notes, { [a.id]: e.target.value }) }),
@@ -1431,6 +1478,11 @@ class Component extends DCLogic {
       arSetQuery: (e) => this.arSetForm({ query: e.target.value }),
       arSetKnowledge: (e) => this.arSetForm({ knowledgeId: e.target.value }),
       arStart: () => this.arStart(),
+      arSourceOpen: !!s.arSource, arCloseSource: () => this.arCloseSource(), stop: (e) => e.stopPropagation(),
+      arSourceTitle: s.arSource ? (s.arSource.loading ? '読み込み中…' : s.arSource.title) : '',
+      arSourceMeta: s.arSource && !s.arSource.loading ? `${s.arSource.source_code} · ${s.arSource.source_type} · ${s.arSource.category || '-'} · v${s.arSource.version} · ${s.arSource.evidence_type}` : '',
+      arSourceHasUrl: !!(s.arSource && s.arSource.canonical_url), arSourceUrl: (s.arSource && s.arSource.canonical_url) || '',
+      arSourceText: s.arSource && !s.arSource.loading ? (s.arSource.content_text || s.arSource.summary || '（本文なし）') : '',
       arLlmNote: (s.llm && s.llm.configured) ? `LLM 接続中（${(s.llm.providers || []).join(', ')}）：構造化Stepで実際にAPI課金が発生します。モデルは Model Router（エージェント設定）で決まります` : 'LLM未設定：構造化Stepは「LLM未設定」で明示的に失敗します（偽の成功にはなりません）',
       arRunRows, arNoRuns: arRunRows.length === 0, arHasRun: !!d, arRun,
       arVersionRows, arVersionNote: arDraftCount > 0 ? `未承認 ${arDraftCount} 件` : '未承認の版はありません',
