@@ -11,7 +11,7 @@
  */
 import { loadEnv } from './src/lib/env.js';
 import { getPool, closePool, withTransaction } from './src/lib/db.js';
-import { createRunForUser, AGENT_INPUT_ALLOWLIST } from './src/agent-runtime/run-create.js';
+import { createRunForUser, inputKeysFor } from './src/agent-runtime/run-create.js';
 
 loadEnv(new URL('.env', import.meta.url).pathname);
 
@@ -20,7 +20,7 @@ if (!email || !agentId || !inputJson) {
   console.error("使い方: node create-agent-run.mjs <email> <agentId> '<入力JSON>' [--wait]");
   process.exit(1);
 }
-if (!AGENT_INPUT_ALLOWLIST[agentId]) { console.error(`不正な agentId: ${agentId}`); process.exit(1); }
+if (!inputKeysFor(agentId)) { console.error(`不正な agentId: ${agentId}`); process.exit(1); }
 let input;
 try { input = JSON.parse(inputJson); } catch (e) { console.error(`入力JSONの解析に失敗: ${e.message}`); process.exit(1); }
 

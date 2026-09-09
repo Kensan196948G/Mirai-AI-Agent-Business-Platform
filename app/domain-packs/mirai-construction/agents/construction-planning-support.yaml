@@ -1,0 +1,52 @@
+schema_version: mirai.agent-definition/v1
+agent_id: construction-planning-support
+version: 1.0.0
+domain_pack: mirai-construction
+title: 施工・調達・作業所支援
+owner_role: 施工本部
+layer: organization
+org_code: '03'
+technical_risk_class: T3
+purpose: 施工計画・工程・仮設・機材・数量の論点を、承認済み資料と提供された数量表から整理する。数量・単位の整合を機械的に確認し、現場の最終判断は人に残す。
+does_not: 施工可否・工程・数量の確定、設備・船舶への指示、安全判断の代替。
+max_autonomy_level: A1
+input_contract:
+  type: object
+  properties:
+    query:
+      type: string
+      minLength: 1
+      maxLength: 4000
+    quantities_text:
+      type: string
+      maxLength: 60000
+delegates_to:
+- technology-selection
+- project-case-research
+timeout_seconds: 600
+budget_usd: 0.5
+model_category: Research / Classification
+skills:
+- skill_id: knowledge-brief
+  version: 1.0.0
+  params:
+    source_types:
+    - technology_catalog
+    - project_case
+- skill_id: quantity-consistency-check
+  version: 1.0.0
+- skill_id: planning-brief
+  version: 1.0.0
+  params:
+    plan_type: construction_plan
+    criteria:
+    - 工程制約
+    - 仮設
+    - 機材
+    - 調達
+    - 品質記録
+- skill_id: risk-assessment
+  version: 1.0.0
+  params:
+    domain: safety
+output: 論点・根拠・不明点を含む草案（review_state=draft、人間レビュー必須）

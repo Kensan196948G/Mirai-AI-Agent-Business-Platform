@@ -1,6 +1,6 @@
 ---
 name: technology-catalog-search
-description: 承認済みの技術カタログ（source_records）から、案件条件に関連する技術候補を検索する。技術選定の事前調査に用い、施工可否の最終決定は行わない。
+description: "承認済みの技術カタログ（source_records）から、案件条件に関連する技術候補を検索する。技術選定の事前調査に用い、施工可否の最終決定は行わない。"
 metadata:
   version: "1.0.0"
   domain: "mirai-construction"

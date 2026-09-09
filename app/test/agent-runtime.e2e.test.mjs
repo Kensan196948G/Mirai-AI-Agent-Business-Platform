@@ -70,9 +70,11 @@ before(async () => {
 
   // Domain Pack をDBへ同期する（本番運用ではsync-agent-registry.mjsをAdministratorが実行する）。
   await withTransaction(async (client) => {
-    await syncAgent(client, 'mirai-construction', 'technology-selection', '1.0.0', { approvedByUserId: adminId, status: 'approved' });
-    await syncAgent(client, 'mirai-construction', 'project-case-research', '1.0.0', { approvedByUserId: adminId, status: 'approved' });
-    await syncAgent(client, 'mirai-construction', 'knowledge-quality', '1.0.0', { approvedByUserId: adminId, status: 'approved' });
+    // org-map.yaml の実定義 Agent（P1 3 件 + 組織責務 Agent 9 件）をすべて同期・承認する
+    const { loadUnifiedCatalog } = await import('../src/agent-runtime/catalog.js');
+    for (const a of loadUnifiedCatalog('mirai-construction').agents.filter((x) => x.executable)) {
+      await syncAgent(client, 'mirai-construction', a.agent_id, '1.0.0', { approvedByUserId: adminId, status: 'approved' });
+    }
   });
 
   // 案件越境テスト用に、実在するprojectを1件作る（project_scopeのFK制約を満たすため）。
@@ -1171,7 +1173,7 @@ test('AI相談の IDEA 構造化: LLM 未設定でもルールベースで関係
   const cat = await call('/api/agent-catalog/org', { cookie: adminCookie });
   assert.equal(cat.status, 200);
   assert.equal(cat.data.organizations.length, 9);
-  assert.equal(cat.data.agents.length, 12);
+  assert.equal(cat.data.agents.length, 20);
   const ts = cat.data.agents.find((a) => a.agent_id === 'technology-selection');
   assert.equal(ts.runnable, true, '承認済み P1 は runnable');
   assert.ok(cat.data.agents.filter((a) => a.stage !== 'P1').every((a) => a.runnable === false));
@@ -1224,4 +1226,45 @@ test('司令塔（CTO Orchestrator）: 要求から計画を作り、複数 Agen
   assert.ok(cRuns.length >= 1 && cRuns.every((r) => r.cancel_requested));
   assert.equal((await call(`/api/orchestrations/${c2.data.orchestration.id}/cancel`, { method: 'POST', cookie: viewerCookie })).status, 403);
   await pool.query(`UPDATE agent_runs SET status = 'cancelled', finished_at = now() WHERE status IN ('queued','running') AND orchestration_id IS NOT NULL`);
+});
+
+test('組織責務 Agent 01〜09（第 2 段）: Registry に存在し、決定的 Skill だけの Agent は LLM 無しで完走、契約外の入力キーは落ち、数量整合は不一致を検出する', async () => {
+  // 先行テストが版の承認状態を変えるため、実定義 Agent をすべて承認済みに再同期してから検証する
+  await withTransaction(async (client) => {
+    const { loadUnifiedCatalog } = await import('../src/agent-runtime/catalog.js');
+    for (const a of loadUnifiedCatalog('mirai-construction').agents.filter((x) => x.executable)) await syncAgent(client, 'mirai-construction', a.agent_id, '1.0.0', { approvedByUserId: adminId, status: 'approved' });
+  });
+  const cat = await call('/api/agent-catalog/org', { cookie: adminCookie });
+  const orgAgents = cat.data.agents.filter((a) => a.layer === 'organization' && a.executable);
+  assert.equal(new Set(orgAgents.map((a) => a.org_code)).size, 9);
+  assert.ok(orgAgents.every((a) => a.runnable), '9 Agent すべて承認済みで実行可能');
+  assert.ok(cat.data.agents.find((a) => a.agent_id === 'safety-quality-environment-review').technical_risk_class === 'T4');
+  // 01 経営・統治: kpi-review → sod-check → decision-log-draft（すべて決定的）
+  const g = await call('/api/agent-runs', { method: 'POST', cookie: adminCookie, body: { agentId: 'governance-support', input: { query: '今月の KPI と承認運用を委員会向けに整理したい', options: ['現状維持', '改善'], evil: 'x' } } });
+  assert.equal(g.status, 201);
+  assert.equal(g.data.run.input_json.evil, undefined, '契約に無いキーは受け付けない');
+  let step; for (let i = 0; i < 6; i++) { step = await claimAndExecute(g.data.run.id); if (step.done) break; }
+  assert.equal(step.run.status, 'completed', step.run.error_message);
+  const gd = await call(`/api/agent-runs/${g.data.run.id}`, { cookie: adminCookie });
+  assert.equal(gd.data.artifacts.length, 3, 'KPI / SoD / 意思決定ログの 3 草案');
+  const dl = (await pool.query(`SELECT content FROM artifacts WHERE run_id = $1 AND kind = 'decision_log'`, [g.data.run.id])).rows[0].content;
+  assert.equal(dl.decision_status, 'undecided'); assert.equal(dl.requires_human_review, true);
+  const kpi = (await pool.query(`SELECT content FROM artifacts WHERE run_id = $1 AND kind = 'kpi_review'`, [g.data.run.id])).rows[0].content;
+  assert.ok(kpi.kpis.length >= 5 && kpi.unknowns.some((u) => /未登録/.test(u)), '業務 KPI は未登録と明示');
+  // 03 施工: knowledge-brief → quantity-consistency-check（決定的）→ planning-brief（LLM 未設定で明示的に失敗）
+  const c = await call('/api/agent-runs', { method: 'POST', cookie: adminCookie, body: { agentId: 'construction-planning-support', input: { query: '港湾の岸壁改良の施工計画', quantities_text: '捨石: 100 m3\n捨石: 5 t\n合計: 300 m3' } } });
+  assert.equal(c.status, 201);
+  for (let i = 0; i < 6; i++) { step = await claimAndExecute(c.data.run.id); if (step.done) break; }
+  assert.equal(step.run.status, 'failed'); assert.match(step.run.error_message, /LLM未設定/);
+  const qc = (await pool.query(`SELECT content FROM artifacts WHERE run_id = $1 AND kind = 'quantity_check'`, [c.data.run.id])).rows[0].content;
+  assert.ok(qc.issues.some((x) => /単位が混在/.test(x)) && qc.issues.some((x) => /一致しません/.test(x)));
+  // 束縛 params が Skill 入力へ渡る（planning-brief の plan_type は Agent 契約で固定）
+  const { rows: ev } = await pool.query(`SELECT detail FROM run_events WHERE run_id = $1 AND type = 'step_completed' AND skill_id = 'knowledge-brief'`, [c.data.run.id]);
+  assert.ok(ev.length === 1);
+  // 司令塔は組織責務 Agent を選ぶ
+  const orc = await call('/api/orchestrations', { method: 'POST', cookie: adminCookie, body: { request: '委員会向けに今月の KPI と承認運用の職務分離を整理したい' } });
+  assert.equal(orc.status, 201);
+  const od = await call(`/api/orchestrations/${orc.data.orchestration.id}`, { cookie: adminCookie });
+  assert.ok(od.data.steps.some((s) => s.agent_id === 'governance-support'), JSON.stringify(od.data.steps.map((s) => s.agent_id)));
+  await pool.query(`UPDATE agent_runs SET status = 'cancelled', finished_at = now() WHERE status IN ('queued','running') AND requested_by = $1`, [adminId]);
 });

@@ -1,6 +1,6 @@
 ---
 name: knowledge-dedup
-description: Knowledge候補間の重複候補を検出する。矛盾する記述を重複と混同しない。
+description: "Knowledge候補間の重複候補を検出する。矛盾する記述を重複と混同しない。"
 metadata:
   version: "1.0.0"
   domain: "mirai-construction"

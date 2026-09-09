@@ -1,0 +1,1 @@
+{"case_id": "RC-01", "input": {"query": "九州支店の案件", "branch": "九州", "allowed_classification": "public_only"}, "expect": {"classification_equals": "public_only", "unknowns_min": 1, "notes": "地域データ未登録を明示"}}

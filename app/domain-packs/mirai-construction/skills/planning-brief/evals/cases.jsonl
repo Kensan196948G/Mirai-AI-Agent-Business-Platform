@@ -1,0 +1,1 @@
+{"case_id": "PB-01", "input": {"query": "港湾の岸壁改良の施工計画の論点を整理したい", "plan_type": "construction_plan"}, "expect": {"requires_human_review": true, "items_min": 0, "notes": "offline では代表値。人手確認は常に true"}}

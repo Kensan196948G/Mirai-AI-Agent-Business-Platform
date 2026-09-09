@@ -1,0 +1,34 @@
+{
+  "type": "object",
+  "required": [
+    "region",
+    "classification",
+    "scope_note",
+    "unknowns"
+  ],
+  "properties": {
+    "region": {
+      "type": "string"
+    },
+    "customer": {
+      "type": "string"
+    },
+    "classification": {
+      "type": "string",
+      "enum": [
+        "public_only",
+        "authorized"
+      ]
+    },
+    "scope_note": {
+      "type": "string"
+    },
+    "unknowns": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

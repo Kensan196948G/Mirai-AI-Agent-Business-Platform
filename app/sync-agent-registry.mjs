@@ -12,15 +12,13 @@
 import { loadEnv } from './src/lib/env.js';
 import { getPool, closePool, withTransaction } from './src/lib/db.js';
 import { syncAgent } from './src/agent-runtime/registry.js';
+import { loadUnifiedCatalog } from './src/agent-runtime/catalog.js';
 
 loadEnv(new URL('.env', import.meta.url).pathname);
 
 const PACK_ID = 'mirai-construction';
-const AGENTS = [
-  { agentId: 'technology-selection', version: '1.0.0' },
-  { agentId: 'project-case-research', version: '1.0.0' },
-  { agentId: 'knowledge-quality', version: '1.0.0' },
-];
+// org-map.yaml に登録された実定義（agents/*.yaml）を持つ Agent をすべて同期する
+const AGENTS = loadUnifiedCatalog(PACK_ID).agents.filter((a) => a.executable).map((a) => ({ agentId: a.agent_id, version: '1.0.0' }));
 
 async function main() {
   const args = process.argv.slice(2);

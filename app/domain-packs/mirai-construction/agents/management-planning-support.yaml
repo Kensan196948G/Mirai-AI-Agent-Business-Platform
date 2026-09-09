@@ -1,0 +1,46 @@
+schema_version: mirai.agent-definition/v1
+agent_id: management-planning-support
+version: 1.0.0
+domain_pack: mirai-construction
+title: 管理本部・経営企画支援
+owner_role: 管理本部 / 経営企画室
+layer: organization
+org_code: '06'
+technical_risk_class: T2
+purpose: 事業計画・予算・ROI・DX ポートフォリオの論点整理と、本システムに実測のある KPI、予算表の整合、AI 利用リスクの評価草案を作る。結果は説明可能な形（根拠と不明点）で示す。
+does_not: 予算・投資の決定、財務数値の推定、人事評価。
+max_autonomy_level: A1
+input_contract:
+  type: object
+  properties:
+    query:
+      type: string
+      minLength: 1
+      maxLength: 4000
+    quantities_text:
+      type: string
+      maxLength: 60000
+delegates_to: []
+timeout_seconds: 600
+budget_usd: 0.5
+model_category: Research / Classification
+skills:
+- skill_id: kpi-review
+  version: 1.0.0
+- skill_id: quantity-consistency-check
+  version: 1.0.0
+- skill_id: planning-brief
+  version: 1.0.0
+  params:
+    plan_type: business_plan
+    criteria:
+    - 目的
+    - 費用対効果
+    - 前提
+    - リスク
+    - KPI
+- skill_id: risk-assessment
+  version: 1.0.0
+  params:
+    domain: ai
+output: 論点・根拠・不明点を含む草案（review_state=draft、人間レビュー必須）

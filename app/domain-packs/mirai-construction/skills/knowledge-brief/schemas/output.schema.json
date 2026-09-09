@@ -1,0 +1,50 @@
+{
+  "type": "object",
+  "required": [
+    "candidates",
+    "findings",
+    "sources",
+    "unknowns",
+    "requires_human_review",
+    "artifact_id",
+    "artifact_code"
+  ],
+  "properties": {
+    "candidates": {
+      "type": "array"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "source_record_id": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "unknowns": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "requires_human_review": {
+      "type": "boolean"
+    },
+    "artifact_id": {
+      "type": "integer"
+    },
+    "artifact_code": {
+      "type": "string"
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

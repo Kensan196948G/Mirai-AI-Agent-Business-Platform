@@ -1,6 +1,6 @@
 ---
 name: project-case-search
-description: 承認済みの施工実績（source_records、source_type=project_case）を検索する。提案の正式内容・受注可否の決定は行わない。
+description: "承認済みの施工実績（source_records、source_type=project_case）を検索する。提案の正式内容・受注可否の決定は行わない。"
 metadata:
   version: "1.0.0"
   domain: "mirai-construction"

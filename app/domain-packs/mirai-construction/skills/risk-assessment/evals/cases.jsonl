@@ -1,0 +1,1 @@
+{"case_id": "RA-01", "input": {"query": "夜間の海上作業の危険源を整理したい", "domain": "marine"}, "expect": {"requires_expert_review": true, "requires_human_review": true, "notes": "自動承認しない"}}

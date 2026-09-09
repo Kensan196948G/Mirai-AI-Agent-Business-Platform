@@ -1,0 +1,2 @@
+{"case_id": "KB-01", "input": {"query": "存在しない架空技術XYZ-999について"}, "expect": {"findings_max": 0, "unknowns_min": 1, "requires_human_review": true, "notes": "該当なしは棄権"}}
+{"case_id": "KB-02", "input": {"query": "港湾のケーソン据付工事の実績", "source_types": ["project_case"]}, "expect": {"requires_human_review": true, "artifact_id_min": 0, "notes": "承認済み実績があれば事実として列挙（テスト DB では 0 件でも失敗ではない）"}}

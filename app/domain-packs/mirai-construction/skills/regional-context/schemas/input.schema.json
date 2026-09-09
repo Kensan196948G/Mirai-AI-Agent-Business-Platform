@@ -1,0 +1,25 @@
+{
+  "type": "object",
+  "required": [
+    "query"
+  ],
+  "properties": {
+    "query": {
+      "type": "string"
+    },
+    "branch": {
+      "type": "string"
+    },
+    "customer": {
+      "type": "string"
+    },
+    "allowed_classification": {
+      "type": "string",
+      "enum": [
+        "public_only",
+        "authorized"
+      ]
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

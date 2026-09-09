@@ -25,6 +25,7 @@ const ajv = new Ajv({ allErrors: true, strict: false });
 export function sampleFromSchema(schema) {
   if (!schema || typeof schema !== 'object') return 'sample';
   if (schema.const !== undefined) return schema.const;
+  if (Array.isArray(schema.enum) && schema.enum.length) return schema.enum[0];
   const type = Array.isArray(schema.type) ? schema.type[0] : schema.type;
   switch (type) {
     case 'array': return schema.items ? [sampleFromSchema(schema.items)] : [];

@@ -20,6 +20,7 @@ const PACK = 'mirai-construction';
 function sample(schema) {
   if (!schema || typeof schema !== 'object') return 'x';
   if (schema.const !== undefined) return schema.const;
+  if (Array.isArray(schema.enum) && schema.enum.length) return schema.enum[0];
   const type = Array.isArray(schema.type) ? schema.type[0] : schema.type;
   switch (type) {
     case 'array': return schema.items ? [sample(schema.items)] : [];
@@ -35,7 +36,7 @@ function makeCtx(def, input, { degraded = false } = {}) {
   const calls = [];
   return {
     calls,
-    client: { query: async () => ({ rows: [{ run_count: 0, avg_steps: null, avg_tokens: null, avg_cost: null }] }) },
+    client: { query: async () => ({ rows: [{ run_count: 0, avg_steps: null, avg_tokens: null, avg_cost: null, total: 0, completed: 0, cost: 0, reviewed: 0, pending: 0, approved: 0, promoted: 0, n: 0 }] }) },
     run: { id: 1, run_code: 'RUN-TEST', project_id: null },
     agentVersion: { version: '1.0.0' },
     skillDef: def,
@@ -69,6 +70,16 @@ const INPUTS = {
   'knowledge-review-packet': { knowledge_candidate_id: 5, findings: ['f'], flags: [], duplicates: [7], conflicts: [], unknowns: [] },
   'outcome-measurement': { agent_id: null },
   'source-normalize': { raw_text: 'abc 03-1234-5678', source_type: 'company_website' },
+  // 第 2 段: 組織責務 Agent の共通 Skill
+  'knowledge-brief': { query: 'MC-Wake', source_types: ['technology_catalog'] },
+  'planning-brief': { query: '施工計画の論点', plan_type: 'construction_plan', candidates: [{ source_record_id: 1, title: 't', summary: 's', evidence_type: 'e' }] },
+  'document-review': { query: 'レビュー', document_text: '高所作業は手すりを設置する。', criteria: ['墜落防止'] },
+  'risk-assessment': { query: '夜間海上作業', domain: 'marine' },
+  'decision-log-draft': { query: '採用可否', options: ['採用', '見送り'], findings: ['f'] },
+  'kpi-review': { query: 'KPI' },
+  'sod-check': { query: 'SoD' },
+  'quantity-consistency-check': { query: '数量', quantities_text: '捨石: 100 m3\n捨石: 5 t\n合計: 300 m3' },
+  'regional-context': { query: '九州', branch: '九州', allowed_classification: 'public_only' },
 };
 
 for (const [skillId, input] of Object.entries(INPUTS)) {
@@ -87,7 +98,7 @@ for (const [skillId, input] of Object.entries(INPUTS)) {
 }
 
 test('structured_llm Skill は LLM出力検証失敗（degraded）でも schema に適合する安全な既定値を返す', async () => {
-  for (const skillId of ['applicability-gap-check', 'technology-comparison', 'case-comparison', 'evidence-backed-draft', 'knowledge-quality-review', 'knowledge-dedup']) {
+  for (const skillId of ['applicability-gap-check', 'technology-comparison', 'case-comparison', 'evidence-backed-draft', 'knowledge-quality-review', 'knowledge-dedup', 'planning-brief', 'document-review', 'risk-assessment']) {
     const def = loadSkillDefinition(PACK, skillId, '1.0.0');
     const out = await SKILL_HANDLERS[skillId](makeCtx(def, INPUTS[skillId], { degraded: true }));
     const validate = ajv.compile(def.outputSchema);

@@ -1,0 +1,1 @@
+{"case_id": "KR-01", "input": {"query": "今月の KPI をレビューしたい"}, "expect": {"kpis_min": 3, "unknowns_min": 1, "requires_human_review": true, "notes": "実測 KPI を返し、業務 KPI は未登録と明示"}}
