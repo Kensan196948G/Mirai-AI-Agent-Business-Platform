@@ -13,6 +13,7 @@ import { withinMonthlyBudget, monthlyCapUsd } from '../lib/llm.js';
 import { validateCitations } from './evidence-validator.js';
 import { authorizeBudget, PolicyDeniedError } from './policy-engine.js';
 import { SKILL_HANDLERS } from './skills/index.js';
+import { ensureStepApproval } from './run-approvals.js';
 
 const ajv = new Ajv({ allErrors: true, strict: false });
 
@@ -33,6 +34,7 @@ export async function executeNextStep(runId, { workerId }) {
 
   if (await checkCancel(run.id)) return finishAs(run.id, 'cancelled', null);
   if (run.current_step >= skillVersions.length) return finishAs(run.id, 'completed', null);
+  if (await checkPause(run.id)) return pauseAs(run.id);
   if (run.current_step >= run.max_steps) return finishAs(run.id, 'failed', `最大Step数（${run.max_steps}）に到達しました`);
 
   const stepIndex = run.current_step;
@@ -58,6 +60,33 @@ export async function executeNextStep(runId, { workerId }) {
         detail: { error: `入力検証エラー: ${ajv.errorsText(validateInput.errors)}` },
       });
       return handleStepFailure(client, run, `入力検証エラー（${skillDef.skillId}）: ${ajv.errorsText(validateInput.errors)}`);
+    }
+
+    // 承認ゲート: Skill 契約が承認を要求する Step は、拘束一致の承認が無ければ waiting_approval で待つ（Worker を占有しない）
+    const gate = freshSkillVersion.approval_gate;
+    if (gate && gate.required) {
+      const verdict = await ensureStepApproval(client, { run, skillVersion: freshSkillVersion, stepIndex, input, gate });
+      if (verdict.decision === 'rejected') {
+        await jobStore.appendEvent(client, run.id, {
+          type: 'error', skillId: skillDef.skillId, skillVersion: freshSkillVersion.version, status: 'error',
+          detail: { error: `承認が却下されました（${verdict.approval.approval_code}）` },
+        });
+        await jobStore.finishRun(client, run.id, { status: 'cancelled', errorMessage: `承認却下: ${verdict.approval.approval_code}` });
+        return { done: true, run: await jobStore.getRun(client, run.id) };
+      }
+      if (verdict.decision === 'wait') {
+        const reason = `${skillDef.skillId} の実行には ${gate.role || 'Approver'} の承認が必要です${gate.reason ? `（${gate.reason}）` : ''}: ${verdict.approval.approval_code}`;
+        await jobStore.appendEvent(client, run.id, {
+          type: 'waiting_approval', skillId: skillDef.skillId, skillVersion: freshSkillVersion.version, status: 'waiting',
+          detail: { approval_id: Number(verdict.approval.id), approval_code: verdict.approval.approval_code, created: verdict.created, reason },
+        });
+        await jobStore.waitForApproval(client, run.id, { reason, approvalRequestId: verdict.approval.id });
+        return { done: true, run: await jobStore.getRun(client, run.id) };
+      }
+      await jobStore.appendEvent(client, run.id, {
+        type: 'approval_verified', skillId: skillDef.skillId, skillVersion: freshSkillVersion.version, status: 'ok',
+        detail: { approval_id: Number(verdict.approval.id), approval_code: verdict.approval.approval_code },
+      });
     }
 
     await jobStore.appendEvent(client, run.id, {
@@ -182,6 +211,18 @@ async function handleStepFailure(client, run, message) {
 
 async function checkCancel(runId) {
   return withTransaction((client) => jobStore.isCancelRequested(client, runId));
+}
+
+async function checkPause(runId) {
+  return withTransaction((client) => jobStore.isPauseRequested(client, runId));
+}
+
+async function pauseAs(runId) {
+  return withTransaction(async (client) => {
+    await jobStore.appendEvent(client, runId, { type: 'paused', status: 'paused', detail: { reason: '利用者の一時停止要求' } });
+    await jobStore.pauseRun(client, runId, '利用者の一時停止要求');
+    return { done: true, run: await jobStore.getRun(client, runId) };
+  });
 }
 
 async function finishAs(runId, status, errorMessage) {

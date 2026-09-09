@@ -3,8 +3,32 @@ import { getPool, withTransaction } from '../lib/db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { recordAudit } from '../lib/audit.js';
 import { nextApprovalCode } from '../lib/codes.js';
+import * as jobStore from '../agent-runtime/job-store.js';
 
 const router = express.Router();
+
+/**
+ * Agent Run の Step 承認（type=agent_run_step）が確定したら Run を再開（queued）または中断する。
+ * 再開時の再検証（Skill 版・入力の一致）は Worker 側の ensureStepApproval が行う。
+ */
+async function syncRunOnDecision(client, approval, decision, actor) {
+  if (approval.type !== 'agent_run_step' || !approval.agent_run_id) return;
+  const { rows } = await client.query(`SELECT id, run_code, status FROM agent_runs WHERE id = $1 FOR UPDATE`, [approval.agent_run_id]);
+  const run = rows[0];
+  if (!run || run.status !== 'waiting_approval') return;
+  if (decision === 'approved') {
+    await jobStore.resumeRun(client, run.id);
+    await jobStore.appendEvent(client, run.id, { type: 'resumed', status: 'ok', detail: { by: 'approval', approval_id: Number(approval.id) } });
+  } else {
+    await jobStore.appendEvent(client, run.id, { type: 'cancelled', status: 'cancelled', detail: { by: 'approval_rejected', approval_id: Number(approval.id) } });
+    await jobStore.finishRun(client, run.id, { status: 'cancelled', errorMessage: `承認却下により中断（approval ${approval.id}）` });
+  }
+  await recordAudit(client, {
+    actorId: actor.id, actorType: 'user', actorName: actor.name,
+    action: decision === 'approved' ? 'agent_run.resume' : 'agent_run.cancelled', resourceType: 'agent_run', resourceId: run.id,
+    detail: { runCode: run.run_code, via: 'approval', approvalId: Number(approval.id) },
+  });
+}
 
 /** type ごとの承認ステップ構成。project_gate は Approver 1段、production_release はより高リスクのため Reviewer→Approver の2段。 */
 const STEP_PLANS = {
@@ -39,8 +63,10 @@ router.get('/', requireAuth, async (_req, res) => {
   const { rows } = await getPool().query(
     `SELECT ar.id, ar.approval_code, ar.type, ar.risk, ar.target, ar.status, ar.created_at, ar.decided_at, ar.target_status,
             p.id AS project_id, p.project_code, p.title, u.name AS requested_by_name
+     , ar.agent_run_id, r.run_code
      FROM approval_requests ar
-     JOIN projects p ON p.id = ar.project_id
+     LEFT JOIN projects p ON p.id = ar.project_id
+     LEFT JOIN agent_runs r ON r.id = ar.agent_run_id
      JOIN users u ON u.id = ar.requested_by
      ORDER BY ar.created_at DESC`,
   );
@@ -65,9 +91,10 @@ router.get('/:id', requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) return res.status(400).json({ error: '不正な id' });
   const { rows } = await getPool().query(
-    `SELECT ar.id, ar.approval_code, ar.type, ar.risk, ar.target, ar.status, ar.target_status, ar.created_at,
-            p.id AS project_id, p.project_code, p.title
-     FROM approval_requests ar JOIN projects p ON p.id = ar.project_id WHERE ar.id = $1`,
+    `SELECT ar.id, ar.approval_code, ar.type, ar.risk, ar.target, ar.status, ar.target_status, ar.created_at, ar.binding,
+            p.id AS project_id, p.project_code, p.title, ar.agent_run_id, r.run_code
+     FROM approval_requests ar LEFT JOIN projects p ON p.id = ar.project_id LEFT JOIN agent_runs r ON r.id = ar.agent_run_id
+     WHERE ar.id = $1`,
     [id],
   );
   if (rows.length === 0) return res.status(404).json({ error: 'approval が見つかりません' });
@@ -92,7 +119,7 @@ router.post('/:id/steps/:stepId/decide', requireAuth, async (req, res) => {
   try {
     const result = await withTransaction(async (client) => {
       const { rows: aprRows } = await client.query(
-        `SELECT id, project_id, status, target_status, requested_by FROM approval_requests WHERE id = $1 FOR UPDATE`,
+        `SELECT id, project_id, status, target_status, requested_by, type, agent_run_id FROM approval_requests WHERE id = $1 FOR UPDATE`,
         [approvalId],
       );
       if (aprRows.length === 0) throw Object.assign(new Error('approval が見つかりません'), { status: 404 });
@@ -129,6 +156,7 @@ router.post('/:id/steps/:stepId/decide', requireAuth, async (req, res) => {
 
       if (decision === 'rejected') {
         await client.query(`UPDATE approval_requests SET status = 'rejected', decided_by = $1, decided_at = now() WHERE id = $2`, [req.user.id, approvalId]);
+        await syncRunOnDecision(client, aprRows[0], 'rejected', req.user);
         await recordAudit(client, {
           actorId: req.user.id, actorType: 'user', actorName: req.user.name,
           action: 'approval.rejected', resourceType: 'approval', resourceId: approvalId, detail: { step: step.role, reason },
@@ -140,9 +168,10 @@ router.post('/:id/steps/:stepId/decide', requireAuth, async (req, res) => {
       if (remaining.length === 0) {
         // 最終stepの承認 → approval確定 + Projectへ反映
         await client.query(`UPDATE approval_requests SET status = 'approved', decided_by = $1, decided_at = now() WHERE id = $2`, [req.user.id, approvalId]);
-        if (aprRows[0].target_status) {
+        if (aprRows[0].target_status && aprRows[0].project_id) {
           await client.query(`UPDATE projects SET status = $1 WHERE id = $2`, [aprRows[0].target_status, aprRows[0].project_id]);
         }
+        await syncRunOnDecision(client, aprRows[0], 'approved', req.user);
         await recordAudit(client, {
           actorId: req.user.id, actorType: 'user', actorName: req.user.name,
           action: 'approval.approved', resourceType: 'approval', resourceId: approvalId,

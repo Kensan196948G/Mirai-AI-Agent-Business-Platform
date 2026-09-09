@@ -103,8 +103,39 @@ export async function isCancelRequested(client, runId) {
 
 export async function resumeRun(client, runId) {
   await client.query(
-    `UPDATE agent_runs SET status = 'queued', cancel_requested = false, updated_at = now() WHERE id = $1`,
+    `UPDATE agent_runs SET status = 'queued', cancel_requested = false, pause_requested = false, waiting_reason = NULL,
+                            lease_owner = NULL, lease_expires_at = NULL, updated_at = now()
+     WHERE id = $1`,
     [runId],
+  );
+}
+
+/** 承認待ちへ遷移する。Lease を手放し（Worker を占有しない）、承認申請と理由を Run に残す。 */
+export async function waitForApproval(client, runId, { reason, approvalRequestId }) {
+  await client.query(
+    `UPDATE agent_runs SET status = 'waiting_approval', waiting_reason = $1, approval_request_id = $2,
+                            lease_owner = NULL, lease_expires_at = NULL, updated_at = now()
+     WHERE id = $3`,
+    [reason, approvalRequestId, runId],
+  );
+}
+
+export async function requestPause(client, runId) {
+  await client.query(`UPDATE agent_runs SET pause_requested = true, updated_at = now() WHERE id = $1`, [runId]);
+}
+
+export async function isPauseRequested(client, runId) {
+  const { rows } = await client.query(`SELECT pause_requested FROM agent_runs WHERE id = $1`, [runId]);
+  return rows[0]?.pause_requested === true;
+}
+
+/** 一時停止（Step 境界でのみ遷移する。実行中の Step は完了させてから止まる）。 */
+export async function pauseRun(client, runId, reason) {
+  await client.query(
+    `UPDATE agent_runs SET status = 'paused', pause_requested = false, waiting_reason = $1,
+                            lease_owner = NULL, lease_expires_at = NULL, updated_at = now()
+     WHERE id = $2`,
+    [reason || '利用者の一時停止要求', runId],
   );
 }
 
