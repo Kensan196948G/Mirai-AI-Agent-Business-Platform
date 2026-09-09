@@ -1,0 +1,2 @@
+{"case_id": "SCV-01", "input": {"sources": [{"source_record_id": 999999}]}, "expect": {"valid_max": 0, "invalid_min": 1, "notes": "存在しない出典は invalid として理由付きで返す"}}
+{"case_id": "SCV-02", "input": {"sources": []}, "expect": {"valid_max": 0, "invalid_max": 0, "notes": "引用ゼロは valid / invalid とも空"}}

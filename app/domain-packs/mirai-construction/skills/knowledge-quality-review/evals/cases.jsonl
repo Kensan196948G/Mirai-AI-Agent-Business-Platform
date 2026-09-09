@@ -1,0 +1,1 @@
+{"case_id": "KQ-01", "input": {"knowledge_candidate_id": 1, "title": "現場写真のEXIF欠損時は電子黒板OCRの日付を優先する", "summary": "EXIF が欠損している場合は電子黒板の OCR で読み取った日付を採用する", "source": "DX推進部 運用メモ"}, "expect": {"knowledge_candidate_id_equals": 1, "findings_min": 0, "flags_min": 0, "notes": "候補 ID を引き継ぎ、findings / flags を配列で返す"}}

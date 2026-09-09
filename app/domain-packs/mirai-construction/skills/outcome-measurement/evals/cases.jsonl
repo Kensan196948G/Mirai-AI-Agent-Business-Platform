@@ -1,0 +1,2 @@
+{"case_id": "OM-01", "input": {"agent_id": "存在しないAgent"}, "expect": {"run_count_max": 0, "unknowns_min": 1, "notes": "実測データが無いときは unknowns に記録し、推定値で埋めない"}}
+{"case_id": "OM-02", "input": {"agent_id": null}, "expect": {"run_count_min": 0, "notes": "全 Agent 集計は完了 Run の件数以上を返す"}}

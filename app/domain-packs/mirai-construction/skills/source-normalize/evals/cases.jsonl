@@ -1,0 +1,2 @@
+{"case_id": "SN-01", "input": {"raw_text": "担当者連絡先 03-1234-5678 まで", "source_type": "technology_catalog"}, "expect": {"quarantined": true, "quarantine_reasons_min": 1, "notes": "電話番号らしき文字列は隔離する"}}
+{"case_id": "SN-02", "input": {"raw_text": "本技術は   ケーソン据付を\n自動計測する 技術である。", "source_type": "technology_catalog"}, "expect": {"quarantined": false, "normalized_text_includes": "ケーソン据付を 自動計測する", "notes": "連続空白・改行を 1 つの空白に正規化し、除外対象が無ければ隔離しない"}}

@@ -228,6 +228,17 @@ curl -X POST http://127.0.0.1:<PORT>/api/agent-runs \
 
 P1 の 3 Agent は A0〜A1（外部書き込みなし）のため既定ではゲートを設定していない。P2/P3 で外部への確定書き込み（A2）を追加する Skill に `approval_gate` を付ける。正式な業務承認（desknet's NEO）とは別のアプリ内承認である（ADR-001）。
 
+## 🧪 Skill 評価ランナー（C-16）
+
+| 手順 | コマンド | 備考 |
+|---|:--|---|
+| 全 Skill を評価（費用ゼロ） | `node evaluate-skills.mjs [--email <実行者>]` | 各 Skill の `evals/cases.jsonl` を実行し、output schema と期待値（`<field>_min` / `_max` / `_equals` / `_includes`、`requires_human_review`）で合否判定。LLM はスタブ、検索 Tool は接続先 DB の承認済み出典を読む。Run・成果物・イベントは作らない |
+| 実 LLM で評価 | `node evaluate-skills.mjs --live --skill technology-comparison` | DeepSeek を呼ぶ（費用が出る）。Skill 改訂前後の品質比較用 |
+| 改訂前後の比較 | `node evaluate-skills.mjs --compare` | 直近 2 バッチを内容ハッシュと合否で比較し、回帰（前回合格 → 今回不合格）と改善を表示 |
+| API | `GET /api/skills/:id/evaluations`、`GET /api/skills/:id/versions`（`eval_passed/eval_total`） | Registry 画面の「評価」列に内容ハッシュ一致の最新結果を表示 |
+
+CI（app-ci）の E2E で全 Skill の offline 評価が実行され、失敗すれば PR がマージできない。LLM による自己採点は合否に使わない（設計文書 §評価）。
+
 ## 🧾 成果物の差分・履歴・版固定（C-15）
 
 | 仕組み | 内容 |

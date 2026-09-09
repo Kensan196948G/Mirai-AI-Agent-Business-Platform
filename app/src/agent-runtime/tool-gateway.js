@@ -19,18 +19,25 @@ async function toolKnowledgeSearchApproved(client, { query, sourceType, projectI
   const tokens = extractSearchTokens(query);
   if (tokens.length === 0) return { candidates: [] };
 
-  const params = [sourceType || null, projectId || null, String(query || ''), ...tokens.map((t) => `%${t}%`)];
-  const hitExprs = tokens.map((_, i) => `(CASE WHEN title ILIKE $${i + 4} THEN 3 WHEN summary ILIKE $${i + 4} THEN 2 WHEN content_text ILIKE $${i + 4} THEN 1 ELSE 0 END)`);
+  // 一致点: title=3 / summary=2 / content_text=1（語ごとの最大）。
+  // 本文中の一般語 1 語だけの一致（例: 架空の技術名を尋ねた相談文の「存在」）で候補を返さないよう、
+  // 語が 2 つ以上ある相談文では合計 2 点以上（title か summary の一致、または本文で 2 語以上）を要求する。
+  const minScore = tokens.length >= 2 ? 2 : 1;
+  const params = [sourceType || null, projectId || null, String(query || ''), minScore, ...tokens.map((t) => `%${t}%`)];
+  const hitExprs = tokens.map((_, i) => `(CASE WHEN title ILIKE $${i + 5} THEN 3 WHEN summary ILIKE $${i + 5} THEN 2 WHEN content_text ILIKE $${i + 5} THEN 1 ELSE 0 END)`);
   const { rows } = await client.query(
-    `SELECT id, title, summary, evidence_type, source_type,
-            (${hitExprs.join(' + ')}) AS hit_score,
-            similarity(title, $3::text) AS title_sim
-     FROM source_records
-     WHERE status = 'approved'
-       AND (effective_to IS NULL OR effective_to >= CURRENT_DATE)
-       AND (classification = 'public' OR ($2::bigint IS NOT NULL AND project_scope = $2))
-       AND ($1::text IS NULL OR source_type = $1)
-       AND (${tokens.map((_, i) => `title ILIKE $${i + 4} OR summary ILIKE $${i + 4} OR content_text ILIKE $${i + 4}`).join(' OR ')})
+    `SELECT * FROM (
+       SELECT id, title, summary, evidence_type, source_type,
+              (${hitExprs.join(' + ')}) AS hit_score,
+              similarity(title, $3::text) AS title_sim
+       FROM source_records
+       WHERE status = 'approved'
+         AND (effective_to IS NULL OR effective_to >= CURRENT_DATE)
+         AND (classification = 'public' OR ($2::bigint IS NOT NULL AND project_scope = $2))
+         AND ($1::text IS NULL OR source_type = $1)
+         AND (${tokens.map((_, i) => `title ILIKE $${i + 5} OR summary ILIKE $${i + 5} OR content_text ILIKE $${i + 5}`).join(' OR ')})
+     ) scored
+     WHERE hit_score >= $4
      ORDER BY hit_score DESC, title_sim DESC, id
      LIMIT 10`,
     params,
@@ -114,6 +121,19 @@ const TOOL_HANDLERS = {
   'source.read-approved-snapshot': (client, args) => toolSourceReadApprovedSnapshot(client, args),
   'artifact.write-draft': (client, args) => toolArtifactWriteDraft(client, args),
 };
+
+/**
+ * 評価ランナー専用: 読み取り専用 Tool を run_events へ記録せずに実行する。
+ * 書き込み Tool（artifact.write-draft）は DB に触れず、偽の成果物 ID を返す（評価で本番データを作らない）。
+ */
+export async function invokeToolForEvaluation(client, toolName, args) {
+  if (toolName === 'artifact.write-draft') {
+    return { artifact: { id: 0, artifact_code: 'ART-EVAL', kind: args.kind, title: args.title, review_state: 'draft', reused: false, evaluation_stub: true } };
+  }
+  const handler = TOOL_HANDLERS[toolName];
+  if (!handler) throw new PolicyDeniedError(`Tool「${toolName}」は登録されていません`);
+  return handler(client, args);
+}
 
 /**
  * Tool呼び出しの唯一の入口。policy-engineでの許可判定 → run_eventsへの記録 → 実行 → 結果記録、の順で行う。
