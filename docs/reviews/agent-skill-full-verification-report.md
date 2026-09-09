@@ -1,7 +1,7 @@
 # Agent / Skills / AI Runtime 全面検証報告（作成中）
 
 基準: `docs/Agent-Skills-AI-Runtime-Full-Verification-Checklist.md` ／ 対象 Repository: `Kensan196948G/Mirai-AI-Agent-Business-Platform`
-最終更新: 2026-09-09（第 3 段） ／ 状態: **作成中**（第 5 段の完了時に PASS / PARTIAL / FAIL / NOT IMPLEMENTED の全項目判定、実装率、Severity、Mermaid 図を確定する）
+最終更新: 2026-09-09（第 4 段） ／ 状態: **作成中**（第 5 段の完了時に PASS / PARTIAL / FAIL / NOT IMPLEMENTED の全項目判定、実装率、Severity、Mermaid 図を確定する）
 
 ## 進め方（段階）
 
@@ -10,7 +10,7 @@
 | 第 1 段 | 司令塔（CTO Orchestrator）: 計画（Agent 選択理由・順序）、複数 Run の実行、統合、上限、監査 | 実装済み（本報告の PR） |
 | 第 2 段 | 組織責務 Agent 01〜09 の実定義と Skill（共通 Skill の再利用、評価ケース） | 実装済み（PR: 組織責務 Agent） |
 | 第 3 段 | 土木専門 Agent 9 種（入出力契約、技術リスク T1〜T6、単位・数値整合） | 実装済み（PR: 土木専門 Agent） |
-| 第 4 段 | Cross Review（独立レビュー、矛盾検出、PASS / CONDITIONAL / FAIL、Human Review 強制） | 未着手 |
+| 第 4 段 | Cross Review（独立レビュー、矛盾検出、PASS / CONDITIONAL / FAIL、Human Review 強制） | 実装済み（PR: Cross Review） |
 | 第 5 段 | 残項目の是正、全項目判定、実装率、Severity、Runtime 経路図と期待構成との差分、README 更新 | 未着手 |
 
 ## 第 1 段で確認・実装した項目（抜粋）
@@ -66,12 +66,30 @@
 | X-016 不足地盤条件で推測しない | PASS | E2E: 地下水位の記載なし → 未確定条件として登録、present に含めない |
 | X-017 Safety Critical で Human Review | PASS | T3 以上は専門技術者確認、全草案 requires_human_review |
 | X-018 / X-019 最終設計・施工判断を人間へ | PASS | Agent の does_not と T5 の ai_completion_prohibited。統合草案も人間レビュー必須 |
-| X-020 Cross Review 結果の Evidence 化 | NOT IMPLEMENTED | 第 4 段 |
+| X-020 Cross Review 結果の Evidence 化 | PASS（第 4 段） | 成果物 cross_review、統合草案 content.cross_review、監査 orchestration.cross_review |
 | 第 2 段の欠陥修正 | FIXED | Run 固定版の Skill 一覧（`getAgentVersionById`）が束縛 params を返しておらず、組織責務 Agent の params（plan_type 等）が実行時に渡っていなかった。E2E で params の到達を検証 |
+
+## 第 4 段で確認・実装した項目（抜粋）
+
+| 項目 | 判定 | 根拠 |
+|---|---|---|
+| K-001 Cross Review 機能 / A-008 独立処理 | PASS | `agents/cross-review-agent.yaml`（layer=cross_review）、`skills/cross-review`、司令塔が最終 Step として自動付与。E2E「Cross Review（第 4 段）」 |
+| K-002 / K-017 独立 Reviewer・モデル多様性 | PASS / PARTIAL | Skill 契約 `model_category: Independent Review` を Model Router で解決。同一 Provider しか設定が無い環境ではモデル名の分離のみ（Provider 多様性は運用設定） |
+| K-003 同じ回答を追認しない | PASS | 機械検査の結果を LLM 入力に渡し、LLM の判定は機械検査より緩められない（ユニット: LLM PASS → 機械 FAIL で FAIL） |
+| K-004〜K-006 矛盾・数値・単位 | PASS | `machineCrossCheck`（Agent 間の同一量の数値差、単位系 / 座標系 / 基準面の混在） |
+| K-007〜K-009 前提・基準 / 出典・リスク評価の矛盾 | PARTIAL | 独立レビュー（LLM）の抽出項目。機械検査は根拠なし（sources 無し）のみ。LLM 未設定環境では未実施を明示 |
+| K-010 未確認事項 / K-011 少数意見 | PASS | unknowns / minority_opinions を成果物に保持（消さない） |
+| K-012 confidence / K-013 判定 | PASS | verdict + confidence（機械検査のみは 0.3、成果なしは 0） |
+| K-014 FAIL で Human Review 強制 | PASS | human_review_forced、統合草案の expert_review_required を強制（review API で専門技術者確認が必須になる） |
+| K-015 Safety / Structural Critical は Human Review | PASS | T3 以上の専門技術者確認（第 3 段）と併用。structural-expert は T5 |
+| K-016 Cross Review 自身の Audit | PASS | `orchestration.cross_review`（判定・confidence・Evidence の成果物コード） |
+| D-017 / X-012 Civil Agent 同士の結果衝突 | PASS / PARTIAL | 数値・単位は機械検査で PASS。意味的矛盾（地盤定数と構造前提）は独立レビュー（LLM）に依存 |
+| T-008 Cross Review 表示 | PASS | WebUI 司令塔詳細に判定・confidence・矛盾件数・Evidence を表示 |
+| Y-008 Cross Review が実稼働 | PENDING | 本 PR のマージ・本番同期後に本番の司令塔で確認する |
 
 ## 未実装 Backlog（現時点）
 
-- Cross Review（第 4 段）: 独立レビュー、矛盾検出、PASS / CONDITIONAL / FAIL、Evidence 化（X-020、D-017 の意味的矛盾）
+- 第 5 段: 承認の期限・差戻し・Evidence 必須（J-006〜J-010）、Tool 結果の schema 検証（H-020）、Circuit Breaker（H-017）、API の pagination（S-015）、司令塔のタイムアウト（B-018）、全項目判定・実装率・Severity・Runtime 経路図
 - 承認の期限・差戻し・Evidence 必須（J-006〜J-010）、Tool 結果の schema 検証（H-020）、Circuit Breaker（H-017）、API の pagination（S-015）など第 5 段で是正
 
 以降の段で本報告を更新する。

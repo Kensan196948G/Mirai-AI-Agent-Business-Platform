@@ -48,22 +48,26 @@ export function loadUnifiedCatalog(packId = 'mirai-construction') {
     }
   }
   // 土木専門 Agent（第 3 段）: 部署に属さず、組織責務 Agent から委譲される横断層。org-map.yaml の civil_experts に列挙する
-  for (const agentId of orgMap.civil_experts || []) {
-    if (agents.has(agentId)) throw new SkillLoaderError(`civil_experts の「${agentId}」は organizations にも登録されています（二重登録）`);
-    const def = loadAgentDefinition(packId, agentId).definition;
-    if (def.layer !== 'civil_expert') throw new SkillLoaderError(`civil_experts の「${agentId}」は layer: civil_expert でなければなりません`);
-    agents.set(agentId, {
-      agent_id: agentId, stage: 'P1', title: def.title, purpose: String(def.purpose || '').trim(), does_not: String(def.does_not || '').trim(),
-      owner_role: def.owner_role, max_autonomy_level: def.max_autonomy_level, skills: (def.skills || []).map((s) => s.skill_id), executable: true,
-      layer: 'civil_expert', technical_risk_class: def.technical_risk_class || null, delegates_to: def.delegates_to || [],
-      keywords: def.keywords || [], required_conditions: def.required_conditions || [], org_code: null, dept: '土木専門（横断）',
-    });
+  // 第 4 段: 相互レビュー Agent（layer=cross_review）は司令塔の最終 Step としてだけ起動する独立層
+  for (const [listKey, layer, dept] of [['civil_experts', 'civil_expert', '土木専門（横断）'], ['cross_review', 'cross_review', '相互レビュー（独立）']]) {
+    for (const agentId of orgMap[listKey] || []) {
+      if (agents.has(agentId)) throw new SkillLoaderError(`${listKey} の「${agentId}」は他の層にも登録されています（二重登録）`);
+      const def = loadAgentDefinition(packId, agentId).definition;
+      if (def.layer !== layer) throw new SkillLoaderError(`${listKey} の「${agentId}」は layer: ${layer} でなければなりません`);
+      agents.set(agentId, {
+        agent_id: agentId, stage: 'P1', title: def.title, purpose: String(def.purpose || '').trim(), does_not: String(def.does_not || '').trim(),
+        owner_role: def.owner_role, max_autonomy_level: def.max_autonomy_level, skills: (def.skills || []).map((s) => s.skill_id), executable: true,
+        layer, technical_risk_class: def.technical_risk_class || null, delegates_to: def.delegates_to || [],
+        keywords: def.keywords || [], required_conditions: def.required_conditions || [], org_code: null, dept, model_category: def.model_category || null,
+      });
+    }
   }
   const catalog = {
     pack_id: packId,
     organizations: (orgMap.organizations || []).map((o) => ({ code: o.code, dept: o.dept, org: o.org, keywords: o.keywords || [], agents: o.agents || [], note: o.note || '' })),
     agents: [...agents.values()],
     civil_experts: orgMap.civil_experts || [],
+    cross_review: orgMap.cross_review || [],
   };
   cache.set(packId, catalog);
   return catalog;
@@ -101,7 +105,8 @@ export function matchByKeywords(text, packId) {
   // 土木専門 Agent は自身の keywords（専門用語）との一致で別枠に挙げる（組織 Agent の枠を奪わない）
   const experts = c.agents.filter((a) => a.layer === 'civil_expert').map((a) => ({ agent_id: a.agent_id, score: (a.keywords || []).filter((k) => t.includes(k)).length }))
     .filter((a) => a.score >= 1).sort((a, b) => b.score - a.score);
-  return { departments: deptScores.slice(0, 3).map((d) => d.code), agents: agentScores.filter((a) => findAgent(a.agent_id, packId)?.layer !== 'civil_expert').slice(0, 3), experts: experts.slice(0, 3) };
+  // 相互レビュー Agent は語の一致では選ばない（司令塔が最終 Step として付ける）
+  return { departments: deptScores.slice(0, 3).map((d) => d.code), agents: agentScores.filter((a) => findAgent(a.agent_id, packId)?.layer === 'organization').slice(0, 3), experts: experts.slice(0, 3) };
 }
 
 /** LLM が返した agent_id / 部署コードのうち、カタログに存在するものだけを残す。 */

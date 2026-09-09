@@ -82,6 +82,12 @@ export function scriptedPlan(requestText, runtimeCatalog) {
   return { source: 'scripted', intent: '相談 / 未分類', risk: 'R1', summary: all.length ? `語の一致で Agent を選択${expertSteps.length ? `（土木専門 ${expertSteps.length} 件へ委譲、最大技術リスク ${maxRisk}）` : ''}。最終判断は人間が行う` : '要求に合う実行可能な Agent が無い（候補は rejected を参照）', steps: all, rejected };
 }
 
+/** Registry で承認済み・実行可能な相互レビュー Agent（org-map.yaml cross_review の先頭）。無ければ null。 */
+async function crossReviewAgent(client) {
+  const rc = await catalogWithRuntime(client);
+  return rc.agents.find((a) => a.layer === 'cross_review' && a.runnable) || null;
+}
+
 /** T1〜T6 の最大値（無ければ null）。 */
 export function maxTechnicalRisk(classes) {
   const levels = classes.map((c) => technicalRiskPolicy(c).level).filter((n) => n !== null);
@@ -113,6 +119,7 @@ export async function planOrchestration(client, { requestText, llmAllowed = true
     if (!a) { rejected.push({ agent_id: s.agent_id, reason: 'カタログに存在しない Agent（LLM の提案を不採用）' }); continue; }
     if (!runnable.has(s.agent_id)) { rejected.push({ agent_id: s.agent_id, reason: a.executable ? 'Registry で未承認のため利用不可' : `${a.stage} の候補（未実装）のため利用不可` }); continue; }
     if (s.agent_id === 'knowledge-quality') { rejected.push({ agent_id: s.agent_id, reason: 'Knowledge 候補の指定が必要なため司令塔からは起動しない' }); continue; }
+    if (a.layer === 'cross_review') { rejected.push({ agent_id: s.agent_id, reason: '相互レビューは司令塔が最終 Step として自動で付けるため計画には入れない' }); continue; }
     if (steps.some((x) => x.agent_id === s.agent_id)) continue;
     const depends = s.depends_on.filter((n) => n >= 1 && n <= steps.length);
     if (a.layer === 'civil_expert') {
@@ -143,6 +150,21 @@ export async function createOrchestration(client, { user, requestText, projectId
       `INSERT INTO orchestration_steps (orchestration_id, seq, agent_id, layer, depends_on, input_json, reason) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
       [orch.id, i + 1, s.agent_id, findAgent(s.agent_id)?.layer || 'organization', s.depends_on, JSON.stringify({ query: s.query }), s.reason],
     );
+  }
+  // 第 4 段（K-001）: 成果が出る計画には、他の全 Step に依存する相互レビュー Step を最終 Step として必ず付ける（Step 上限には数えない）
+  let crossReview = { status: 'not_planned', reason: '実行する Agent が無い' };
+  if (plan.steps.length > 0) {
+    const reviewer = await crossReviewAgent(client);
+    if (reviewer) {
+      await client.query(
+        `INSERT INTO orchestration_steps (orchestration_id, seq, agent_id, layer, depends_on, input_json, reason) VALUES ($1,$2,$3,'cross_review',$4,$5,$6)`,
+        [orch.id, plan.steps.length + 1, reviewer.agent_id, plan.steps.map((_, i) => i + 1), JSON.stringify({ query: requestText }), '独立レビュー: 全 Agent の成果を横断し矛盾・根拠なし・未確認事項を検査（Independent Review 分類のモデル）'],
+      );
+      crossReview = { status: 'planned', agent_id: reviewer.agent_id };
+    } else {
+      crossReview = { status: 'unavailable', reason: '相互レビュー Agent が Registry で未承認のため実施しない（統合草案は人間レビュー必須のまま）' };
+    }
+    await client.query(`UPDATE orchestrations SET plan_json = plan_json || $1::jsonb WHERE id = $2`, [JSON.stringify({ cross_review: crossReview }), orch.id]);
   }
   await recordAudit(client, {
     actorId: user.id, actorType: 'user', actorName: user.name, action: 'orchestration.create', resourceType: 'orchestration', resourceId: orch.id,
@@ -187,17 +209,28 @@ export async function advanceOrchestration(client, orchestrationId, { user = nul
   let cost = 0;
   for (const s of steps) {
     if (s.status !== 'pending' || orch.cancel_requested) continue;
-    const deps = (s.depends_on || []).map((n) => bySeq.get(n)).filter(Boolean);
-    if (deps.some((d) => ['failed', 'cancelled', 'skipped', 'blocked'].includes(d.status))) {
-      await client.query(`UPDATE orchestration_steps SET status = 'skipped', error_message = '先行 Step が失敗・中断したため実行しない', finished_at = now() WHERE id = $1`, [s.id]);
-      s.status = 'skipped'; continue;
+    let deps = (s.depends_on || []).map((n) => bySeq.get(n)).filter(Boolean);
+    const terminal = (d) => ['completed', 'failed', 'cancelled', 'skipped', 'blocked'].includes(d.status);
+    if (s.layer === 'cross_review') {
+      // 相互レビューは他の全 Step が終わってから、成果のある Step だけを対象に実施する（部分成功でもレビューする。成果が無ければ skipped）
+      if (!deps.every(terminal)) continue;
+      deps = deps.filter((d) => d.status === 'completed');
+      if (deps.length === 0) {
+        await client.query(`UPDATE orchestration_steps SET status = 'skipped', error_message = 'レビュー対象の成果が無いため実施しない', finished_at = now() WHERE id = $1`, [s.id]);
+        s.status = 'skipped'; continue;
+      }
+    } else {
+      if (deps.some((d) => ['failed', 'cancelled', 'skipped', 'blocked'].includes(d.status))) {
+        await client.query(`UPDATE orchestration_steps SET status = 'skipped', error_message = '先行 Step が失敗・中断したため実行しない', finished_at = now() WHERE id = $1`, [s.id]);
+        s.status = 'skipped'; continue;
+      }
+      if (!deps.every((d) => d.status === 'completed')) continue;
     }
-    if (!deps.every((d) => d.status === 'completed')) continue;
-    // 先行 Step の成果（findings / unknowns）を context として渡す（入力契約に無いキーは createRunForUser が落とす）
+    // 先行 Step の成果（findings / unknowns / assumptions / sources）を context として渡す（入力契約に無いキーは createRunForUser が落とす）
     const priorContext = [];
     for (const d of deps) {
       const { rows: arts } = await client.query(`SELECT artifact_code, content FROM artifacts WHERE run_id = $1 ORDER BY id`, [d.run_id]);
-      for (const a of arts) priorContext.push({ agent_id: d.agent_id, artifact_code: a.artifact_code, findings: (a.content?.findings || []).slice(0, 10), unknowns: (a.content?.unknowns || []).slice(0, 10) });
+      for (const a of arts) priorContext.push({ agent_id: d.agent_id, artifact_code: a.artifact_code, findings: (a.content?.findings || []).slice(0, 15), unknowns: (a.content?.unknowns || []).slice(0, 10), assumptions: (a.content?.assumptions || []).slice(0, 10), sources: (a.content?.sources || []).slice(0, 20).map((x) => ({ source_record_id: x?.source_record_id })).filter((x) => x.source_record_id) });
     }
     try {
       const run = await createRunForUser(client, { user: requester, agentId: s.agent_id, projectId: orch.project_id, input: { ...s.input_json, prior_context: priorContext }, via: 'orchestrator', orchestration: { id: orch.id, stepId: s.id } });
@@ -250,20 +283,31 @@ async function finalizeOrchestration(client, orch, steps, status) {
       unknowns.push(`[${s.agent_id}] 結果なし（${s.status}${s.error_message ? ': ' + s.error_message : ''}）`);
     }
   }
-  const maxRisk = maxTechnicalRisk(steps.map((s) => findAgent(s.agent_id)?.technical_risk_class));
+  const maxRisk = maxTechnicalRisk(steps.filter((s) => s.layer !== 'cross_review').map((s) => findAgent(s.agent_id)?.technical_risk_class));
   const riskPolicy = technicalRiskPolicy(maxRisk);
+  // 第 4 段: 相互レビューの判定を統合草案へ。FAIL は人間レビューを強制（K-014）。未実施は隠さない
+  const crStep = steps.find((s) => s.layer === 'cross_review');
+  let crossReview = { verdict: 'NOT_RUN', reason: crStep ? `${crStep.status}${crStep.error_message ? ': ' + crStep.error_message : ''}` : '相互レビュー Step なし' };
+  if (crStep && crStep.status === 'completed' && crStep.run_id) {
+    const { rows: cr } = await client.query(`SELECT artifact_code, content FROM artifacts WHERE run_id = $1 AND kind = 'cross_review' ORDER BY id DESC LIMIT 1`, [crStep.run_id]);
+    if (cr[0]) crossReview = { verdict: cr[0].content.verdict, confidence: cr[0].content.confidence, review_source: cr[0].content.review_source, contradictions: (cr[0].content.contradictions || []).length, unsupported_claims: (cr[0].content.unsupported_claims || []).length, artifact_code: cr[0].artifact_code };
+  }
+  const humanForced = crossReview.verdict === 'FAIL';
+  if (humanForced) unknowns.push(`[cross-review] 判定 FAIL（矛盾 ${crossReview.contradictions} 件）: 人間レビューを強制`);
   const content = enforceOutputPolicy({
     findings: sections.flatMap((x) => x.findings.map((f) => `[${x.agent_id}] ${f}`)), unknowns, assumptions: sections.flatMap((x) => x.assumptions),
     sources: [...sources.values()], sections, orchestration_status: status, requires_human_review: true,
-    technical_risk_class: maxRisk, expert_review_required: riskPolicy.expert_review_required, ai_completion_prohibited: riskPolicy.ai_completion_prohibited,
+    technical_risk_class: maxRisk, expert_review_required: riskPolicy.expert_review_required || humanForced, ai_completion_prohibited: riskPolicy.ai_completion_prohibited,
+    cross_review: crossReview, human_review_forced: humanForced,
     summary: `${steps.length} Agent 中 ${sections.length} 件の成果を統合。事実 ${findingsCount} 件、不明点 ${unknowns.length} 件。採用・施工可否・最終決定は人間が行う` +
-      (riskPolicy.ai_completion_prohibited ? `。最大技術リスク ${maxRisk}: AI 単独では完了できず、専門技術者の確認記録が必須` : riskPolicy.expert_review_required ? `。最大技術リスク ${maxRisk}: 専門技術者レビュー必須` : ''),
+      (riskPolicy.ai_completion_prohibited ? `。最大技術リスク ${maxRisk}: AI 単独では完了できず、専門技術者の確認記録が必須` : riskPolicy.expert_review_required ? `。最大技術リスク ${maxRisk}: 専門技術者レビュー必須` : '') +
+      `。相互レビュー ${crossReview.verdict}${crossReview.confidence !== undefined ? `（confidence ${crossReview.confidence}）` : ''}${humanForced ? ': 矛盾があるため人間レビューを強制' : ''}`,
   }, { requireHumanReview: true }).output;
   const code = await nextArtifactCode(client);
   const { rows } = await client.query(
     `INSERT INTO artifacts (artifact_code, run_id, kind, title, content, review_state, content_hash, orchestration_id, expert_review_required, ai_completion_prohibited)
      VALUES ($1, $2, 'orchestration_summary', $3, $4, 'draft', $5, $6, $7, $8) RETURNING id`,
-    [code, steps.find((s) => s.run_id)?.run_id || null, `司令塔 ${orch.orchestration_code} 統合草案`, JSON.stringify(content), contentHash(content), orch.id, riskPolicy.expert_review_required, riskPolicy.ai_completion_prohibited],
+    [code, steps.find((s) => s.run_id)?.run_id || null, `司令塔 ${orch.orchestration_code} 統合草案`, JSON.stringify(content), contentHash(content), orch.id, riskPolicy.expert_review_required || humanForced, riskPolicy.ai_completion_prohibited],
   ).catch(async (err) => {
     // run_id が無い（全 Step が blocked 等）場合は統合草案を作らず、理由だけ残す
     await client.query(`UPDATE orchestrations SET error_message = COALESCE(error_message, $1) WHERE id = $2`, [`統合草案なし: ${err.message}`, orch.id]);
@@ -272,8 +316,15 @@ async function finalizeOrchestration(client, orch, steps, status) {
   await client.query(`UPDATE orchestrations SET final_artifact_id = $1, finished_at = now(), updated_at = now() WHERE id = $2`, [rows[0]?.id || null, orch.id]);
   await recordAudit(client, {
     actorId: null, actorType: 'agent', actorName: 'cto-orchestrator', action: 'orchestration.finish', resourceType: 'orchestration', resourceId: orch.id,
-    detail: { code: orch.orchestration_code, status, steps: steps.map((s) => ({ agent_id: s.agent_id, status: s.status })), final_artifact_id: rows[0]?.id || null },
+    detail: { code: orch.orchestration_code, status, steps: steps.map((s) => ({ agent_id: s.agent_id, status: s.status })), final_artifact_id: rows[0]?.id || null, cross_review: crossReview, technical_risk_class: maxRisk },
   });
+  // K-016: 相互レビュー自身も監査対象（判定・confidence・Evidence の成果物コード）
+  if (crStep) {
+    await recordAudit(client, {
+      actorId: null, actorType: 'agent', actorName: crStep.agent_id, action: 'orchestration.cross_review', resourceType: 'orchestration', resourceId: orch.id,
+      detail: { code: orch.orchestration_code, step_status: crStep.status, ...crossReview, human_review_forced: humanForced },
+    });
+  }
 }
 
 /** Worker のポーリングから呼ぶ: 進行中の司令塔を全て前へ進める。 */
