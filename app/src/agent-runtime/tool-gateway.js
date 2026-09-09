@@ -7,6 +7,7 @@ import { authorizeToolCall, authorizeSourceAccess, PolicyDeniedError } from './p
 import { extractSearchTokens } from '../lib/search-tokens.js';
 import { appendEvent } from './job-store.js';
 import { nextArtifactCode } from '../lib/codes.js';
+import { contentHash, inputHash, findPreviousArtifact } from '../lib/artifact-lineage.js';
 
 /**
  * 承認済み出典の検索（B-12）。
@@ -65,25 +66,34 @@ async function toolSourceReadApprovedSnapshot(client, { run, sourceRecordId }) {
  */
 async function toolArtifactWriteDraft(client, { run, kind, title, content }) {
   const { rows: existing } = await client.query(
-    `SELECT id, artifact_code, kind, title, review_state FROM artifacts
+    `SELECT id, artifact_code, kind, title, review_state, content, content_hash FROM artifacts
      WHERE run_id = $1 AND kind = $2 ORDER BY id LIMIT 1 FOR UPDATE`,
     [run.id, kind],
   );
+  const newHash = contentHash(content);
   let artifact;
   if (existing.length > 0) {
     artifact = existing[0];
     if (artifact.review_state !== 'draft') {
       throw new PolicyDeniedError(`成果物 ${artifact.artifact_code} はレビュー済みのため上書きできません`);
     }
-    await client.query(`UPDATE artifacts SET title = $1, content = $2 WHERE id = $3`, [title, JSON.stringify(content), artifact.id]);
+    // 書き直し前の内容を履歴（artifact_revisions）へ残してから上書きする
+    const { rows: rev } = await client.query(`SELECT COALESCE(MAX(revision), 0) + 1 AS n FROM artifact_revisions WHERE artifact_id = $1`, [artifact.id]);
+    await client.query(
+      `INSERT INTO artifact_revisions (artifact_id, revision, title, content, content_hash, reason) VALUES ($1,$2,$3,$4,$5,$6)`,
+      [artifact.id, rev[0].n, artifact.title, JSON.stringify(artifact.content), artifact.content_hash || contentHash(artifact.content), 'Step の再実行による書き直し'],
+    );
+    await client.query(`UPDATE artifacts SET title = $1, content = $2, content_hash = $3, updated_at = now() WHERE id = $4`, [title, JSON.stringify(content), newHash, artifact.id]);
     await client.query(`DELETE FROM artifact_citations WHERE artifact_id = $1`, [artifact.id]);
-    artifact = { ...artifact, title, reused: true };
+    artifact = { id: artifact.id, artifact_code: artifact.artifact_code, kind, title, review_state: artifact.review_state, reused: true };
   } else {
     const artifactCode = await nextArtifactCode(client);
+    const ih = inputHash(run.input_json || {});
+    const prev = await findPreviousArtifact(client, { agentId: run.agent_id, kind, inputHash: ih, excludeRunId: run.id });
     const { rows } = await client.query(
-      `INSERT INTO artifacts (artifact_code, run_id, kind, title, content, review_state)
-       VALUES ($1,$2,$3,$4,$5,'draft') RETURNING id, artifact_code, kind, title, review_state`,
-      [artifactCode, run.id, kind, title, JSON.stringify(content)],
+      `INSERT INTO artifacts (artifact_code, run_id, kind, title, content, review_state, content_hash, input_hash, previous_artifact_id, lineage_version)
+       VALUES ($1,$2,$3,$4,$5,'draft',$6,$7,$8,$9) RETURNING id, artifact_code, kind, title, review_state, previous_artifact_id, lineage_version`,
+      [artifactCode, run.id, kind, title, JSON.stringify(content), newHash, ih, prev ? prev.id : null, prev ? Number(prev.lineage_version) + 1 : 1],
     );
     artifact = { ...rows[0], reused: false };
   }
