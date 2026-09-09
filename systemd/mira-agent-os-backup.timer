@@ -1,0 +1,9 @@
+# /etc/systemd/system/mira-agent-os-backup.timer — 毎日 03:15 にバックアップ
+[Unit]
+Description=Daily backup for Mirai AgentOS databases
+[Timer]
+OnCalendar=*-*-* 03:15:00
+Persistent=true
+Unit=mira-agent-os-backup.service
+[Install]
+WantedBy=timers.target

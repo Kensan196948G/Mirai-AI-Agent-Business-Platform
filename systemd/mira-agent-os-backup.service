@@ -1,0 +1,10 @@
+# /etc/systemd/system/mira-agent-os-backup.service
+# 本番/MVP DB の日次 pg_dump（A-6）。bin/pg-backup.sh を実行し、保持日数を超えた世代を削除する。
+[Unit]
+Description=Mirai AgentOS PostgreSQL daily backup (mira_agent_os / mira_agent_os_mvp)
+After=postgresql.service
+[Service]
+Type=oneshot
+User=kensan
+Group=kensan
+ExecStart=/home/kensan/Projects/Mirai-DX-Project/Mirai-AI-Agent-Business-Platform/bin/pg-backup.sh
