@@ -70,3 +70,26 @@ test('withinMonthlyBudget: 当月コストが上限以上なら false', async ()
   const fakeClient = { query: async () => ({ rows: [{ spent: 5 }] }) };
   assert.equal(await llm.withinMonthlyBudget(fakeClient), false);
 });
+
+test('complete: 構造化出力向けオプション（maxTokens / jsonMode / systemPrompt）を API リクエストへ反映し、finish_reason を返す', async () => {
+  const llm = await loadLlm({ LLM_PROVIDER: 'deepseek', LLM_API_KEY: 'sk-test', LLM_STRUCTURED_MAX_TOKENS: '4321' });
+  const calls = [];
+  const savedFetch = globalThis.fetch;
+  globalThis.fetch = async (_url, init) => {
+    calls.push(JSON.parse(init.body));
+    return { ok: true, json: async () => ({ choices: [{ message: { content: '{"a":1}' }, finish_reason: 'length' }], usage: { prompt_tokens: 10, completion_tokens: 5 } }) };
+  };
+  try {
+    const r = await llm.complete([{ role: 'user', content: 'JSON で' }], { maxTokens: llm.structuredMaxTokens(), jsonMode: true, systemPrompt: 'SYS' });
+    assert.equal(calls[0].max_tokens, 4321);
+    assert.deepEqual(calls[0].response_format, { type: 'json_object' });
+    assert.equal(calls[0].messages[0].content, 'SYS');
+    assert.equal(r.finishReason, 'length');
+    const chat = await llm.complete([{ role: 'user', content: 'こんにちは' }]);
+    assert.equal(calls[1].max_tokens, 600);
+    assert.equal(calls[1].response_format, undefined);
+    assert.equal(chat.finishReason, 'length');
+  } finally {
+    globalThis.fetch = savedFetch;
+  }
+});

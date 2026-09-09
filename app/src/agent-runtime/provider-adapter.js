@@ -15,6 +15,10 @@ const ajv = new Ajv({ allErrors: true, strict: false });
 
 export class ProviderNotConfiguredError extends Error {}
 
+const STRUCTURED_SYSTEM_PROMPT =
+  'あなたは建設・土木の業務Agentの構造化出力エンジンです。与えられた入力と JSON Schema に基づき、' +
+  'Schema に厳密に適合する JSON オブジェクトのみを出力してください。根拠のない断定はせず、不明な点は unknowns に列挙します。';
+
 export function isConfigured() {
   return llm.isConfigured();
 }
@@ -51,7 +55,7 @@ export async function structuredComplete({ instructions, input, schema, fallback
 
     let completion;
     try {
-      completion = await llm.complete(messages);
+      completion = await llm.complete(messages, { maxTokens: llm.structuredMaxTokens(), jsonMode: true, systemPrompt: STRUCTURED_SYSTEM_PROMPT });
     } catch (err) {
       lastError = { message: err.message, rawText: '' };
       continue;
@@ -60,6 +64,11 @@ export async function structuredComplete({ instructions, input, schema, fallback
     totalTokensOut += completion.tokensOut;
     totalCost += completion.cost;
 
+    if (completion.finishReason === 'length') {
+      // 打ち切られた JSON は解析しても意味がない。原因を明示して再試行する（再試行でも同じ上限なら degraded になる）
+      lastError = { message: `出力が max_tokens（${llm.structuredMaxTokens()}）で打ち切られました`, rawText: completion.text };
+      continue;
+    }
     let parsed;
     try {
       const jsonText = extractJson(completion.text);
@@ -76,7 +85,11 @@ export async function structuredComplete({ instructions, input, schema, fallback
   }
 
   // maxAttempts回失敗 → 「根拠なし・要人手確認」の安全な既定値へ縮退する（偽の成功ではなく明示的な保留）。
-  return { data: fallbackData, tokensIn: totalTokensIn, tokensOut: totalTokensOut, cost: totalCost, degraded: true };
+  // 理由（検証エラー・打ち切り・API失敗）と応答先頭は呼び出し側が run_events に残し、後から原因を追えるようにする。
+  return {
+    data: fallbackData, tokensIn: totalTokensIn, tokensOut: totalTokensOut, cost: totalCost, degraded: true,
+    degradedReason: lastError ? lastError.message : '不明', rawHead: (lastError && lastError.rawText ? lastError.rawText : '').slice(0, 300), attempts: maxAttempts,
+  };
 }
 
 function extractJson(text) {
