@@ -1,0 +1,17 @@
+# /etc/systemd/system/mira-agent-os-watchdog.service
+# Agent Runtime の稼働監視（A-5）。Worker 停止・キュー滞留・Lease 期限切れを検知すると失敗終了し journal に WARNING を残す。
+[Unit]
+Description=Mirai AgentOS Agent Runtime watchdog
+After=postgresql.service
+[Service]
+Type=oneshot
+User=kensan
+Group=kensan
+WorkingDirectory=/home/kensan/Projects/Mirai-DX-Project/Mirai-AI-Agent-Business-Platform/app
+EnvironmentFile=/home/kensan/Projects/Mirai-DX-Project/Mirai-AI-Agent-Business-Platform/app/.env
+Environment=WATCHDOG_LABEL=mira-agent-os
+ExecStart=/home/kensan/.nvm/versions/node/v22.22.3/bin/node watchdog.mjs
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only

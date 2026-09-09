@@ -17,8 +17,21 @@ const LEASE_SECONDS = Number(process.env.AGENT_WORKER_LEASE_SECONDS || 60);
 
 let shuttingDown = false;
 
+import { hostname } from 'node:os';
+
+/** アイドル時も含め、ポーリングごとに生存を記録する（/api/health・watchdog が参照）。 */
+async function beat(claimed = 0) {
+  await withTransaction((client) => client.query(
+    `INSERT INTO worker_heartbeats (worker_id, hostname, pid, runs_claimed)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (worker_id) DO UPDATE SET last_seen_at = now(), runs_claimed = worker_heartbeats.runs_claimed + EXCLUDED.runs_claimed`,
+    [WORKER_ID, hostname(), process.pid, claimed],
+  ));
+}
+
 async function tick() {
   const run = await withTransaction((client) => jobStore.claimNextRun(client, { workerId: WORKER_ID, leaseSeconds: LEASE_SECONDS }));
+  await beat(run ? 1 : 0);
   if (!run) return false;
 
   // eslint-disable-next-line no-console
@@ -55,6 +68,8 @@ process.on('SIGINT', () => { shuttingDown = true; });
 // eslint-disable-next-line no-console
 console.log(`[${WORKER_ID}] Agent Runtime Worker 起動`);
 loop().then(async () => {
+  // 停止時はハートビート行を消し、監視側が「停止中」を即時に判定できるようにする
+  await withTransaction((client) => client.query(`DELETE FROM worker_heartbeats WHERE worker_id = $1`, [WORKER_ID])).catch(() => {});
   await getPool().end();
   // eslint-disable-next-line no-console
   console.log(`[${WORKER_ID}] 停止しました`);

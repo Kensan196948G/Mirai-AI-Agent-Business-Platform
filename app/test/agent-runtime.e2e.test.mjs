@@ -36,7 +36,7 @@ if (!/test/.test(process.env.DATABASE_URL)) {
 }
 
 const ALL_TABLES = [
-  'artifact_citations', 'artifacts', 'effect_ledger', 'budget_reservations', 'run_events', 'agent_runs',
+  'worker_heartbeats', 'artifact_citations', 'artifacts', 'effect_ledger', 'budget_reservations', 'run_events', 'agent_runs',
   'source_records', 'agent_skill_bindings', 'skill_versions', 'agent_versions',
   'chat_messages', 'chat_conversations', 'task_tool_calls', 'tasks', 'knowledge_candidates',
   'approval_steps', 'approval_requests', 'project_kpis', 'projects', 'requests',
@@ -475,4 +475,31 @@ test('evidence-backed-draft: 実DBで草案を保存した戻り値が output sc
   const { rows: art } = await pool.query(`SELECT id, review_state FROM artifacts WHERE run_id = $1`, [run.id]);
   assert.equal(art.length, 1);
   assert.equal(Number(art[0].id), output.artifact_id);
+});
+
+test('監視: /api/health が Worker 生存・キュー滞留・degraded を返し、ハートビート有無で判定が変わる', async () => {
+  const before = await call('/api/health');
+  assert.equal(before.status, 200);
+  assert.equal(before.data.status, 'ok');
+  assert.equal(before.data.worker.alive, false, 'Worker 未起動のテスト環境では alive=false');
+  assert.ok(Array.isArray(before.data.degraded) && before.data.degraded.some((m) => /Worker/.test(m)));
+
+  await pool.query(`INSERT INTO worker_heartbeats (worker_id, hostname, pid) VALUES ('test-worker-1', 'ci', 1)`);
+  const after = await call('/api/health');
+  assert.equal(after.data.worker.alive, true);
+  assert.equal(after.data.worker.alive_count, 1);
+  assert.ok(!after.data.degraded.some((m) => /Worker/.test(m)));
+
+  // 古いハートビートは alive と見なさない
+  await pool.query(`UPDATE worker_heartbeats SET last_seen_at = now() - interval '10 minutes' WHERE worker_id = 'test-worker-1'`);
+  const stale = await call('/api/health');
+  assert.equal(stale.data.worker.alive, false);
+
+  // queued の滞留は degraded に現れる（閾値を過去に倒して検証）
+  const created = await call('/api/agent-runs', { method: 'POST', cookie: adminCookie, body: { agentId: 'technology-selection', input: { query: '滞留テスト' } } });
+  await pool.query(`UPDATE agent_runs SET created_at = now() - interval '30 minutes' WHERE id = $1`, [created.data.run.id]);
+  const backlog = await call('/api/health');
+  assert.equal(backlog.data.queue.backlog, true);
+  assert.ok(backlog.data.degraded.some((m) => /滞留/.test(m)));
+  await pool.query(`UPDATE agent_runs SET status = 'cancelled', finished_at = now() WHERE id = $1`, [created.data.run.id]);
 });
