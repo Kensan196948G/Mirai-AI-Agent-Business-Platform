@@ -1,5 +1,5 @@
 # Mirai AI Agent Business Platform
-# Agent / Skills / AI Runtime 全機能確認チェックリスト
+## Agent / Skills / AI Runtime 全機能確認チェックリスト
 ## Claude Code 全面検証・是正用
 
 対象Repository: `Kensan196948G/Mirai-AI-Agent-Business-Platform`  
@@ -58,7 +58,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 
 ---
 
-# A. 全体アーキテクチャ整合性
+## A. 全体アーキテクチャ整合性
 
 - [ ] A-001 User → Orchestrator → Agent → Skill → Knowledge/Tool → Cross Review → Human Approval の一連の処理経路がコード上で追跡可能
 - [ ] A-002 各レイヤが単なるUI表示ではなく、バックエンド実装と結び付いている
@@ -76,7 +76,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] A-014 Agent Runtimeと通常の業務Workflowが矛盾しない
 - [ ] A-015 設計資料・README・実コードの機能状態表示が一致する
 
-# B. CTO Orchestrator / 司令塔Agent
+## B. CTO Orchestrator / 司令塔Agent
 
 - [ ] B-001 Orchestrator相当の責務がコード上に存在
 - [ ] B-002 ユーザー要求を受け取る
@@ -104,11 +104,11 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] B-024 根拠が不足している場合「不足」と返す
 - [ ] B-025 人間最終判断対象を自動確定しない
 
-# C. Organization Agents 01〜09
+## C. Organization Agents 01〜09
 
 以下の9責務が「設定上の名称だけ」でなく、Agent Contract / Registry / Runtimeから識別可能か確認する。
 
-## 01 経営・統治・委員会
+### 01 経営・統治・委員会
 - [ ] C01-01 Agent定義あり
 - [ ] C01-02 経営戦略支援
 - [ ] C01-03 Governance
@@ -119,7 +119,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] C01-08 SoD Check利用
 - [ ] C01-09 経営判断をAI単独確定しない
 
-## 02 営業・案件形成
+### 02 営業・案件形成
 - [ ] C02-01 Agent定義あり
 - [ ] C02-02 Opportunity Qualification
 - [ ] C02-03 Tender Analysis
@@ -129,7 +129,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] C02-07 Win/Loss Analysis
 - [ ] C02-08 技術判断を営業Agent内で勝手に完結しない
 
-## 03 施工・調達・作業所
+### 03 施工・調達・作業所
 - [ ] C03-01 Agent定義あり
 - [ ] C03-02 Construction Planning
 - [ ] C03-03 Schedule Planning
@@ -140,7 +140,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] C03-08 Progress Analysis
 - [ ] C03-09 現場最終判断を人間に残す
 
-## 04 技術・研究開発
+### 04 技術・研究開発
 - [ ] C04-01 Agent定義あり
 - [ ] C04-02 Literature Review
 - [ ] C04-03 Research Planning
@@ -151,7 +151,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] C04-08 Evidence Verification
 - [ ] C04-09 根拠・引用・出典の追跡可能性
 
-## 05 安全・品質・環境
+### 05 安全・品質・環境
 - [ ] C05-01 Agent定義あり
 - [ ] C05-02 Hazard Identification
 - [ ] C05-03 Risk Assessment
@@ -161,7 +161,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] C05-07 Environmental Review
 - [ ] C05-08 Safety Critical判断を自動承認しない
 
-## 06 管理本部・経営企画
+### 06 管理本部・経営企画
 - [ ] C06-01 Agent定義あり
 - [ ] C06-02 Business Planning
 - [ ] C06-03 Budget & Cost Analysis
@@ -171,7 +171,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] C06-07 AI Risk Assessment
 - [ ] C06-08 結果説明可能性
 
-## 07 支店・営業支店・営業所
+### 07 支店・営業支店・営業所
 - [ ] C07-01 共通Branch Agent方式
 - [ ] C07-02 地域Context注入
 - [ ] C07-03 Project Context注入
@@ -181,7 +181,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] C07-07 Past Project Retrieval
 - [ ] C07-08 支店ごとのデータ境界
 
-## 08 船舶事業
+### 08 船舶事業
 - [ ] C08-01 Agent定義あり
 - [ ] C08-02 Vessel Assignment
 - [ ] C08-03 Fleet Scheduling
@@ -192,7 +192,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] C08-08 Marine Safety Review
 - [ ] C08-09 港湾Agent/施工Agent/安全Agent連携
 
-## 09 社外向けDX
+### 09 社外向けDX
 - [ ] C09-01 Agent定義あり
 - [ ] C09-02 Requirement Discovery
 - [ ] C09-03 DX Assessment
@@ -203,7 +203,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] C09-08 顧客単位Tenant境界
 - [ ] C09-09 社内AgentOSデータとの不用意な共有防止
 
-# D. Civil Expert Agents / 土木専門Agent
+## D. Civil Expert Agents / 土木専門Agent
 
 - [ ] D-001 Port / Marine Agent
 - [ ] D-002 Geotechnical Agent
@@ -226,7 +226,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] D-019 根拠基準の版/発行元を保持
 - [ ] D-020 不明条件を勝手に補完せず未確定として扱う
 
-# E. Agent Registry / Agent Contract
+## E. Agent Registry / Agent Contract
 
 - [ ] E-001 Agent Registryが実装されている
 - [ ] E-002 Agent IDが一意
@@ -253,7 +253,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] E-023 未登録Tool参照を拒否
 - [ ] E-024 Contract変更時の互換性確認
 
-# F. Skills / Skill Registry
+## F. Skills / Skill Registry
 
 - [ ] F-001 Skill Loaderが全Skillを検出
 - [ ] F-002 `SKILL.md`必須項目検証
@@ -286,7 +286,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] F-029 SkillごとのOwner明示
 - [ ] F-030 廃止Skill参照を検出
 
-# G. Knowledge / ナレッジ
+## G. Knowledge / ナレッジ
 
 - [ ] G-001 Knowledge Sourceの登録
 - [ ] G-002 Source種別管理
@@ -309,7 +309,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] G-019 Knowledge Curatorの権限制御
 - [ ] G-020 Knowledge品質評価を自動テスト
 
-# H. Tools / Tool Gateway
+## H. Tools / Tool Gateway
 
 - [ ] H-001 Tool Gateway経由でのみToolを実行
 - [ ] H-002 Tool Allowlist
@@ -337,7 +337,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] H-024 External Publish/SendにApproval Required
 - [ ] H-025 File更新の差分/対象記録
 
-# I. Policy Engine / ガバナンス
+## I. Policy Engine / ガバナンス
 
 - [ ] I-001 Policy EngineがRuntimeに強制適用
 - [ ] I-002 UIだけでなくサーバ側強制
@@ -364,7 +364,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] I-023 Default Deny原則が必要箇所で機能
 - [ ] I-024 未知Actionを安易にPermitしない
 
-# J. Human Review & Approval
+## J. Human Review & Approval
 
 - [ ] J-001 Approval Request生成
 - [ ] J-002 Approval Step生成
@@ -387,7 +387,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] J-019 ApprovalのAudit
 - [ ] J-020 Human Final Decisionを明示
 
-# K. Cross Review / 横断レビュー
+## K. Cross Review / 横断レビュー
 
 - [ ] K-001 Cross Review Agent/機能を実装
 - [ ] K-002 一次Agentとは独立したReviewerを利用
@@ -408,7 +408,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] K-017 Reviewer Model多様性ポリシー
 - [ ] K-018 同一Provider障害時の扱い
 
-# L. AI Model / Provider Adapter / Model Router
+## L. AI Model / Provider Adapter / Model Router
 
 - [ ] L-001 Provider Adapter実装
 - [ ] L-002 Providerを交換可能
@@ -435,7 +435,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] L-023 Model response raw logの機密制御
 - [ ] L-024 作成ModelとReview Modelの独立性
 
-# M. Prompt / Prompt Guard
+## M. Prompt / Prompt Guard
 
 - [ ] M-001 System promptとUser promptを分離
 - [ ] M-002 外部資料を命令として扱わない
@@ -453,7 +453,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] M-014 HTML/Markdown/JSON内Injectionテスト
 - [ ] M-015 Tool結果内Injectionテスト
 
-# N. Runtime / Worker / Queue
+## N. Runtime / Worker / Queue
 
 - [ ] N-001 Run Create
 - [ ] N-002 Job Store
@@ -486,7 +486,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] N-029 health check
 - [ ] N-030 concurrency limit
 
-# O. Artifact / Evidence / Lineage
+## O. Artifact / Evidence / Lineage
 
 - [ ] O-001 成果物ID
 - [ ] O-002 元Run ID
@@ -506,7 +506,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] O-016 Approvalとの関連
 - [ ] O-017 最終成果物から根拠へ逆引き可能
 
-# P. Audit / Observability
+## P. Audit / Observability
 
 - [ ] P-001 Append-only思想
 - [ ] P-002 Hash chain
@@ -539,7 +539,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] P-029 Approval pending
 - [ ] P-030 Dashboard集計整合性
 
-# Q. Authentication / Authorization / SoD
+## Q. Authentication / Authorization / SoD
 
 - [ ] Q-001 Password hash
 - [ ] Q-002 Session署名
@@ -564,7 +564,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] Q-021 brute force/rate limit
 - [ ] Q-022 password reset安全性
 
-# R. Database / Migration / Data Integrity
+## R. Database / Migration / Data Integrity
 
 - [ ] R-001 全migrationを空DBに適用可能
 - [ ] R-002 冪等性
@@ -587,7 +587,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] R-019 retention
 - [ ] R-020 sensitive data masking
 
-# S. API
+## S. API
 
 - [ ] S-001 全APIに認証
 - [ ] S-002 必要APIにRole guard
@@ -610,7 +610,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] S-019 state transition validation
 - [ ] S-020 destructive API approval enforcement
 
-# T. WebUI
+## T. WebUI
 
 - [ ] T-001 UI表示と実API状態一致
 - [ ] T-002 mockのみで成功表示しない
@@ -633,7 +633,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] T-019 XSS対策
 - [ ] T-020 HTML/Markdownの安全な表示
 
-# U. External Integrations
+## U. External Integrations
 
 現在「状態管理のみ」の連携と「実接続」を明確に区別する。
 
@@ -654,7 +654,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] U-015 External writeにapproval
 - [ ] U-016 External send/publishにapproval
 
-# V. Security
+## V. Security
 
 - [ ] V-001 Dependency vulnerability scan
 - [ ] V-002 Secret scan
@@ -687,7 +687,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] V-029 CI security
 - [ ] V-030 production secret protection
 
-# W. Test Suite
+## W. Test Suite
 
 既存テストをすべて実行し、失敗をゼロにする。
 
@@ -722,7 +722,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] W-029 Cost limit test
 - [ ] W-030 crash recovery test
 
-# X. 建設土木ドメイン固有テスト
+## X. 建設土木ドメイン固有テスト
 
 - [ ] X-001 港湾案件→港湾AgentへRouting
 - [ ] X-002 地盤案件→地盤AgentへRouting
@@ -745,7 +745,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] X-019 Final Construction DecisionをHumanへ渡す
 - [ ] X-020 Cross Review結果をEvidence化
 
-# Y. 01〜09＋Civil Agent完全実装判定
+## Y. 01〜09＋Civil Agent完全実装判定
 
 以下をすべて満たした時のみ「提示アーキテクチャが完全に機能」と判定する。
 
@@ -765,7 +765,7 @@ Knowledge / ナレッジ ＋ Tools / ツール
 - [ ] Y-014 READMEの「実装済み/未実装」表記を現状へ更新
 - [ ] Y-015 設計資料と実装差分がゼロ、またはBacklogとして明示
 
-# Z. Claude Code 最終成果物
+## Z. Claude Code 最終成果物
 
 Claude Codeは検証終了時に以下を作成すること。
 
@@ -792,7 +792,7 @@ Claude Codeは検証終了時に以下を作成すること。
 
 ---
 
-# Claude Codeにそのまま渡す最終プロンプト
+## Claude Codeにそのまま渡す最終プロンプト
 
 ```text
 このRepository全体を対象に、Agent / Skills / AI Runtime / Policy / Human Approval /
