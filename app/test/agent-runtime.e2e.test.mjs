@@ -503,3 +503,99 @@ test('監視: /api/health が Worker 生存・キュー滞留・degraded を返�
   assert.ok(backlog.data.degraded.some((m) => /滞留/.test(m)));
   await pool.query(`UPDATE agent_runs SET status = 'cancelled', finished_at = now() WHERE id = $1`, [created.data.run.id]);
 });
+
+test('出典取り込み（B-8〜B-12）: pending は検索されず、承認（職務分離）後に日本語の相談文で本文一致し、新版承認で旧版が失効する', async () => {
+  const { callTool } = await import('../src/agent-runtime/tool-gateway.js');
+  const { saveIngestedSource } = await import('../src/lib/source-ops.js');
+  const { rows: sv } = await pool.query(`SELECT * FROM skill_versions WHERE skill_id = 'project-case-search' LIMIT 1`);
+  // Run は Tool 呼び出しの文脈（run_events の記録先）としてのみ使う。technology-selection は前のテストで承認済みのまま
+  const created = await call('/api/agent-runs', {
+    method: 'POST', cookie: adminCookie, body: { agentId: 'technology-selection', input: { query: 'ダミー' } },
+  });
+  assert.equal(created.status, 201, JSON.stringify(created.data));
+  const { rows: runRows } = await pool.query(`SELECT * FROM agent_runs WHERE id = $1`, [created.data.run.id]);
+  const run = runRows[0];
+  const search = (query) => withTransaction((client) => callTool(client, {
+    run, skillVersion: sv[0], toolName: 'knowledge.search-approved', args: { query, sourceType: 'project_case', projectId: null },
+  }));
+  const admin = { id: adminId, name: 'E2E Admin' };
+  const url = 'https://www.mirai-const.co.jp/work/ocean/999999/';
+  const query = '港湾のケーソン据付工事で MC-Caisson を適用した実績と、類似条件での提案の論点';
+
+  // 1. 取り込み直後（pending）は検索対象外
+  const v1 = await withTransaction((client) => saveIngestedSource(client, {
+    canonicalUrl: url, title: 'E2E 港湾ケーソン据付工事', sourceType: 'project_case', evidenceType: 'public_project_page',
+    category: '海上工事', summary: '合成データ', contentText: '本工事はケーソン据付と MC-Caisson による誘導を行った（合成データ・第1版）。',
+    attributes: { prefecture: '千葉県', completed_year: 2015 }, quarantined: false, ingestedBy: admin,
+  }));
+  assert.equal(v1.action, 'inserted');
+  assert.equal(v1.record.status, 'pending');
+  assert.equal((await search(query)).candidates.length, 0);
+
+  // 同じ内容の再取り込みは unchanged
+  const again = await withTransaction((client) => saveIngestedSource(client, {
+    canonicalUrl: url, title: 'E2E 港湾ケーソン据付工事', sourceType: 'project_case', evidenceType: 'public_project_page',
+    category: '海上工事', summary: '合成データ', contentText: '本工事はケーソン据付と MC-Caisson による誘導を行った（合成データ・第1版）。',
+    attributes: {}, quarantined: false, ingestedBy: admin,
+  }));
+  assert.equal(again.action, 'unchanged');
+
+  // 2. 職務分離: 取り込み者本人の承認は拒否、例外を明示すると承認され監査に残る。Viewer は 403
+  const listed = await call('/api/sources?status=pending', { cookie: adminCookie });
+  assert.equal(listed.status, 200);
+  assert.ok(listed.data.sources.some((s) => Number(s.id) === Number(v1.record.id)));
+  const viewerCookie = await loginAs('e2e-viewer-agent@example.com', 'viewer-password'); // doc003-allow: 使い捨てテストDB専用の固定値
+  assert.equal((await call(`/api/sources/${v1.record.id}/approve`, { method: 'POST', cookie: viewerCookie, body: {} })).status, 403);
+  const selfDenied = await call(`/api/sources/${v1.record.id}/approve`, { method: 'POST', cookie: adminCookie, body: {} });
+  assert.equal(selfDenied.status, 403);
+  assert.match(selfDenied.data.error, /職務分離/);
+  const approved = await call(`/api/sources/${v1.record.id}/approve`, { method: 'POST', cookie: adminCookie, body: { allowSelfReview: true } });
+  assert.equal(approved.status, 200);
+  assert.equal(approved.data.selfReviewException, true);
+  const { rows: audit } = await pool.query(`SELECT detail FROM audit_log WHERE action = 'source.approve' AND resource_id = $1`, [String(v1.record.id)]);
+  assert.equal(audit[0].detail.selfReviewException, true);
+
+  // 3. 承認後は日本語の相談文（空白なし語も含む）で content_text に一致する
+  const hit = await search(query);
+  assert.equal(hit.candidates.length, 1);
+  assert.equal(hit.candidates[0].source_record_id, Number(v1.record.id));
+  assert.equal(hit.candidates[0].evidence_type, 'public_project_page');
+  const hit2 = await search('ケーソン据付の類似工事');
+  assert.equal(hit2.candidates.length, 1);
+
+  // 4. 内容が変わった再取り込みは version 2 の pending。承認すると旧版は superseded になり検索から消える
+  const v2 = await withTransaction((client) => saveIngestedSource(client, {
+    canonicalUrl: url, title: 'E2E 港湾ケーソン据付工事', sourceType: 'project_case', evidenceType: 'public_project_page',
+    category: '海上工事', summary: '合成データ', contentText: '本工事はケーソン据付と MC-Caisson による誘導を行った（合成データ・第2版・追記あり）。',
+    attributes: {}, quarantined: false, ingestedBy: admin,
+  }));
+  assert.equal(v2.action, 'new_version');
+  assert.equal(Number(v2.record.version), 2);
+  assert.equal(Number(v2.record.supersedes_id), Number(v1.record.id));
+  const approved2 = await call(`/api/sources/${v2.record.id}/approve`, { method: 'POST', cookie: adminCookie, body: { allowSelfReview: true } });
+  assert.equal(approved2.status, 200);
+  assert.equal(approved2.data.supersededId, Number(v1.record.id));
+  const { rows: old } = await pool.query(`SELECT status, effective_to FROM source_records WHERE id = $1`, [v1.record.id]);
+  assert.equal(old[0].status, 'superseded');
+  assert.ok(old[0].effective_to);
+  const hit3 = await search(query);
+  assert.deepEqual(hit3.candidates.map((c) => c.source_record_id), [Number(v2.record.id)]);
+
+  // 5. 失効（effective_to を過去日に）で検索から外れ、引用検証でも無効になる
+  const retired = await call(`/api/sources/${v2.record.id}/retire`, { method: 'POST', cookie: adminCookie, body: { effectiveTo: '2000-01-01', reason: 'E2E' } });
+  assert.equal(retired.status, 200);
+  assert.equal((await search(query)).candidates.length, 0);
+  const cit = await withTransaction((client) => validateCitations(client, { run, sources: [{ source_record_id: Number(v2.record.id) }] }));
+  assert.equal(cit.valid.length, 0);
+  assert.match(cit.invalid[0].reason, /有効期限/);
+
+  // 6. 隔離: 取り込み時に位置情報らしき文字列があれば quarantined で保存され、承認できない
+  const q = await withTransaction((client) => saveIngestedSource(client, {
+    canonicalUrl: 'https://www.mirai-const.co.jp/work/ocean/999998/', title: 'E2E 隔離対象', sourceType: 'project_case', evidenceType: 'public_project_page',
+    category: '海上工事', summary: 's', contentText: '緯度 35.123456, 経度 139.123456 の地点', attributes: {}, quarantined: true, quarantineReasons: ['位置情報らしき文字列を検出'], ingestedBy: admin,
+  }));
+  assert.equal(q.record.status, 'quarantined');
+  assert.equal((await call(`/api/sources/${q.record.id}/approve`, { method: 'POST', cookie: adminCookie, body: { allowSelfReview: true } })).status, 409);
+
+  await pool.query(`UPDATE agent_runs SET status = 'cancelled', finished_at = now() WHERE id = $1`, [run.id]);
+});

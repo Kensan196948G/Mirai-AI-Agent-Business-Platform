@@ -193,6 +193,8 @@ Playwright（`playwright-core` + 既存 Chrome）でログイン→全画面遷�
 node sync-agent-registry.mjs <Administratorのemail>            # domain-packs/ を draft（未承認）として同期
 node sync-agent-registry.mjs <Administratorのemail> --approve  # 同期と同時に承認（運用者＝承認者の暫定運用）
 node seed-agent-fixtures.mjs                            # 公開技術情報Fixtureを投入（冪等）
+node ingest-sources.mjs <email> --kind technology       # 公式サイトの技術紹介ページを出典として取り込み（pending）
+node manage-sources.mjs <email> list pending            # 出典のレビュー（approve / quarantine / retire）
 npm run worker                                          # 別プロセスとしてWorkerを起動（ポーリング実行）
 ```
 
@@ -213,6 +215,21 @@ curl -X POST http://127.0.0.1:<PORT>/api/agent-runs \
 | A-5 | Worker 監視 | `GET /api/health` の `worker.alive` / `queue.backlog` / `degraded`。`systemd/mira-agent-os{,-mvp}-watchdog.timer` を有効化（5 分ごと。異常時は失敗終了して journal に WARNING） | `systemctl list-timers`、`journalctl -u mira-agent-os-watchdog` |
 | A-6 | バックアップとリストア訓練 | `bin/pg-backup.sh`（`systemd/mira-agent-os-backup.timer` で毎日 03:15、保持 14 日）、`bin/pg-restore-drill.sh [mira_agent_os|mira_agent_os_mvp]`（使い捨て DB へ復元し件数確認後に削除）。両スクリプトはサーバーと同じ PostgreSQL 16 の `pg_dump` / `pg_restore`（`PG_BIN`、既定 `/usr/lib/postgresql/16/bin`）を使う。初回訓練 2026-09-09 実施済み | 直近 dump の存在と、訓練スクリプトの件数出力 |
 | A-7 | 本チェックリストの維持 | 手順変更時に本節を更新 | — |
+
+## 📚 出典（source_records）の取り込みと版管理（B-8〜B-12）
+
+Agent が根拠にできるのは **承認済み（`approved`）かつ有効期限内** の出典だけです。取り込みは人が起動するバッチで行い、Agent には URL 取得の Tool を与えません。
+
+| 手順 | コマンド | 備考 |
+|---|:--|---|
+| 公式サイトの技術紹介ページを取り込む | `node ingest-sources.mjs <運用者のemail> --kind technology [--dry-run] [--limit N]` | sitemap から詳細ページを列挙し 1 秒間隔で取得。`status='pending'` で保存（検索対象外） |
+| 公式サイトの施工実績ページを取り込む | `node ingest-sources.mjs <email> --kind work` | 「地域／市区町村」（詳細な位置情報）と画像は保存しない。都道府県・発注者区分・竣工年は `attributes` に構造化 |
+| 未承認の一覧 | `node manage-sources.mjs <email> list pending` または `GET /api/sources?status=pending` | 隔離（`quarantined`）された行は理由が `review_note` に入る |
+| 承認 | `node manage-sources.mjs <Approverのemail> approve <id,id,...\|--all-pending>` または `POST /api/sources/:id/approve` | 取り込み者本人の承認は職務分離で 403。Approver が 1 人しかいない間は `--allow-self-review`（API は `allowSelfReview:true`）で例外承認でき、監査ログに `selfReviewException=true` が残る |
+| 隔離 / 失効 | `manage-sources.mjs <email> quarantine <id> --reason "..."` / `retire <id> --effective-to YYYY-MM-DD` | 失効した出典は検索・引用検証の両方で除外される |
+| 版の更新 | 同じ URL を再取り込み → 内容（SHA-256）が変わっていれば `version+1` の pending 行 → 承認で旧版が自動的に `superseded`（`effective_to`=当日） | 内容が同じなら `unchanged` で何も作らない |
+
+検索は `title` / `summary` / `content_text` への部分一致（pg_trgm GIN index）で、相談文から英数字の技術名・カタカナ語・漢字語を取り出して照合します（`src/lib/search-tokens.js`）。社内基準（安全・品質・環境）は公開情報ではないため本バッチの対象外で、承認済み版の提供を受けてから `classification` を設計したうえで取り込みます。
 
 ## 🚧 既知の制約（本格実装スコープ）
 

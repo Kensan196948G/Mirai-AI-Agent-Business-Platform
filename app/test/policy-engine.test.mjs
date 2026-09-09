@@ -81,3 +81,11 @@ test('authorizeToolCall: knowledge.search-promoted は登録済みToolとして�
   const skillVersion = { skill_id: 'knowledge-dedup', status: 'approved', allowed_tools: ['knowledge.search-promoted'] };
   assert.doesNotThrow(() => authorizeToolCall({ skillVersion, toolName: 'knowledge.search-promoted' }));
 });
+
+test('authorizeSourceAccess: 有効期限切れ（effective_to が過去）の出典は拒否され、未来なら許可される', () => {
+  const run = { project_id: null };
+  const base = { id: 9, status: 'approved', classification: 'public' };
+  assert.throws(() => authorizeSourceAccess({ run, sourceRecord: { ...base, effective_to: '2000-01-01' } }), PolicyDeniedError);
+  assert.doesNotThrow(() => authorizeSourceAccess({ run, sourceRecord: { ...base, effective_to: '2999-12-31' } }));
+  assert.doesNotThrow(() => authorizeSourceAccess({ run, sourceRecord: { ...base, effective_to: null } }));
+});
