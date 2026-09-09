@@ -30,7 +30,7 @@ if (!/test/.test(process.env.DATABASE_URL)) {
 }
 
 const ALL_TABLES = [
-  'artifact_citations', 'artifacts', 'effect_ledger', 'budget_reservations', 'run_events', 'agent_runs',
+  'worker_heartbeats', 'artifact_citations', 'artifacts', 'effect_ledger', 'budget_reservations', 'run_events', 'agent_runs',
   'source_records', 'agent_skill_bindings', 'skill_versions', 'agent_versions',
   'chat_messages', 'chat_conversations', 'task_tool_calls', 'tasks', 'knowledge_candidates',
   'approval_steps', 'approval_requests', 'project_kpis', 'projects', 'requests',
