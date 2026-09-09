@@ -1,0 +1,1 @@
+{"case_id": "SC-01", "input": {"query": "承認運用の職務分離を確認したい"}, "expect": {"checks_min": 3, "requires_human_review": true, "notes": "実データの件数を返す"}}

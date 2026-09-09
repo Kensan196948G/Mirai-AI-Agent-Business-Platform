@@ -1,6 +1,6 @@
 ---
 name: applicability-gap-check
-description: 承認済み技術資料と案件条件を照合し、適用候補、不足条件、要専門家確認事項を根拠付きで整理する。技術選定の事前検討に用い、施工可否の最終承認は行わない。
+description: "承認済み技術資料と案件条件を照合し、適用候補、不足条件、要専門家確認事項を根拠付きで整理する。技術選定の事前検討に用い、施工可否の最終承認は行わない。"
 metadata:
   version: "1.0.0"
   domain: "mirai-construction"

@@ -1,0 +1,60 @@
+schema_version: mirai.agent-definition/v1
+agent_id: external-dx-support
+version: 1.0.0
+domain_pack: mirai-construction
+title: 社外向け DX 支援
+owner_role: DX推進部
+layer: organization
+org_code: '09'
+technical_risk_class: T2
+purpose: 顧客向け DX の要件発見・アセスメント・ソリューション構成・セキュリティ評価の論点を、公開資料だけを根拠に整理する。顧客単位の境界を守り、社内 AgentOS の非公開データを共有しない。
+does_not: 契約・見積の確定、顧客データの取り込み、社内非公開資料の顧客向け利用。
+max_autonomy_level: A1
+input_contract:
+  type: object
+  properties:
+    query:
+      type: string
+      minLength: 1
+      maxLength: 4000
+    customer:
+      type: string
+      maxLength: 80
+    document_text:
+      type: string
+      maxLength: 60000
+delegates_to: []
+timeout_seconds: 600
+budget_usd: 0.5
+model_category: Research / Classification
+skills:
+- skill_id: regional-context
+  version: 1.0.0
+  params:
+    allowed_classification: public_only
+- skill_id: knowledge-brief
+  version: 1.0.0
+  params:
+    classification: public_only
+    source_types:
+    - technology_catalog
+- skill_id: planning-brief
+  version: 1.0.0
+  params:
+    plan_type: requirement_discovery
+    criteria:
+    - 業務課題
+    - 現状システム
+    - データ
+    - セキュリティ
+    - 運用体制
+- skill_id: document-review
+  version: 1.0.0
+  params:
+    criteria:
+    - 認証・認可
+    - データ保護
+    - ログ・監査
+    - 外部接続
+    - 運用・保守
+output: 論点・根拠・不明点を含む草案（review_state=draft、人間レビュー必須）

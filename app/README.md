@@ -228,6 +228,24 @@ curl -X POST http://127.0.0.1:<PORT>/api/agent-runs \
 
 P1 の 3 Agent は A0〜A1（外部書き込みなし）のため既定ではゲートを設定していない。P2/P3 で外部への確定書き込み（A2）を追加する Skill に `approval_gate` を付ける。正式な業務承認（desknet's NEO）とは別のアプリ内承認である（ADR-001）。
 
+## 🏢 組織責務 Agent 01〜09（第 2 段）
+
+`org-map.yaml` の 9 組織それぞれに実行可能な Agent（`agents/*.yaml`、layer=organization、技術リスク T2〜T4）を定義し、共通 Skill 9 種を Agent 契約の `params` で再利用する。P1 の 3 Agent と合わせて 12 Agent が Registry で承認・実行可能。
+
+| 組織 | Agent | Skill（順に実行） | 主な入力 |
+|---|---|---|---|
+| 01 経営・統治・委員会 | governance-support | kpi-review → sod-check → decision-log-draft | query, options |
+| 02 営業・案件形成 | sales-opportunity-support | knowledge-brief（実績・技術）→ planning-brief（proposal）→ decision-log-draft | query |
+| 03 施工・調達・作業所 | construction-planning-support | knowledge-brief → quantity-consistency-check → planning-brief（construction_plan）→ risk-assessment（safety） | query, quantities_text |
+| 04 技術・研究開発 | research-technology-support | knowledge-brief（技術・基準）→ planning-brief（research_or_poc）→ source-citation-verify → decision-log-draft | query |
+| 05 安全・品質・環境 | safety-quality-environment-review（T4） | document-review（安全・品質・環境の観点）→ risk-assessment（safety）→ decision-log-draft | query, document_text |
+| 06 管理本部・経営企画 | management-planning-support | kpi-review → quantity-consistency-check → planning-brief（business_plan）→ risk-assessment（ai） | query, quantities_text |
+| 07 支店・営業所 | branch-support | regional-context → knowledge-brief → planning-brief（regional_overview） | query, branch |
+| 08 船舶事業部 | vessel-operation-support（T4） | knowledge-brief → planning-brief（vessel_assignment）→ risk-assessment（marine） | query |
+| 09 DX推進部（社外向け） | external-dx-support | regional-context（public_only）→ knowledge-brief（公開資料のみ）→ planning-brief（requirement_discovery）→ document-review（セキュリティ観点） | query, customer, document_text |
+
+共通 Skill: knowledge-brief（決定的）/ planning-brief / document-review / risk-assessment（構造化 LLM、検証失敗は保留）/ decision-log-draft（常に「未決定」）/ kpi-review（実測のみ、業務 KPI は未登録と明示）/ sod-check / quantity-consistency-check（単位混在・合計不一致の機械検出）/ regional-context（データ境界）。すべて草案は人間レビュー必須で、決定・承認・制御は行わない。
+
 ## 🧭 司令塔（CTO Orchestrator）
 
 | 項目 | 内容 |

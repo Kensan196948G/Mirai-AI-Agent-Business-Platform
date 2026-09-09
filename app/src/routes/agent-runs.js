@@ -5,13 +5,13 @@ import { recordAudit } from '../lib/audit.js';
 import * as registry from '../agent-runtime/registry.js';
 import * as jobStore from '../agent-runtime/job-store.js';
 import { PolicyDeniedError } from '../agent-runtime/policy-engine.js';
-import { createRunForUser, AGENT_INPUT_ALLOWLIST } from '../agent-runtime/run-create.js';
+import { createRunForUser, inputKeysFor } from '../agent-runtime/run-create.js';
 
 const router = express.Router();
 
 router.post('/', requireAuth, async (req, res) => {
   const { agentId, projectId, input } = req.body || {};
-  if (!agentId || !AGENT_INPUT_ALLOWLIST[agentId]) {
+  if (!agentId || !inputKeysFor(agentId)) {
     return res.status(400).json({ error: '不正な agentId' });
   }
   try {

@@ -9,9 +9,12 @@ process.env.LLM_PROVIDER = 'deepseek'; process.env.LLM_API_KEY = 'sk-test-dummy'
 test('統合カタログ: org-map の 9 組織と 12 Agent（P1 3 件は実行可、P2/P3 は候補）が読める', () => {
   const c = loadUnifiedCatalog();
   assert.equal(c.organizations.length, 9);
-  assert.equal(c.agents.length, 12);
+  assert.equal(c.agents.length, 20);
   const p1 = c.agents.filter((a) => a.stage === 'P1').map((a) => a.agent_id).sort();
-  assert.deepEqual(p1, ['knowledge-quality', 'project-case-research', 'technology-selection']);
+  assert.equal(p1.length, 12, 'P1: 元の 3 Agent + 組織責務 Agent 9 種');
+  for (const id of ['knowledge-quality', 'project-case-research', 'technology-selection', 'governance-support', 'external-dx-support']) assert.ok(p1.includes(id));
+  const orgs = new Set(c.agents.filter((a) => a.layer === 'organization' && a.org_code && a.executable).map((a) => a.org_code));
+  assert.equal(orgs.size, 9, '01〜09 のすべてに実行可能な Agent がある');
   assert.ok(c.agents.filter((a) => a.stage === 'P1').every((a) => a.executable && a.purpose && a.does_not));
   assert.ok(c.agents.filter((a) => a.stage !== 'P1').every((a) => !a.executable && a.backlog_id));
   assert.equal(findAgent('technology-selection').dept, '技術・研究開発');

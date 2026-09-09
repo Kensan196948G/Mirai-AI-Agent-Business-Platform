@@ -1,6 +1,6 @@
 ---
 name: technology-comparison
-description: 技術候補間の比較表を作成する。適用条件・不足情報を候補ごとに並べ、同一視できない相違点（警報機能の有無等）を明示する。工法決定は行わない。
+description: "技術候補間の比較表を作成する。適用条件・不足情報を候補ごとに並べ、同一視できない相違点（警報機能の有無等）を明示する。工法決定は行わない。"
 metadata:
   version: "1.0.0"
   domain: "mirai-construction"

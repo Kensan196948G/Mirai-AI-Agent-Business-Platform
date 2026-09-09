@@ -1,0 +1,2 @@
+{"case_id": "DR-01", "input": {"query": "安全計画をレビューしたい"}, "expect": {"issues_max": 0, "unknowns_min": 1, "requires_human_review": true, "requires_expert_review": true, "notes": "文書が無ければ棄権"}}
+{"case_id": "DR-02", "input": {"query": "レビュー", "document_text": "高所作業は手すりを設置する。", "criteria": ["墜落防止"]}, "expect": {"requires_expert_review": true, "notes": "文書があれば観点ごとに指摘（offline は代表値）"}}

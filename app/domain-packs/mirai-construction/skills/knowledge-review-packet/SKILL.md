@@ -1,6 +1,6 @@
 ---
 name: knowledge-review-packet
-description: knowledge-quality-reviewとknowledge-dedupの出力を、人間レビュー用の根拠・差分・未解決事項パケットにまとめてArtifactとして保存する。
+description: "knowledge-quality-reviewとknowledge-dedupの出力を、人間レビュー用の根拠・差分・未解決事項パケットにまとめてArtifactとして保存する。"
 metadata:
   version: "1.0.0"
   domain: "mirai-construction"

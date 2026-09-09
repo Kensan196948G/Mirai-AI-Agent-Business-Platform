@@ -1,0 +1,59 @@
+{
+  "type": "object",
+  "required": [
+    "decision_status",
+    "topic",
+    "options",
+    "considerations",
+    "unknowns",
+    "approvers_required",
+    "requires_human_review",
+    "artifact_id",
+    "artifact_code"
+  ],
+  "properties": {
+    "decision_status": {
+      "type": "string",
+      "enum": [
+        "undecided"
+      ]
+    },
+    "topic": {
+      "type": "string"
+    },
+    "options": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "considerations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "unknowns": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "approvers_required": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "requires_human_review": {
+      "type": "boolean"
+    },
+    "artifact_id": {
+      "type": "integer"
+    },
+    "artifact_code": {
+      "type": "string"
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

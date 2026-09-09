@@ -1,6 +1,6 @@
 ---
 name: knowledge-quality-review
-description: Knowledge候補の正確性・具体性・再利用性・機密性を検査し、人間レビュー用の指摘一覧を作る。自己昇格はしない。
+description: "Knowledge候補の正確性・具体性・再利用性・機密性を検査し、人間レビュー用の指摘一覧を作る。自己昇格はしない。"
 metadata:
   version: "1.0.0"
   domain: "mirai-construction"

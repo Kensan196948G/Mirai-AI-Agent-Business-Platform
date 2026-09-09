@@ -1,0 +1,79 @@
+{
+  "type": "object",
+  "required": [
+    "risk_items",
+    "unknowns",
+    "requires_human_review",
+    "requires_expert_review",
+    "artifact_id",
+    "artifact_code"
+  ],
+  "properties": {
+    "risk_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "hazard",
+          "consequence",
+          "likelihood",
+          "severity"
+        ],
+        "properties": {
+          "hazard": {
+            "type": "string"
+          },
+          "consequence": {
+            "type": "string"
+          },
+          "likelihood": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low",
+              "unknown"
+            ]
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low",
+              "unknown"
+            ]
+          },
+          "controls": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "basis": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "unknowns": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "requires_human_review": {
+      "type": "boolean"
+    },
+    "requires_expert_review": {
+      "type": "boolean"
+    },
+    "artifact_id": {
+      "type": "integer"
+    },
+    "artifact_code": {
+      "type": "string"
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

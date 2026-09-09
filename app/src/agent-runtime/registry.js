@@ -78,8 +78,8 @@ async function upsertAgentVersion(client, packId, agentId, version, { approvedBy
   for (const s of definition.skills) {
     const { row: skillVersionRow } = await upsertSkillVersion(client, packId, s.skill_id, s.version, { approvedByUserId, status });
     await client.query(
-      `INSERT INTO agent_skill_bindings (agent_version_id, skill_version_id, sort_order) VALUES ($1,$2,$3)`,
-      [agentVersionRow.id, skillVersionRow.id, sortOrder++],
+      `INSERT INTO agent_skill_bindings (agent_version_id, skill_version_id, sort_order, params) VALUES ($1,$2,$3,$4)`,
+      [agentVersionRow.id, skillVersionRow.id, sortOrder++, JSON.stringify(s.params || {})],
     );
     skillVersionRows.push(skillVersionRow);
   }
@@ -128,7 +128,7 @@ export async function getApprovedAgentVersion(client, agentId) {
 
   const { rows: bindings } = await client.query(
     `SELECT sv.id, sv.skill_id, sv.version, sv.content_hash, sv.status, sv.risk, sv.definition_path,
-            sv.allowed_tools, sv.approval_gate, b.sort_order
+            sv.allowed_tools, sv.approval_gate, b.sort_order, b.params
      FROM agent_skill_bindings b JOIN skill_versions sv ON sv.id = b.skill_version_id
      WHERE b.agent_version_id = $1 AND sv.status = 'approved'
      ORDER BY b.sort_order`,

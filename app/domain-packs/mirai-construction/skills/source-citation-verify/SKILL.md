@@ -1,6 +1,6 @@
 ---
 name: source-citation-verify
-description: 成果物が引用するsource_recordのID・版・参照権限を検証する。存在しない・失効した・権限外の引用を検出し除去対象として報告する。
+description: "成果物が引用するsource_recordのID・版・参照権限を検証する。存在しない・失効した・権限外の引用を検出し除去対象として報告する。"
 metadata:
   version: "1.0.0"
   domain: "mirai-construction"

@@ -1,6 +1,6 @@
 ---
 name: case-comparison
-description: 施工実績候補間の類似・相違・不明条件を比較する。案件の受注可否・工法決定は行わない。
+description: "施工実績候補間の類似・相違・不明条件を比較する。案件の受注可否・工法決定は行わない。"
 metadata:
   version: "1.0.0"
   domain: "mirai-construction"

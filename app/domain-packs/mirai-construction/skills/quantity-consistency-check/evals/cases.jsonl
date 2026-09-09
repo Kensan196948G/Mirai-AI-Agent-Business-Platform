@@ -1,0 +1,2 @@
+{"case_id": "QC-01", "input": {"query": "数量表の確認", "quantities_text": "捨石: 100 m3\n捨石: 5 t\n被覆ブロック: 20 個\n合計: 300 m3"}, "expect": {"issues_min": 2, "parsed_min": 4, "requires_human_review": true, "notes": "単位不一致と合計不一致を検出"}}
+{"case_id": "QC-02", "input": {"query": "数量表の確認"}, "expect": {"parsed_max": 0, "unknowns_min": 1, "notes": "テキストが無ければ棄権"}}

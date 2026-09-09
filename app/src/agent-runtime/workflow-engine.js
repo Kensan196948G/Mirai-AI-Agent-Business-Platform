@@ -58,7 +58,8 @@ export async function executeNextStep(runId, { workerId }) {
     const skillDef = loadSkillDefinition(freshSkillVersion.domain_pack, freshSkillVersion.skill_id, freshSkillVersion.version);
 
     const priorOutputs = await collectPriorOutputs(client, run.id);
-    const input = { ...run.input_json, ...priorOutputs };
+    const bindingParams = skillVersionRow.params && typeof skillVersionRow.params === 'object' ? skillVersionRow.params : {};
+    const input = { ...run.input_json, ...priorOutputs, ...bindingParams };
 
     const validateInput = ajv.compile(skillDef.inputSchema);
     if (!validateInput(input)) {

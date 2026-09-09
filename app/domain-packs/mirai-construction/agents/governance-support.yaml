@@ -1,0 +1,35 @@
+schema_version: mirai.agent-definition/v1
+agent_id: governance-support
+version: 1.0.0
+domain_pack: mirai-construction
+title: 経営・統治・委員会支援
+owner_role: 経営企画 / 監査役
+layer: organization
+org_code: '01'
+technical_risk_class: T2
+purpose: 委員会・経営会議に向けて、本システムに実測のある KPI と承認運用の職務分離（SoD）を点検し、意思決定ログの様式（未決定）を下書きする。経営判断・承認は行わない。
+does_not: 経営判断の確定、承認・却下の判定、KPI の推定値の提示、正式承認（desknet's NEO）の代替。
+max_autonomy_level: A1
+input_contract:
+  type: object
+  properties:
+    query:
+      type: string
+      minLength: 1
+      maxLength: 4000
+    options:
+      type: array
+      items:
+        type: string
+delegates_to: []
+timeout_seconds: 600
+budget_usd: 0.5
+model_category: Research / Classification
+skills:
+- skill_id: kpi-review
+  version: 1.0.0
+- skill_id: sod-check
+  version: 1.0.0
+- skill_id: decision-log-draft
+  version: 1.0.0
+output: 論点・根拠・不明点を含む草案（review_state=draft、人間レビュー必須）

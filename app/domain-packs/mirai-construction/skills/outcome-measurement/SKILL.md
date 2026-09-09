@@ -1,6 +1,6 @@
 ---
 name: outcome-measurement
-description: 実測された作業時間・利用量・人間修正量を集計する。効果の誇張表現は生成しない。
+description: "実測された作業時間・利用量・人間修正量を集計する。効果の誇張表現は生成しない。"
 metadata:
   version: "1.0.0"
   domain: "mirai-construction"

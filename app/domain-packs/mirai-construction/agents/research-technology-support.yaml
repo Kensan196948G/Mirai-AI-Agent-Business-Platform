@@ -1,0 +1,46 @@
+schema_version: mirai.agent-definition/v1
+agent_id: research-technology-support
+version: 1.0.0
+domain_pack: mirai-construction
+title: 技術・研究開発支援
+owner_role: 技術本部
+layer: organization
+org_code: '04'
+technical_risk_class: T2
+purpose: 文献・基準・保有技術の承認済み資料を集め、研究計画・PoC 計画の論点と根拠の追跡可能性（引用の検証）を整理する。
+does_not: 技術の採用決定、特許・基準の法的判断、公開資料だけでの設計確定。
+max_autonomy_level: A1
+input_contract:
+  type: object
+  properties:
+    query:
+      type: string
+      minLength: 1
+      maxLength: 4000
+delegates_to:
+- technology-selection
+timeout_seconds: 600
+budget_usd: 0.5
+model_category: Research / Classification
+skills:
+- skill_id: knowledge-brief
+  version: 1.0.0
+  params:
+    source_types:
+    - technology_catalog
+    - standard
+- skill_id: planning-brief
+  version: 1.0.0
+  params:
+    plan_type: research_or_poc
+    criteria:
+    - 目的
+    - 評価基準
+    - 必要データ
+    - 期間
+    - リスク
+- skill_id: source-citation-verify
+  version: 1.0.0
+- skill_id: decision-log-draft
+  version: 1.0.0
+output: 論点・根拠・不明点を含む草案（review_state=draft、人間レビュー必須）

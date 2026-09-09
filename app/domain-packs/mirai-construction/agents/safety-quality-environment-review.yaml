@@ -1,0 +1,44 @@
+schema_version: mirai.agent-definition/v1
+agent_id: safety-quality-environment-review
+version: 1.0.0
+domain_pack: mirai-construction
+title: 安全・品質・環境レビュー支援
+owner_role: 安全品質環境本部
+layer: organization
+org_code: '05'
+technical_risk_class: T4
+purpose: 安全計画・品質計画・環境計画の文書を観点に沿ってレビューし、危険源とリスクを列挙する。Safety Critical な判断は自動承認しない。
+does_not: 安全・品質・環境の合否判定、是正の承認、災害防止措置の決定。
+max_autonomy_level: A1
+input_contract:
+  type: object
+  properties:
+    query:
+      type: string
+      minLength: 1
+      maxLength: 4000
+    document_text:
+      type: string
+      maxLength: 60000
+delegates_to: []
+timeout_seconds: 600
+budget_usd: 0.5
+model_category: Research / Classification
+skills:
+- skill_id: document-review
+  version: 1.0.0
+  params:
+    criteria:
+    - 墜落・転落防止
+    - 重機との接触
+    - 海上作業の安全
+    - 品質記録と検査計画
+    - 環境保全（濁り・騒音・廃棄物）
+    - 法令・社内基準への適合
+- skill_id: risk-assessment
+  version: 1.0.0
+  params:
+    domain: safety
+- skill_id: decision-log-draft
+  version: 1.0.0
+output: 論点・根拠・不明点を含む草案（review_state=draft、人間レビュー必須）

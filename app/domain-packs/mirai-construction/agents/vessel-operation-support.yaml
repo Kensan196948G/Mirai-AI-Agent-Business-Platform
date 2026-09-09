@@ -1,0 +1,47 @@
+schema_version: mirai.agent-definition/v1
+agent_id: vessel-operation-support
+version: 1.0.0
+domain_pack: mirai-construction
+title: 船舶事業支援
+owner_role: 船舶事業部
+layer: organization
+org_code: '08'
+technical_risk_class: T4
+purpose: 配船・船団運用・保守・海上物流・浚渫船運用の論点整理と、気海象・海上安全の観点のリスク整理を、承認済み資料から行う。船舶・機械の制御や運航判断は行わない。
+does_not: 配船・運航・出港の決定、船舶・機械への制御指示、気海象情報の自動取得、海上安全の最終判断。
+max_autonomy_level: A1
+input_contract:
+  type: object
+  properties:
+    query:
+      type: string
+      minLength: 1
+      maxLength: 4000
+delegates_to:
+- project-case-research
+- technology-selection
+timeout_seconds: 600
+budget_usd: 0.5
+model_category: Research / Classification
+skills:
+- skill_id: knowledge-brief
+  version: 1.0.0
+  params:
+    source_types:
+    - technology_catalog
+    - project_case
+- skill_id: planning-brief
+  version: 1.0.0
+  params:
+    plan_type: vessel_assignment
+    criteria:
+    - 船種と能力
+    - 工程との整合
+    - 保守計画
+    - 気海象の前提
+    - 安全
+- skill_id: risk-assessment
+  version: 1.0.0
+  params:
+    domain: marine
+output: 論点・根拠・不明点を含む草案（review_state=draft、人間レビュー必須）

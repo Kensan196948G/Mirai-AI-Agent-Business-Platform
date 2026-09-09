@@ -1,6 +1,6 @@
 ---
 name: evidence-backed-draft
-description: それまでのStep出力から、根拠付きの最終草案（Artifact）を作成し保存する。人間レビューを前提とした草案であり、正式な成果物ではない。
+description: "それまでのStep出力から、根拠付きの最終草案（Artifact）を作成し保存する。人間レビューを前提とした草案であり、正式な成果物ではない。"
 metadata:
   version: "1.0.0"
   domain: "mirai-construction"
