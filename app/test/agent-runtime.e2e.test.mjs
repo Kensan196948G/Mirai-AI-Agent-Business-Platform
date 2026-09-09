@@ -886,3 +886,24 @@ test('評価ランナー（C-16）: 全 Skill の offline 評価が合格し、�
   const s2 = await evaluationSummary(pool, { skillId: 'no-such-skill' });
   assert.equal(s2.latest, null);
 });
+
+test('検索の精度（評価ランナーが本番で検出）: 本文中の一般語 1 語だけの一致では候補を返さない', async () => {
+  const { callTool } = await import('../src/agent-runtime/tool-gateway.js');
+  const { saveIngestedSource } = await import('../src/lib/source-ops.js');
+  const { rows: sv } = await pool.query(`SELECT * FROM skill_versions WHERE skill_id = 'technology-catalog-search' LIMIT 1`);
+  const created = await call('/api/agent-runs', { method: 'POST', cookie: adminCookie, body: { agentId: 'technology-selection', input: { query: 'ダミー' } } });
+  const run = (await pool.query(`SELECT * FROM agent_runs WHERE id = $1`, [created.data.run.id])).rows[0];
+  const rec = await withTransaction((client) => saveIngestedSource(client, {
+    canonicalUrl: 'https://www.mirai-const.co.jp/technology/port/999997/', title: 'E2E 港湾技術', sourceType: 'technology_catalog', evidenceType: 'public_technology_page',
+    category: '港湾・海上', summary: '合成データ', contentText: 'この技術は港湾工事で実績が存在する。ケーソン据付を自動計測する。', attributes: {}, quarantined: false, ingestedBy: { id: adminId, name: 'E2E Admin' },
+  }));
+  assert.equal((await call(`/api/sources/${rec.record.id}/approve`, { method: 'POST', cookie: adminCookie, body: { allowSelfReview: true } })).status, 200);
+  const search = (query) => withTransaction((client) => callTool(client, { run, skillVersion: sv[0], toolName: 'knowledge.search-approved', args: { query, sourceType: 'technology_catalog', projectId: null } }));
+  const none = await search('存在しない架空技術XYZ-999について');
+  assert.equal(none.candidates.length, 0, '「存在」だけの本文一致では返さない');
+  const one = await search('港湾工事でのケーソン据付の実績');
+  assert.ok(one.candidates.some((c) => c.source_record_id === Number(rec.record.id)), '本文で 2 語以上一致すれば返す');
+  const single = await search('ケーソン');
+  assert.ok(single.candidates.some((c) => c.source_record_id === Number(rec.record.id)), '1 語の相談文は本文 1 語一致でも返す');
+  await pool.query(`UPDATE agent_runs SET status = 'cancelled', finished_at = now() WHERE id = $1`, [run.id]);
+});
