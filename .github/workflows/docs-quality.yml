@@ -22,7 +22,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: チェックアウト（全履歴：秘密情報の履歴走査に必要）
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
