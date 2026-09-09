@@ -5,6 +5,8 @@
 set -euo pipefail
 APP="/home/kensan/Projects/Mirai-DX-Project/Mirai-AI-Agent-Business-Platform/app"
 BACKUP_DIR="${BACKUP_DIR:-/home/kensan/backups/mira-agent-os}"
+# サーバー（PostgreSQL 16）と同じ major の pg_dump を使う。PATH 上の pg_dump 17 で取ると pg_restore 16 が読めない
+PG_BIN="${PG_BIN:-/usr/lib/postgresql/16/bin}"
 RETENTION_DAYS="${RETENTION_DAYS:-14}"
 STAMP="$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$BACKUP_DIR"; chmod 700 "$BACKUP_DIR"
@@ -13,7 +15,7 @@ for envfile in .env .env.mvp; do
   [ -n "$url" ] || { echo "DATABASE_URL が見つかりません: $envfile" >&2; exit 1; }
   db="${url##*/}"; db="${db%%\?*}"
   out="$BACKUP_DIR/${db}_${STAMP}.dump"
-  pg_dump --format=custom --no-owner --no-privileges --dbname="$url" --file="$out"
+  "$PG_BIN/pg_dump" --format=custom --no-owner --no-privileges --dbname="$url" --file="$out"
   chmod 600 "$out"
   echo "backup: $db -> $out ($(du -h "$out" | cut -f1))"
 done

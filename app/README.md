@@ -211,7 +211,7 @@ curl -X POST http://127.0.0.1:<PORT>/api/agent-runs \
 | A-2 | 失敗 Run の残骸（重複草案）を整理する | 本番データ削除のため **Y/N 承認**のうえ SQL で削除（`artifact_citations` → `artifacts`） | `GET /api/agent-runs/:id` の artifacts が想定件数 |
 | A-3 / A-4 | 各 Agent の実 Run を本番・MVP で 1 件ずつ完走確認 | `node create-agent-run.mjs <Administratorのemail> <agentId> '<入力JSON>' --wait`（MVP は `set -a; source .env.mvp; set +a` の上で実行） | `final: completed`、成果物 1 件、`requires_human_review=true` |
 | A-5 | Worker 監視 | `GET /api/health` の `worker.alive` / `queue.backlog` / `degraded`。`systemd/mira-agent-os{,-mvp}-watchdog.timer` を有効化（5 分ごと。異常時は失敗終了して journal に WARNING） | `systemctl list-timers`、`journalctl -u mira-agent-os-watchdog` |
-| A-6 | バックアップとリストア訓練 | `bin/pg-backup.sh`（`systemd/mira-agent-os-backup.timer` で毎日 03:15、保持 14 日）、`bin/pg-restore-drill.sh [mira_agent_os|mira_agent_os_mvp]`（使い捨て DB へ復元し件数確認後に削除） | 直近 dump の存在と、訓練スクリプトの件数出力 |
+| A-6 | バックアップとリストア訓練 | `bin/pg-backup.sh`（`systemd/mira-agent-os-backup.timer` で毎日 03:15、保持 14 日）、`bin/pg-restore-drill.sh [mira_agent_os|mira_agent_os_mvp]`（使い捨て DB へ復元し件数確認後に削除）。両スクリプトはサーバーと同じ PostgreSQL 16 の `pg_dump` / `pg_restore`（`PG_BIN`、既定 `/usr/lib/postgresql/16/bin`）を使う。初回訓練 2026-09-09 実施済み | 直近 dump の存在と、訓練スクリプトの件数出力 |
 | A-7 | 本チェックリストの維持 | 手順変更時に本節を更新 | — |
 
 ## 🚧 既知の制約（本格実装スコープ）
