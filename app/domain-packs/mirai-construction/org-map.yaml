@@ -132,7 +132,7 @@ organizations:
   - 九州
   agents:
   - branch-support
-- code: 08
+- code: '08'
   dept: 船舶事業部
   org: 船舶事業部
   keywords:
@@ -146,7 +146,7 @@ organizations:
   agents:
   - vessel-operation-support
   - vessel-machinery-operation
-- code: 09
+- code: '09'
   dept: DX推進部
   org: DX推進部（本基盤の運用主管）
   keywords:
