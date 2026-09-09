@@ -360,6 +360,26 @@ input::placeholder,textarea::placeholder{color:var(--muted)}
       <sc-if value="{{ isAgentRuns }}" hint-placeholder-val="{{ false }}">
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px;margin-bottom:16px"><sc-for list="{{ arAgents }}" as="a" hint-placeholder-count="3"><div style="background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:8px"><span style="flex:1;font-size:13.5px;font-weight:600">{{ a.title }}</span><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:{{ a.fg }};background:{{ a.bg }}">{{ a.st }}</span></div><div style="font-size:11px;color:var(--muted);font-family:var(--mono)">{{ a.id }}@{{ a.version }} · {{ a.level }} · Owner: {{ a.owner }}</div><div style="font-size:12px;color:var(--ink-2);line-height:1.55">{{ a.purpose }}</div><div style="font-size:11.5px;color:var(--red);line-height:1.5">できないこと: {{ a.doesNot }}</div><div style="font-size:11px;color:var(--muted);font-family:var(--mono)">Skills: {{ a.skills }}</div></div></sc-for></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:16px;align-items:start">
+          <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden;grid-column:1 / -1">
+            <div style="padding:15px 18px;border-bottom:1px solid var(--line-2)"><div style="font-size:14px;font-weight:600">司令塔に依頼（CTO Orchestrator）</div><div style="font-size:11.5px;color:var(--muted)">要求文から必要な Agent を選び、順序を決めて複数の Run を実行し、結果を統合します。実行できるのは承認済み Agent だけで、候補（P2/P3）は理由付きで却下されます。採用・施工可否・最終決定は人が行います</div></div>
+            <div style="padding:14px 18px;display:flex;gap:8px;align-items:flex-start"><textarea value="{{ orcInput }}" onChange="{{ setOrcInput }}" rows="2" placeholder="例：港湾の岸壁改良で MC-Caisson を使う場合の技術条件と、類似工事の実績を提案用に整理したい" style="flex:1;resize:vertical"></textarea><button onClick="{{ orcStart }}" style="background:var(--accent);color:#fff;border:1px solid var(--accent);padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap" style-hover="background:var(--accent-d)">司令塔に依頼</button></div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:0;border-top:1px solid var(--line-2)">
+              <div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr><th style="text-align:left;padding:10px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">依頼</th><th style="text-align:left;padding:10px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">Step</th><th style="text-align:left;padding:10px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">費用</th><th style="text-align:left;padding:10px 16px;border-bottom:1px solid var(--line-2);font-size:11px;color:var(--muted);font-weight:600;background:var(--hover)">状態</th></tr></thead>
+                <tbody><sc-for list="{{ orcRows }}" as="o" hint-placeholder-count="3"><tr onClick="{{ o.open }}" style="cursor:pointer;background:{{ o.rowBg }}" style-hover="background:var(--hover)"><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2)"><div style="font-family:var(--mono);font-size:11px;color:var(--muted)">{{ o.code }}</div><div>{{ o.text }}</div><div style="font-size:11px;color:var(--muted)">{{ o.by }} · {{ o.at }}</div></td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2)">{{ o.steps }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2);font-family:var(--mono)">{{ o.cost }}</td><td style="padding:var(--rowpad);border-bottom:1px solid var(--line-2)"><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:{{ o.fg }};background:{{ o.bg }}">{{ o.st }}</span></td></tr></sc-for></tbody></table>
+                <sc-if value="{{ orcNone }}" hint-placeholder-val="{{ true }}"><div style="padding:16px 18px;font-size:12.5px;color:var(--muted)">司令塔への依頼はまだありません</div></sc-if></div>
+              <sc-if value="{{ orcHas }}" hint-placeholder-val="{{ false }}"><aside style="border-left:1px solid var(--line-2);display:flex;flex-direction:column;gap:12px;padding:14px 18px;font-size:12.5px">
+                <div style="display:flex;align-items:center;gap:8px"><span style="font-family:var(--mono);font-size:11.5px;color:var(--muted)">{{ orc.code }}</span><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:{{ orc.fg }};background:{{ orc.bg }}">{{ orc.st }}</span><span style="flex:1"></span><button onClick="{{ orc.refresh }}" style="border:1px solid var(--line);background:var(--surface);padding:4px 9px;border-radius:7px;font-size:11.5px;cursor:pointer">更新</button></div>
+                <div style="white-space:pre-wrap">{{ orc.text }}</div>
+                <div style="font-size:11.5px;color:var(--muted)">意図: {{ orc.intent }} · リスク: {{ orc.risk }} · {{ orc.planSource }} · 費用 {{ orc.cost }}</div>
+                <sc-if value="{{ orc.summary }}" hint-placeholder-val="{{ false }}"><div style="background:var(--subtle);border-radius:7px;padding:8px 10px">{{ orc.summary }}</div></sc-if>
+                <sc-if value="{{ orc.hasErr }}" hint-placeholder-val="{{ false }}"><div style="background:var(--amber-bg);color:var(--amber);border-radius:7px;padding:8px 10px">{{ orc.err }}</div></sc-if>
+                <div><div style="font-weight:600;color:var(--ink-2);margin-bottom:6px">実行計画（Agent と理由）</div><sc-for list="{{ orc.steps }}" as="st" hint-placeholder-count="2"><div onClick="{{ st.open }}" style="display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:8px;padding:7px 10px;margin-bottom:6px;cursor:pointer" style-hover="background:var(--subtle)"><span style="font-family:var(--mono);font-size:11px;color:var(--muted)">#{{ st.seq }}</span><span style="flex:1;min-width:0"><b>{{ st.agent }}</b> <span style="font-size:11px;color:var(--muted)">{{ st.deps }} · Run {{ st.run }}</span><span style="display:block;font-size:11.5px;color:var(--muted)">{{ st.reason }}</span><sc-if value="{{ st.err }}" hint-placeholder-val="{{ false }}"><span style="display:block;font-size:11.5px;color:var(--red)">{{ st.err }}</span></sc-if></span><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:{{ st.fg }};background:{{ st.bg }}">{{ st.st }}</span></div></sc-for></div>
+                <sc-if value="{{ orc.hasRejected }}" hint-placeholder-val="{{ false }}"><div><div style="font-weight:600;color:var(--ink-2);margin-bottom:4px">却下した候補（理由）</div><sc-for list="{{ orc.rejected }}" as="rj" hint-placeholder-count="1"><div style="font-size:11.5px;color:var(--muted)">・{{ rj }}</div></sc-for></div></sc-if>
+                <sc-if value="{{ orc.hasFinal }}" hint-placeholder-val="{{ false }}"><div><div style="font-weight:600;color:var(--ink-2);margin-bottom:4px">統合草案 {{ orc.finalCode }}（人間レビュー必須）</div><div style="white-space:pre-wrap;line-height:1.55;background:var(--subtle);border-radius:7px;padding:8px 10px">{{ orc.final }}</div></div></sc-if>
+                <sc-if value="{{ orc.canCancel }}" hint-placeholder-val="{{ false }}"><div><button onClick="{{ orc.cancel }}" style="border:1px solid var(--line);background:var(--surface);color:var(--red);padding:6px 11px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">中断</button></div></sc-if>
+              </aside></sc-if>
+            </div>
+          </section>
           <section style="background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden">
             <div style="padding:15px 18px;border-bottom:1px solid var(--line-2)"><div style="font-size:14px;font-weight:600">Agent Run を開始</div><div style="font-size:11.5px;color:var(--muted)">検索・比較・草案作成まで自動。採用・昇格の判断は必ず人がレビューします</div></div>
             <div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px">
@@ -531,7 +551,7 @@ class Component extends DCLogic {
     const [
       users, projects, tasks, approvals, knowledge, audit,
       integrations, agents, skills, router, usage, chat,
-      arCatalog, arRuns, arVersions, arMetrics,
+      arCatalog, arRuns, arVersions, arMetrics, orchestrations,
     ] = await Promise.all([
       this.api('/api/users'),
       this.api('/api/projects'),
@@ -549,6 +569,7 @@ class Component extends DCLogic {
       this.api('/api/agent-runs').catch(() => ({ runs: [] })),
       this.api('/api/agent-catalog/versions').catch(() => ({ skills: [], agents: [] })),
       this.api(`/api/agent-runs/metrics?range=${this.state.range || '30d'}`).catch(() => null),
+      this.api('/api/orchestrations').catch(() => ({ orchestrations: [] })),
     ]);
     this.setState({
       users: users.users.map(mapUser),
@@ -567,6 +588,7 @@ class Component extends DCLogic {
       arRuns: arRuns.runs || [],
       arVersions: { skills: arVersions.skills || [], agents: arVersions.agents || [] },
       arMetrics: arMetrics,
+      orchestrations: orchestrations.orchestrations || [],
       chat: { messages: mapChatMessages(chat.messages), topic: -1, step: Math.max(0, chat.messages.length - 1) },
       openGroups: this.state.openGroups || { g1: true, g2: true, g3: true, g4: true },
       screen: this.state.screen || 'dashboard',
@@ -885,6 +907,26 @@ class Component extends DCLogic {
     });
   }
   arCloseSource() { this.setState({ arSource: null }); }
+  orcStart() {
+    const text = (this.state.orcInput || '').trim();
+    if (!this.can('create')) return this.deny('create', '司令塔への依頼');
+    if (!text) return this.toast('依頼内容を入力してください', 'red');
+    this.guarded('orchestration-create', async () => {
+      const r = await this.api('/api/orchestrations', { method: 'POST', body: { request: text } });
+      this.setState({ orcInput: '' });
+      await this.refreshAll();
+      this.orcOpen(r.orchestration.id);
+      const o = r.orchestration;
+      this.toast(o.status === 'blocked' ? `${o.orchestration_code}: 要求に合う実行可能な Agent がありません（計画の却下理由を確認してください）` : `${o.orchestration_code} を開始しました（${o.plan_source === 'llm' ? 'LLM 計画' : 'ルールベース計画'}）`, o.status === 'blocked' ? 'amber' : 'green');
+    });
+  }
+  orcOpen(id) {
+    this.setState({ orcSel: id, orcDetail: null });
+    this.guarded('orchestration-detail', async () => { const d = await this.api(`/api/orchestrations/${id}`); this.setState({ orcSel: id, orcDetail: d }); });
+  }
+  orcCancel(id) {
+    this.guarded('orchestration-cancel', async () => { await this.api(`/api/orchestrations/${id}/cancel`, { method: 'POST' }); await this.refreshAll(); this.orcOpen(id); this.toast('中断を要求しました', 'amber'); });
+  }
   arRerun(id) {
     this.guarded('agent-run-rerun', async () => {
       const r = await this.api(`/api/agent-runs/${id}/rerun`, { method: 'POST' });
@@ -1322,6 +1364,14 @@ class Component extends DCLogic {
       if (e.type === 'lease_reclaimed') return `Lease を引き継ぎ（前: ${det.previous_owner || '?'}）`;
       return JSON.stringify(det).slice(0, 160);
     };
+    const artifactBody = (a) => {
+      const c = a.content || {}; const lines = [];
+      if (c.summary) lines.push(c.summary);
+      if (c.findings && c.findings.length) lines.push('【確認できた事実】\n' + c.findings.map((x) => '・' + x).join('\n'));
+      if (c.unknowns && c.unknowns.length) lines.push('【不明点・不足】\n' + c.unknowns.map((x) => '・' + x).join('\n'));
+      if (c.sources && c.sources.length) lines.push('【根拠】source_record ' + c.sources.map((x) => '#' + x.source_record_id).join(', '));
+      return lines.join('\n\n') || '（内容なし）';
+    };
     // 成果物カード: 項目ごとに確認済みチェック（G-36）。本文は変更せず artifact_checks に記録する
     const checkOf = (a, kind, text) => (a.checks || []).find((c) => c.item_kind === kind && c.item_text === text);
     const itemRows = (a, kind, list, runId) => (Array.isArray(list) ? list : []).map((text) => {
@@ -1388,6 +1438,27 @@ class Component extends DCLogic {
       pause: () => this.arPause(d.run.id), resume: () => this.arResume(d.run.id),
       cancel: () => this.arCancel(d.run.id), refresh: () => this.arOpenRun(d.run.id),
     }, runSt(d.run.status)) : {};
+    // 司令塔（CTO Orchestrator）
+    const ORC_ST = { planned: ['計画済み', 'muted'], running: ['実行中', 'blue'], waiting_approval: ['承認待ち', 'amber'], completed: ['完了', 'green'], partial: ['一部完了', 'amber'], failed: ['失敗', 'red'], cancelled: ['中断', 'muted'], blocked: ['実行不可', 'red'] };
+    const orcSt = (k) => Object.assign({ st: (ORC_ST[k] || [k, 'muted'])[0] }, this.tone((ORC_ST[k] || [k, 'muted'])[1]));
+    const orcRows = (s.orchestrations || []).map((o) => Object.assign({
+      id: o.id, code: o.orchestration_code, text: (o.request_text || '').slice(0, 60), steps: o.step_count, by: o.requested_by_name || '', at: o.created_at ? fmtDate(o.created_at) : '',
+      cost: this.fmtCost(Number(o.cost_usd || 0)), open: () => this.orcOpen(o.id), rowBg: s.orcSel === o.id ? 'var(--subtle)' : 'transparent',
+    }, orcSt(o.status)));
+    const od = s.orcDetail;
+    const orc = od ? Object.assign({
+      id: od.orchestration.id, code: od.orchestration.orchestration_code, text: od.orchestration.request_text, intent: od.orchestration.intent || '—', risk: od.orchestration.risk || '—',
+      planSource: od.orchestration.plan_source === 'llm' ? 'LLM 計画（カタログ・承認状態で検証）' : 'ルールベース計画（語の一致）', summary: (od.orchestration.plan_json || {}).summary || '',
+      cost: `${this.fmtCost(Number(od.orchestration.cost_usd || 0))} / 上限 ${this.fmtCost(Number(od.orchestration.budget_usd || 0))}`, err: od.orchestration.error_message || '', hasErr: !!od.orchestration.error_message,
+      steps: (od.steps || []).map((st) => Object.assign({
+        seq: st.seq, agent: st.agent_id, reason: st.reason || '', deps: (st.depends_on || []).length ? `先行: ${st.depends_on.join(',')}` : '独立', run: st.run_code || '—', err: st.error_message || st.run_error || '',
+        open: () => { if (st.run_id) { this.arOpenRun(st.run_id); } },
+      }, orcSt(st.status === 'running' ? 'running' : st.status === 'completed' ? 'completed' : st.status === 'waiting_approval' ? 'waiting_approval' : st.status === 'blocked' ? 'blocked' : st.status === 'failed' ? 'failed' : st.status === 'cancelled' || st.status === 'skipped' ? 'cancelled' : 'planned'))),
+      rejected: ((od.orchestration.plan_json || {}).rejected || []).map((r) => `${r.agent_id}: ${r.reason}`),
+      hasRejected: (((od.orchestration.plan_json || {}).rejected) || []).length > 0,
+      final: od.final_artifact ? artifactBody({ content: od.final_artifact.content, citations: [] }) : '', hasFinal: !!od.final_artifact, finalCode: od.final_artifact ? od.final_artifact.artifact_code : '',
+      canCancel: ['planned', 'running', 'waiting_approval'].includes(od.orchestration.status), cancel: () => this.orcCancel(od.orchestration.id), refresh: () => this.orcOpen(od.orchestration.id),
+    }, orcSt(od.orchestration.status)) : {};
     const canApproveVer = this.can('users');
     const verRow = (kind, v) => Object.assign({
       kind: kind === 'skill' ? 'Skill' : 'Agent', name: v.name, version: v.version, hash: (v.content_hash || '').slice(0, 12),
@@ -1490,6 +1561,7 @@ class Component extends DCLogic {
       arSourceText: s.arSource && !s.arSource.loading ? (s.arSource.content_text || s.arSource.summary || '（本文なし）') : '',
       arLlmNote: (s.llm && s.llm.configured) ? `LLM 接続中（${(s.llm.providers || []).join(', ')}）：構造化Stepで実際にAPI課金が発生します。モデルは Model Router（エージェント設定）で決まります` : 'LLM未設定：構造化Stepは「LLM未設定」で明示的に失敗します（偽の成功にはなりません）',
       arRunRows, arNoRuns: arRunRows.length === 0, arHasRun: !!d, arRun,
+      orcRows, orcNone: orcRows.length === 0, orcHas: !!od, orc, orcInput: s.orcInput || '', setOrcInput: (e) => this.setState({ orcInput: e.target.value }), orcStart: () => this.orcStart(),
       arVersionRows, arVersionNote: arDraftCount > 0 ? `未承認 ${arDraftCount} 件` : '未承認の版はありません',
       resetAll: () => this.refreshAllWithToast(),
       modalNew: s.modal === 'new', closeModal: () => this.setState({ modal: null }), stop: (e) => e.stopPropagation(),

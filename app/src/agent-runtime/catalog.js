@@ -30,6 +30,7 @@ export function loadUnifiedCatalog(packId = 'mirai-construction') {
         entry = {
           agent_id: agentId, stage: 'P1', title: def.title, purpose: String(def.purpose || '').trim(), does_not: String(def.does_not || '').trim(),
           owner_role: def.owner_role, max_autonomy_level: def.max_autonomy_level, skills: (def.skills || []).map((s) => s.skill_id), executable: true,
+          layer: def.layer || 'organization', technical_risk_class: def.technical_risk_class || null, delegates_to: def.delegates_to || [],
         };
       } catch (err) {
         if (!(err instanceof SkillLoaderError)) throw err;
@@ -38,7 +39,7 @@ export function loadUnifiedCatalog(packId = 'mirai-construction') {
         entry = {
           agent_id: agentId, stage: c.stage, title: c.title, purpose: `${c.main_deliverable || ''}（候補: ${(c.skill_candidates || []).join('、')}）`,
           does_not: (c.forbidden || []).join('、'), owner_role: c.owner_role, max_autonomy_level: null, skills: c.skill_candidates || [], executable: false,
-          backlog_id: c.id, required_materials: c.required_materials || [],
+          backlog_id: c.id, required_materials: c.required_materials || [], layer: 'organization', technical_risk_class: null, delegates_to: [],
         };
       }
       entry.org_code = org.code; entry.dept = org.dept;

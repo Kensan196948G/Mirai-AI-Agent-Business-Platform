@@ -228,6 +228,19 @@ curl -X POST http://127.0.0.1:<PORT>/api/agent-runs \
 
 P1 の 3 Agent は A0〜A1（外部書き込みなし）のため既定ではゲートを設定していない。P2/P3 で外部への確定書き込み（A2）を追加する Skill に `approval_gate` を付ける。正式な業務承認（desknet's NEO）とは別のアプリ内承認である（ADR-001）。
 
+## 🧭 司令塔（CTO Orchestrator）
+
+| 項目 | 内容 |
+|---|---|
+| 入口 | 業務Agent 画面「司令塔に依頼」または `POST /api/orchestrations {request}`。ロール・同時実行・日次上限は Run 作成と同じ |
+| 計画 | LLM が要求文とカタログから意図・リスク・必要な Agent・順序（依存）・各 Agent への相談文を JSON Schema 付きで作る（`src/agent-runtime/orchestrator.js`）。LLM 未設定時はルールベース（語の一致）。**選べるのは Registry で承認済み・実行可能な Agent だけ**で、候補（P2/P3）・未承認・カタログに無い提案は理由付きで却下し、勝手に別経路へ迂回しない。合う Agent が無ければ `blocked` で止まり人間の判断に渡す |
+| 実行 | 依存が満たされた Step から Run を作り（Worker のポーリングと詳細 API で前進）、先行 Step の findings / unknowns を `prior_context` として渡す。各 Run の Policy / 承認待ち / 予算はそのまま効き、司令塔は上書きしない |
+| 上限 | Step 数 `ORCHESTRATION_MAX_STEPS`（4）、費用 `ORCHESTRATION_BUDGET_USD`（2.0、配下 Run の合計）。超過時は未着手 Step を blocked にして `partial` で止める |
+| 統合 | 全 Step 終了後、Agent ごとの帰属付きで事実・不明点・根拠を 1 つの統合草案（`orchestration_summary`、人間レビュー必須）にまとめる。失敗した Agent の結果は「結果なし」として不足を明示し、成功扱いしない。部分成功は `partial` |
+| 記録 | 計画（選択理由・却下理由）と終了を監査ログに残し、Run / 成果物は `orchestration_id` で追跡できる |
+
+Cross Review（横断レビュー）は次段で司令塔の最終 Step として組み込む。
+
 ## 💬 AI相談の IDEA 構造化と部署別カタログの照合
 
 | 項目 | 内容 |

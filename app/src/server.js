@@ -20,6 +20,7 @@ import artifactRoutes from './routes/artifacts.js';
 import skillVersionRoutes from './routes/skill-versions.js';
 import agentCatalogRoutes from './routes/agent-catalog.js';
 import sourceRoutes from './routes/sources.js';
+import orchestrationRoutes from './routes/orchestrations.js';
 
 const app = express();
 app.disable('x-powered-by');
@@ -55,6 +56,7 @@ app.use('/api/artifacts', artifactRoutes);
 app.use('/api/skills', skillVersionRoutes); // /api/skills/:id/versions（platformRoutesのGET /skillsとはパスが異なり衝突しない）
 app.use('/api/agent-catalog', agentCatalogRoutes);
 app.use('/api/sources', sourceRoutes);
+app.use('/api/orchestrations', orchestrationRoutes);
 
 // eslint-disable-next-line no-unused-vars
 app.use((err, _req, res, _next) => {
