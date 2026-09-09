@@ -105,3 +105,18 @@ test('evidence-backed-draft は requires_human_review=true を必ず返し、art
   assert.equal(typeof out.artifact_id, 'number');
   assert.deepEqual(ctx.calls, ['artifact.write-draft']);
 });
+
+test('evidence-backed-draft は出典ゼロのとき LLM を呼ばず、前段の unknowns を保持して理由を明記する', async () => {
+  const def = loadSkillDefinition(PACK, 'evidence-backed-draft', '1.0.0');
+  const ctx = makeCtx(def, { query: 'q', candidates: [], comparisons: [], unknowns: ['該当する承認済み施工実績が見つかりません'] });
+  let llmCalled = false;
+  ctx.structuredComplete = async () => { llmCalled = true; return { data: {}, degraded: false }; };
+  const out = await SKILL_HANDLERS['evidence-backed-draft'](ctx);
+  assert.equal(llmCalled, false);
+  assert.equal(out.sources.length, 0);
+  assert.equal(out.requires_human_review, true);
+  assert.ok(out.unknowns.includes('該当する承認済み施工実績が見つかりません'), '前段の unknowns を引き継ぐ');
+  assert.ok(out.unknowns.some((u) => u.includes('承認済み出典が見つからなかった')), '出典ゼロの理由を明記する');
+  assert.ok(!out.unknowns.some((u) => u.includes('LLM出力の検証に失敗')), 'LLM を呼んでいないのに検証失敗と書かない');
+  assert.ok(new Ajv({ allErrors: true }).compile(def.outputSchema)(out), 'output schema に適合');
+});

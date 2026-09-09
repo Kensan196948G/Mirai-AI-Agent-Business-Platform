@@ -73,12 +73,15 @@ async function evidenceBackedDraft(ctx) {
   const draftSources = collectSources(ctx.input);
   const { valid, invalid } = await ctx.validateCitations(draftSources.map((id) => ({ source_record_id: id })));
 
+  // 前段 Step までに積み上がった不明点は、LLM を呼ばない場合や degraded 時にも失わない
+  const priorUnknowns = ctx.input.unknowns || [];
   const fallback = {
     findings: [], sources: valid.map((id) => ({ source_record_id: id })),
-    unknowns: ['LLM出力の検証に失敗したため保留（人手確認が必要）'], assumptions: [], requires_human_review: true,
+    unknowns: [...priorUnknowns, 'LLM出力の検証に失敗したため保留（人手確認が必要）'], assumptions: ctx.input.assumptions || [],
+    requires_human_review: true,
   };
 
-  let output = fallback;
+  let output;
   if (draftSources.length > 0 || (ctx.input.comparison_table || []).length > 0) {
     const { data, degraded } = await ctx.structuredComplete({
       instructions:
@@ -90,6 +93,13 @@ async function evidenceBackedDraft(ctx) {
       fallbackData: fallback,
     });
     output = degraded ? fallback : data;
+  } else {
+    // 根拠となる承認済み出典が 1 件もない場合は LLM を呼ばず（推測で草案を書かせない）、その旨を明記する
+    output = {
+      findings: [], sources: [],
+      unknowns: [...priorUnknowns, '根拠となる承認済み出典が見つからなかったため、草案は作成していません（出典の登録または検索条件の見直しが必要）'],
+      assumptions: ctx.input.assumptions || [], requires_human_review: true,
+    };
   }
 
   // 引用検証で無効と判定されたsourceは、成果物保存前に取り除き、unknownsへ差し戻す。
