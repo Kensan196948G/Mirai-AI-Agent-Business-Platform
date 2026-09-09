@@ -11,20 +11,9 @@
  */
 import { loadEnv } from './src/lib/env.js';
 import { getPool, closePool, withTransaction } from './src/lib/db.js';
-import { recordAudit } from './src/lib/audit.js';
-import * as registry from './src/agent-runtime/registry.js';
-import * as jobStore from './src/agent-runtime/job-store.js';
-import { authorizeRunStart } from './src/agent-runtime/policy-engine.js';
+import { createRunForUser, AGENT_INPUT_ALLOWLIST } from './src/agent-runtime/run-create.js';
 
 loadEnv(new URL('.env', import.meta.url).pathname);
-
-// routes/agent-runs.js と同じ許可入力キー
-const AGENT_INPUT_ALLOWLIST = {
-  'technology-selection': ['query'],
-  'project-case-research': ['query'],
-  'knowledge-quality': ['knowledge_candidate_id', 'title', 'summary', 'source'],
-};
-const AGENT_RUN_BUDGET_USD = Number(process.env.AGENT_RUN_BUDGET_USD || '0.50');
 
 const [email, agentId, inputJson, ...flags] = process.argv.slice(2);
 if (!email || !agentId || !inputJson) {
@@ -34,27 +23,17 @@ if (!email || !agentId || !inputJson) {
 if (!AGENT_INPUT_ALLOWLIST[agentId]) { console.error(`不正な agentId: ${agentId}`); process.exit(1); }
 let input;
 try { input = JSON.parse(inputJson); } catch (e) { console.error(`入力JSONの解析に失敗: ${e.message}`); process.exit(1); }
-const picked = Object.fromEntries(AGENT_INPUT_ALLOWLIST[agentId].filter((k) => input[k] !== undefined).map((k) => [k, input[k]]));
 
 const pool = getPool();
 const { rows: users } = await pool.query(`SELECT id, name, role, active FROM users WHERE email = $1`, [email]);
 if (users.length === 0 || !users[0].active) { console.error(`有効なユーザーが見つかりません: ${email}`); process.exit(1); }
 const user = users[0];
-try { authorizeRunStart({ user }); } catch (e) { console.error(e.message); process.exit(1); }
 
-const run = await withTransaction(async (client) => {
-  const av = await registry.getApprovedAgentVersion(client, agentId);
-  if (!av) throw new Error(`Agent「${agentId}」の承認済み版がありません`);
-  const r = await jobStore.createRun(client, {
-    agentId, agentVersionId: av.agentVersion.id, projectId: null, requestedBy: user.id, inputJson: picked, maxSteps: 8,
-  });
-  await jobStore.reserveBudget(client, r.id, AGENT_RUN_BUDGET_USD);
-  await recordAudit(client, {
-    actorId: user.id, actorType: 'user', actorName: user.name,
-    action: 'agent_run.create', resourceType: 'agent_run', resourceId: r.id, detail: { agentId, runCode: r.run_code, via: 'cli' },
-  });
-  return r;
-});
+// API（POST /api/agent-runs）と同じ検証（許可入力キー・ロール・並行実行上限・承認済み版）と監査を通る
+let run;
+try {
+  run = await withTransaction((client) => createRunForUser(client, { user, agentId, input, via: 'cli' }));
+} catch (e) { console.error(e.message); await closePool(); process.exit(1); }
 console.log(`created: ${run.run_code} (id=${run.id}) agent=${agentId} status=${run.status}`);
 
 if (flags.includes('--wait')) {

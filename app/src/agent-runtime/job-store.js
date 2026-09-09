@@ -16,16 +16,33 @@ export async function createRun(client, { agentId, agentVersionId, projectId, re
   return rows[0];
 }
 
+/** 利用者ごと・全体の「実行中または待機中」の Run 数（並行実行の上限判定に使う）。 */
+export async function countActiveRuns(client, { userId }) {
+  const { rows } = await client.query(
+    `SELECT count(*) FILTER (WHERE requested_by = $1)::int AS for_user, count(*)::int AS total
+     FROM agent_runs WHERE status IN ('queued', 'running')`,
+    [userId],
+  );
+  return { forUser: rows[0].for_user, total: rows[0].total };
+}
+
 /** キュー内の実行可能なRunを1件、排他的に取得する（Postgresの定番パターン: FOR UPDATE SKIP LOCKED）。 */
 export async function claimNextRun(client, { workerId, leaseSeconds = 60 }) {
   const { rows } = await client.query(
-    `SELECT id FROM agent_runs
+    `SELECT id, status, lease_owner, lease_expires_at FROM agent_runs
      WHERE (status = 'queued') OR (status = 'running' AND lease_expires_at < now())
      ORDER BY created_at
      LIMIT 1
      FOR UPDATE SKIP LOCKED`,
   );
   if (rows.length === 0) return null;
+  if (rows[0].status === 'running') {
+    // 期限切れ Lease の引き継ぎは監査可能にする（前の Worker が停止・遅延した証跡）
+    await appendEvent(client, rows[0].id, {
+      type: 'lease_reclaimed', status: 'ok',
+      detail: { previous_owner: rows[0].lease_owner, expired_at: rows[0].lease_expires_at, new_owner: workerId },
+    });
+  }
   const { rows: updated } = await client.query(
     `UPDATE agent_runs
      SET status = 'running', lease_owner = $1, lease_expires_at = now() + ($2 || ' seconds')::interval, updated_at = now()
@@ -137,6 +154,15 @@ export async function pauseRun(client, runId, reason) {
      WHERE id = $2`,
     [reason || '利用者の一時停止要求', runId],
   );
+}
+
+/** 実行前に Lease の所有を確認する。期限切れで他 Worker に引き継がれていれば false。 */
+export async function holdsLease(client, runId, workerId) {
+  const { rows } = await client.query(
+    `SELECT 1 FROM agent_runs WHERE id = $1 AND status = 'running' AND lease_owner = $2 AND lease_expires_at >= now()`,
+    [runId, workerId],
+  );
+  return rows.length > 0;
 }
 
 export async function getRun(client, runId) {

@@ -228,6 +228,17 @@ curl -X POST http://127.0.0.1:<PORT>/api/agent-runs \
 
 P1 の 3 Agent は A0〜A1（外部書き込みなし）のため既定ではゲートを設定していない。P2/P3 で外部への確定書き込み（A2）を追加する Skill に `approval_gate` を付ける。正式な業務承認（desknet's NEO）とは別のアプリ内承認である（ADR-001）。
 
+## 🔀 並行実行制御（C-14）
+
+| 制御 | 内容 |
+|---|---|
+| 利用者あたりの同時実行 | `AGENT_RUN_MAX_ACTIVE_PER_USER`（既定 2）。queued + running を数え、承認待ち・一時停止は数えない。超過は 409 で理由を返す。利用者単位の advisory lock で同時要求の割り込みを防ぐ |
+| 環境全体の同時実行 | `AGENT_RUN_MAX_ACTIVE_TOTAL`（既定 10）。LLM 費用と Worker 負荷の上限 |
+| Worker 複数化 | 1 プロセス 1 Run。増やす場合は `systemd/mira-agent-os-worker.service` を複製して起動する（`FOR UPDATE SKIP LOCKED` で同じ Run を二重に取らない） |
+| Lease | `AGENT_WORKER_LEASE_SECONDS`（60）内に heartbeat が無い running Run は別 Worker が引き継ぐ（`lease_reclaimed` イベント）。Lease を失った Worker は以後その Run に書き込まない |
+
+API と運用 CLI（`create-agent-run.mjs`）は同じ `createRunForUser` を通るため、検証・上限・監査は共通。
+
 ## 📚 出典（source_records）の取り込みと版管理（B-8〜B-12）
 
 Agent が根拠にできるのは **承認済み（`approved`）かつ有効期限内** の出典だけです。取り込みは人が起動するバッチで行い、Agent には URL 取得の Tool を与えません。

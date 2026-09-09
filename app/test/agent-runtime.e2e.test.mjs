@@ -717,3 +717,66 @@ test('一時停止・再開（C-13）: pause は Step 境界で paused になり
   assert.deepEqual(ev.map((e) => e.type), ['paused', 'resumed', 'paused']);
   await pool.query(`UPDATE agent_runs SET status = 'cancelled', finished_at = now() WHERE id = $1`, [runId]);
 });
+
+test('並行実行制御（C-14）: 利用者あたりの同時実行上限を超える Run 作成は 409、完了すれば再び作成できる', async () => {
+  const saved = process.env.AGENT_RUN_MAX_ACTIVE_PER_USER;
+  process.env.AGENT_RUN_MAX_ACTIVE_PER_USER = '2';
+  try {
+    // 前のテストが残した queued/running を片付けてから数える
+    await pool.query(`UPDATE agent_runs SET status = 'cancelled', finished_at = now() WHERE status IN ('queued','running') AND requested_by = $1`, [adminId]);
+    const body = { agentId: 'technology-selection', input: { query: '並行' } };
+    const a = await call('/api/agent-runs', { method: 'POST', cookie: adminCookie, body });
+    const b = await call('/api/agent-runs', { method: 'POST', cookie: adminCookie, body });
+    assert.equal(a.status, 201); assert.equal(b.status, 201);
+    const c = await call('/api/agent-runs', { method: 'POST', cookie: adminCookie, body });
+    assert.equal(c.status, 409);
+    assert.match(c.data.error, /利用者あたり 2 件/);
+    // 承認待ち・一時停止は数えない: 1 件を paused にすると作成できる
+    await call(`/api/agent-runs/${a.data.run.id}/pause`, { method: 'POST', cookie: adminCookie });
+    const d = await call('/api/agent-runs', { method: 'POST', cookie: adminCookie, body });
+    assert.equal(d.status, 201);
+    // 別の利用者には影響しない
+    await createUser('e2e-dev-conc@example.com', 'E2E Dev', 'Developer', 'dev-password'); // doc003-allow: 使い捨てテストDB専用の固定値
+    const devCookie = await loginAs('e2e-dev-conc@example.com', 'dev-password'); // doc003-allow: 使い捨てテストDB専用の固定値
+    assert.equal((await call('/api/agent-runs', { method: 'POST', cookie: devCookie, body })).status, 201);
+    await pool.query(`UPDATE agent_runs SET status = 'cancelled', finished_at = now() WHERE status IN ('queued','running','paused') AND agent_id = 'technology-selection' AND input_json->>'query' = '並行'`);
+  } finally {
+    if (saved === undefined) delete process.env.AGENT_RUN_MAX_ACTIVE_PER_USER; else process.env.AGENT_RUN_MAX_ACTIVE_PER_USER = saved;
+  }
+});
+
+test('Lease 競合（C-14）: 2 つの Worker は同じ Run を取らず、期限切れ Lease は引き継がれ、失った Worker は書き込めない', async () => {
+  const body = { agentId: 'technology-selection', input: { query: 'lease' } };
+  const r1 = await call('/api/agent-runs', { method: 'POST', cookie: adminCookie, body });
+  const r2 = await call('/api/agent-runs', { method: 'POST', cookie: adminCookie, body });
+  assert.equal(r1.status, 201); assert.equal(r2.status, 201);
+  // 同時 claim（別トランザクション）→ 異なる Run
+  const [c1, c2] = await Promise.all([
+    withTransaction((client) => claimNextRun(client, { workerId: 'wA', leaseSeconds: 60 })),
+    withTransaction((client) => claimNextRun(client, { workerId: 'wB', leaseSeconds: 60 })),
+  ]);
+  assert.ok(c1 && c2 && Number(c1.id) !== Number(c2.id), '同じ Run を二重に取らない');
+  // 所有者以外の heartbeat は延長しない
+  const { heartbeat, holdsLease } = await import('../src/agent-runtime/job-store.js');
+  const before = (await pool.query(`SELECT lease_expires_at FROM agent_runs WHERE id = $1`, [c1.id])).rows[0].lease_expires_at;
+  await withTransaction((client) => heartbeat(client, c1.id, 'wB', 3600));
+  const after = (await pool.query(`SELECT lease_expires_at FROM agent_runs WHERE id = $1`, [c1.id])).rows[0].lease_expires_at;
+  assert.equal(String(after), String(before));
+  // Lease 期限切れ → 別 Worker が引き継ぎ、lease_reclaimed が記録される。元の Worker は実行を拒否される
+  await pool.query(`UPDATE agent_runs SET lease_expires_at = now() - interval '1 second' WHERE id = $1`, [c1.id]);
+  const c3 = await withTransaction((client) => claimNextRun(client, { workerId: 'wC', leaseSeconds: 60 }));
+  assert.equal(Number(c3.id), Number(c1.id));
+  assert.equal(c3.lease_owner, 'wC');
+  const { rows: ev } = await pool.query(`SELECT detail FROM run_events WHERE run_id = $1 AND type = 'lease_reclaimed'`, [c1.id]);
+  assert.equal(ev.length, 1);
+  assert.equal(ev[0].detail.previous_owner, 'wA');
+  assert.equal(await withTransaction((client) => holdsLease(client, c1.id, 'wA')), false);
+  const stale = await executeNextStep(c1.id, { workerId: 'wA' });
+  assert.equal(stale.lostLease, true);
+  const { rows: steps } = await pool.query(`SELECT count(*)::int AS n FROM run_events WHERE run_id = $1 AND type = 'step_started'`, [c1.id]);
+  assert.equal(steps[0].n, 0, 'Lease を失った Worker は Step を開始しない');
+  // 正当な所有者は実行できる
+  const ok = await executeNextStep(c1.id, { workerId: 'wC' });
+  assert.equal(ok.run.current_step, 1);
+  await pool.query(`UPDATE agent_runs SET status = 'cancelled', finished_at = now() WHERE id = ANY($1::bigint[])`, [[c1.id, c2.id]]);
+});

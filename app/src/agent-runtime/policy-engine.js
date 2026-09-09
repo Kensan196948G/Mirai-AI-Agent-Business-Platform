@@ -31,6 +31,28 @@ export function authorizeRunStart({ user }) {
   }
 }
 
+/** 並行実行の上限（環境変数は呼び出し時に読む。テストで切り替えられるようにするため）。 */
+export function runConcurrencyLimits() {
+  return {
+    perUser: Number(process.env.AGENT_RUN_MAX_ACTIVE_PER_USER || '2'),
+    total: Number(process.env.AGENT_RUN_MAX_ACTIVE_TOTAL || '10'),
+  };
+}
+
+/**
+ * 同時実行（queued / running）の上限を超える Run 作成を拒否する（C-14）。
+ * 承認待ち・一時停止は Worker を占有しないため数えない。
+ */
+export function authorizeRunConcurrency({ activeForUser, activeTotal }) {
+  const limits = runConcurrencyLimits();
+  if (activeForUser >= limits.perUser) {
+    throw Object.assign(new PolicyDeniedError(`同時に実行できる Run は利用者あたり ${limits.perUser} 件までです（実行中・待機中: ${activeForUser} 件）。完了または中断してから再度開始してください`), { code: 'concurrency' });
+  }
+  if (activeTotal >= limits.total) {
+    throw Object.assign(new PolicyDeniedError(`環境全体の同時実行上限（${limits.total} 件）に達しています。しばらく待ってから再度開始してください`), { code: 'concurrency' });
+  }
+}
+
 /**
  * Tool呼び出しを許可するか判定する。呼び出し側（tool-gateway.js）は結果に関わらず
  * run_events へ permit/deny を記録すること。
