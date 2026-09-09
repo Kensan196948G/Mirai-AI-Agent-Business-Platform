@@ -12,6 +12,7 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 import { recordAudit } from '../lib/audit.js';
 import { loadAgentDefinition, SkillLoaderError } from '../agent-runtime/skill-loader.js';
 import { approveVersion, deprecateVersion } from '../agent-runtime/registry.js';
+import { catalogWithRuntime } from '../agent-runtime/catalog.js';
 
 const router = express.Router();
 const TABLE = { skill: 'skill_versions', agent: 'agent_versions' };
@@ -44,6 +45,11 @@ router.get('/', requireAuth, async (_req, res) => {
     });
   }
   res.json({ agents });
+});
+
+/** 組織 × Agent の統合カタログ（org-map.yaml + P1 定義 + P2/P3 候補 + 承認状態）。AI相談の「近い Agent」と部署別一覧の正本。 */
+router.get('/org', requireAuth, async (_req, res) => {
+  res.json(await catalogWithRuntime(getPool()));
 });
 
 router.get('/versions', requireAuth, async (_req, res) => {

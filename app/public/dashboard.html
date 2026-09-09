@@ -153,7 +153,9 @@ input::placeholder,textarea::placeholder{color:var(--muted)}
                       <div style="border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)">
                         <div style="padding:11px 14px;border-bottom:1px solid var(--line-2);display:flex;align-items:center;gap:8px"><span style="font-size:11px;font-weight:600;color:var(--accent);letter-spacing:.5px">IDEA 構造化</span><span style="flex:1;font-size:13px;font-weight:600">{{ m.ideaTitle }}</span><span style="font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:6px;color:{{ m.riskFg }};background:{{ m.riskBg }}">{{ m.risk }}</span></div>
                         <dl style="display:grid;grid-template-columns:max-content 1fr;gap:8px 14px;margin:0;padding:12px 14px;font-size:12.5px"><sc-for list="{{ m.idea }}" as="row" hint-placeholder-count="6"><dt style="color:var(--muted);font-weight:600;font-size:12px">{{ row.k }}</dt><dd style="margin:0">{{ row.v }}</dd></sc-for></dl>
-                        <div style="padding:11px 14px;border-top:1px solid var(--line-2);display:flex;gap:8px;align-items:center"><span style="flex:1;font-size:11.5px;color:var(--muted)">Intent: {{ m.intent }}</span><sc-if value="{{ m.canAgentRun }}" hint-placeholder-val="{{ false }}"><button onClick="{{ m.toAgentRun }}" style="border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--subtle)">業務Agent で技術候補を比較</button></sc-if><button onClick="{{ m.promote }}" style="background:var(--accent);color:#fff;border:1px solid var(--accent);padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--accent-d)">正式案件化（Project ID発番）</button></div>
+                        <sc-if value="{{ m.hasAgents }}" hint-placeholder-val="{{ false }}"><div style="padding:0 14px 12px;display:flex;flex-direction:column;gap:6px"><div style="font-size:11.5px;font-weight:600;color:var(--ink-2)">近い Agent（部署別カタログと照合）</div><sc-for list="{{ m.agentRows }}" as="ag" hint-placeholder-count="2"><div style="display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;padding:7px 10px"><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:{{ ag.badgeFg }};background:{{ ag.badgeBg }}">{{ ag.badge }}</span><span style="flex:1;min-width:0;font-size:12.5px"><b>{{ ag.title }}</b> <span style="color:var(--muted);font-size:11.5px">{{ ag.stage }} · {{ ag.dept }}</span><sc-if value="{{ ag.reason }}" hint-placeholder-val="{{ false }}"><span style="display:block;font-size:11.5px;color:var(--muted)">{{ ag.reason }}</span></sc-if></span><sc-if value="{{ ag.canRun }}" hint-placeholder-val="{{ false }}"><button onClick="{{ ag.run }}" style="border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:5px 10px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap" style-hover="background:var(--subtle)">この Agent で実行</button></sc-if></div></sc-for></div></sc-if>
+                        <sc-if value="{{ m.needsNewAgent }}" hint-placeholder-val="{{ false }}"><div style="margin:0 14px 12px;padding:8px 10px;border-radius:8px;background:var(--amber-bg);color:var(--amber);font-size:12px">この相談に合う Agent は未登録です。部署別 Agent／Skill 機能一覧シートの「追加希望」に記入すると、DX推進部の集計で検討されます</div></sc-if>
+                        <div style="padding:11px 14px;border-top:1px solid var(--line-2);display:flex;gap:8px;align-items:center"><span style="flex:1;font-size:11.5px;color:var(--muted)">Intent: {{ m.intent }} · {{ m.ideaSourceLabel }}</span><button onClick="{{ m.promote }}" style="background:var(--accent);color:#fff;border:1px solid var(--accent);padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--accent-d)">正式案件化（Project ID発番）</button></div>
                       </div>
                     </sc-if>
                   </div>
@@ -787,13 +789,8 @@ class Component extends DCLogic {
         typing: false,
         chat: Object.assign({}, s.chat, {
           step: s.chat.step + 1,
-          messages: [...s.chat.messages, {
-            role: 'ai', text: message.text, source: message.source,
-            idea: message.idea_json ? message.idea_json.idea : undefined,
-            ideaTitle: message.idea_json ? message.idea_json.title : undefined,
-            intent: message.idea_json ? message.idea_json.intent : undefined,
-            risk: message.idea_json ? message.idea_json.risk : undefined,
-          }],
+          // 一覧取得時と同じ整形（関係部署・近い Agent・相談原文を含む）
+          messages: [...s.chat.messages, ...mapChatMessages([message])],
         }),
       }));
     });
@@ -860,9 +857,10 @@ class Component extends DCLogic {
       this.toast('承認番号を「未検証」として控えました（NEO 連携で検証されるまで本番実行の許可にはなりません）', 'amber');
     });
   }
-  chatToAgentRun(m) {
-    const query = (m.idea || []).find((x) => x[0] === '対象業務')?.[1] || m.ideaTitle || '';
-    this.arSetForm({ agentId: 'technology-selection', query: query === '（相談内容から抽出）' ? '' : query });
+  chatToAgentRun(m, agentId) {
+    // 相談者の元の文章をそのまま相談欄へ。無ければ構造化した対象業務
+    const query = m.consultation || m.targetTask || m.ideaTitle || '';
+    this.arSetForm({ agentId: agentId || 'technology-selection', query });
     this.go('agentruns');
     this.toast('相談内容を業務Agent の相談欄に転記しました。個人情報・社外秘が無いか確認して「Run を開始」してください', 'green');
   }
@@ -1416,7 +1414,14 @@ class Component extends DCLogic {
         showSource: ai && !!m.source,
         sourceLabel: m.source === 'llm' ? 'DeepSeek 応答' : 'シナリオ応答',
         promote: () => this.createProject({ title: m.ideaTitle, owner: me.id, risk: m.risk, summary: (m.idea || []).slice(0, 3).map((x) => x[1]).join('。') }),
-        toAgentRun: () => this.chatToAgentRun(m), canAgentRun: this.can('create'),
+        ideaSourceLabel: m.ideaSource === 'llm' ? 'LLM で構造化（Agent カタログと照合）' : (m.ideaSource === 'scripted' ? 'ルールベースで構造化（LLM 未使用）' : ''),
+        agentRows: (m.agents || []).map((a) => ({
+          title: a.title, stage: a.stage || '—', dept: a.dept || '', reason: a.reason || '',
+          badge: a.executable ? '実行可' : '候補（未実装）', badgeFg: a.executable ? 'var(--green)' : 'var(--amber)', badgeBg: a.executable ? 'var(--green-bg)' : 'var(--amber-bg)',
+          canRun: a.executable && a.agent_id !== 'knowledge-quality' && this.can('create'),
+          run: () => this.chatToAgentRun(m, a.agent_id),
+        })),
+        hasAgents: (m.agents || []).length > 0, needsNewAgent: !!m.needsNewAgent,
       };
     });
     const cstep = s.chat.step;
@@ -1625,6 +1630,11 @@ function mapChatMessages(rows) {
     ideaTitle: m.idea_json ? m.idea_json.title : undefined,
     intent: m.idea_json ? m.idea_json.intent : undefined,
     risk: m.idea_json ? m.idea_json.risk : undefined,
+    ideaSource: m.idea_json ? m.idea_json.source : undefined,
+    agents: m.idea_json && Array.isArray(m.idea_json.agents) ? m.idea_json.agents : [],
+    needsNewAgent: !!(m.idea_json && m.idea_json.needs_new_agent),
+    consultation: m.idea_json ? m.idea_json.consultation : undefined,
+    targetTask: m.idea_json ? m.idea_json.target_task : undefined,
   }));
 }
 
