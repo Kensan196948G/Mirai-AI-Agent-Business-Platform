@@ -32,6 +32,11 @@ export async function executeNextStep(runId, { workerId }) {
   const { run, agentVersionInfo } = runContext;
   const { agentVersion, skillVersions } = agentVersionInfo;
 
+  // Lease を失った Worker（期限切れで他 Worker に引き継がれた）は、この Run に一切書き込まない
+  if (run.status === 'running' && !(await withTransaction((client) => jobStore.holdsLease(client, run.id, workerId)))) {
+    return { done: true, lostLease: true, run };
+  }
+
   if (await checkCancel(run.id)) return finishAs(run.id, 'cancelled', null);
   if (run.current_step >= skillVersions.length) return finishAs(run.id, 'completed', null);
   if (await checkPause(run.id)) return pauseAs(run.id);

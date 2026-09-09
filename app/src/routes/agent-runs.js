@@ -4,24 +4,10 @@ import { requireAuth } from '../middleware/auth.js';
 import { recordAudit } from '../lib/audit.js';
 import * as registry from '../agent-runtime/registry.js';
 import * as jobStore from '../agent-runtime/job-store.js';
-import { authorizeRunStart, PolicyDeniedError } from '../agent-runtime/policy-engine.js';
+import { PolicyDeniedError } from '../agent-runtime/policy-engine.js';
+import { createRunForUser, AGENT_INPUT_ALLOWLIST } from '../agent-runtime/run-create.js';
 
 const router = express.Router();
-
-const AGENT_RUN_BUDGET_USD = Number(process.env.AGENT_RUN_BUDGET_USD || '0.50');
-
-// エージェントごとに受け付ける input_json のキーを固定する（利用者が任意のキーを混入できないようにする）。
-const AGENT_INPUT_ALLOWLIST = {
-  'technology-selection': ['query'],
-  'project-case-research': ['query'],
-  'knowledge-quality': ['knowledge_candidate_id', 'title', 'summary', 'source'],
-};
-
-function pickAllowed(input, keys) {
-  const out = {};
-  for (const k of keys) if (input[k] !== undefined) out[k] = input[k];
-  return out;
-}
 
 router.post('/', requireAuth, async (req, res) => {
   const { agentId, projectId, input } = req.body || {};
@@ -29,35 +15,11 @@ router.post('/', requireAuth, async (req, res) => {
     return res.status(400).json({ error: '不正な agentId' });
   }
   try {
-    authorizeRunStart({ user: req.user });
-  } catch (err) {
-    return res.status(err instanceof PolicyDeniedError ? 403 : 500).json({ error: err.message });
-  }
-
-  try {
-    const result = await withTransaction(async (client) => {
-      const agentVersionInfo = await registry.getApprovedAgentVersion(client, agentId);
-      if (!agentVersionInfo) {
-        throw Object.assign(new Error(`Agent「${agentId}」の承認済み版がありません`), { status: 409 });
-      }
-      const run = await jobStore.createRun(client, {
-        agentId,
-        agentVersionId: agentVersionInfo.agentVersion.id,
-        projectId: projectId || null,
-        requestedBy: req.user.id,
-        inputJson: pickAllowed(input || {}, AGENT_INPUT_ALLOWLIST[agentId]),
-        maxSteps: 8,
-      });
-      await jobStore.reserveBudget(client, run.id, AGENT_RUN_BUDGET_USD);
-      await recordAudit(client, {
-        actorId: req.user.id, actorType: 'user', actorName: req.user.name,
-        action: 'agent_run.create', resourceType: 'agent_run', resourceId: run.id,
-        detail: { agentId, runCode: run.run_code },
-      });
-      return run;
-    });
+    const result = await withTransaction((client) => createRunForUser(client, { user: req.user, agentId, projectId, input, via: 'api' }));
     res.status(201).json({ run: result });
   } catch (err) {
+    // ロール不足・並行実行上限は 403 / 409 として利用者に理由を返す（Policy の拒否は監査対象の正常系）
+    if (err instanceof PolicyDeniedError) return res.status(err.code === 'concurrency' ? 409 : 403).json({ error: err.message });
     res.status(err.status || 500).json({ error: err.message });
   }
 });

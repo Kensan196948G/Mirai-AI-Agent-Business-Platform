@@ -89,3 +89,18 @@ test('authorizeSourceAccess: 有効期限切れ（effective_to が過去）の�
   assert.doesNotThrow(() => authorizeSourceAccess({ run, sourceRecord: { ...base, effective_to: '2999-12-31' } }));
   assert.doesNotThrow(() => authorizeSourceAccess({ run, sourceRecord: { ...base, effective_to: null } }));
 });
+
+test('authorizeRunConcurrency: 利用者上限・全体上限を超えると拒否し、環境変数は呼び出し時に反映される', async () => {
+  const { authorizeRunConcurrency, runConcurrencyLimits } = await import('../src/agent-runtime/policy-engine.js');
+  const saved = { u: process.env.AGENT_RUN_MAX_ACTIVE_PER_USER, t: process.env.AGENT_RUN_MAX_ACTIVE_TOTAL };
+  try {
+    process.env.AGENT_RUN_MAX_ACTIVE_PER_USER = '2'; process.env.AGENT_RUN_MAX_ACTIVE_TOTAL = '3';
+    assert.deepEqual(runConcurrencyLimits(), { perUser: 2, total: 3 });
+    assert.doesNotThrow(() => authorizeRunConcurrency({ activeForUser: 1, activeTotal: 2 }));
+    assert.throws(() => authorizeRunConcurrency({ activeForUser: 2, activeTotal: 2 }), /利用者あたり 2 件/);
+    assert.throws(() => authorizeRunConcurrency({ activeForUser: 0, activeTotal: 3 }), /環境全体/);
+  } finally {
+    if (saved.u === undefined) delete process.env.AGENT_RUN_MAX_ACTIVE_PER_USER; else process.env.AGENT_RUN_MAX_ACTIVE_PER_USER = saved.u;
+    if (saved.t === undefined) delete process.env.AGENT_RUN_MAX_ACTIVE_TOTAL; else process.env.AGENT_RUN_MAX_ACTIVE_TOTAL = saved.t;
+  }
+});
