@@ -1,6 +1,6 @@
 # Agent / Skills / AI Runtime 全面検証報告（作成中）
 
-基準: `../Agent-Skills-AI-Runtime-Full-Verification-Checklist.md` ／ 対象 Repository: `Kensan196948G/Mirai-AI-Agent-Business-Platform`
+基準: `docs/Agent-Skills-AI-Runtime-Full-Verification-Checklist.md` ／ 対象 Repository: `Kensan196948G/Mirai-AI-Agent-Business-Platform`
 最終更新: 2026-09-09（第 1 段） ／ 状態: **作成中**（第 5 段の完了時に PASS / PARTIAL / FAIL / NOT IMPLEMENTED の全項目判定、実装率、Severity、Mermaid 図を確定する）
 
 ## 進め方（段階）
