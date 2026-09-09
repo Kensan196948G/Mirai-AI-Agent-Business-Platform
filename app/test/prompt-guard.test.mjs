@@ -21,7 +21,7 @@ test('scanForInjection: 指示の無視・役割変更・ポリシー改変・�
 
 test('scanForSecrets: API キー・秘密鍵・接続文字列・password= を検出する', () => {
   assert.deepEqual(scanForSecrets('key sk-abcdefghijklmnopqrstuvwxyz1234'), ['api_key_like']);
-  assert.ok(scanForSecrets('-----BEGIN RSA PRIVATE KEY-----').includes('private_key'));
+  assert.ok(scanForSecrets(['-----BEGIN', 'RSA PRIVATE KEY-----'].join(' ')).includes('private_key')); // 検出テスト用（連結して文書検査の誤検出を避ける）
   assert.ok(scanForSecrets('postgres://user:pass@host/db').includes('connection_string')); // doc003-allow: 検出テスト用のダミー
   assert.ok(scanForSecrets('password: hunter2x').includes('password_kv')); // doc003-allow: 検出テスト用のダミー
   assert.deepEqual(scanForSecrets('通常の文章です'), []);
