@@ -907,3 +907,28 @@ test('検索の精度（評価ランナーが本番で検出）: 本文中の一
   assert.ok(single.candidates.some((c) => c.source_record_id === Number(rec.record.id)), '1 語の相談文は本文 1 語一致でも返す');
   await pool.query(`UPDATE agent_runs SET status = 'cancelled', finished_at = now() WHERE id = $1`, [run.id]);
 });
+
+test('実測 KPI（C-17）: /api/agent-runs/metrics は Agent 別の完走率・費用・レビュー率を実データから集計し、期間で絞れる', async () => {
+  const m = await call('/api/agent-runs/metrics?range=all', { cookie: adminCookie });
+  assert.equal(m.status, 200);
+  const ts = m.data.agents.find((a) => a.agent_id === 'technology-selection');
+  assert.ok(ts && ts.total >= 1);
+  assert.equal(ts.completed + ts.failed + ts.cancelled + ts.active + ts.waiting, ts.total, '状態の内訳は合計と一致');
+  assert.ok(ts.completion_rate === null || (ts.completion_rate >= 0 && ts.completion_rate <= 1));
+  const { rows: dbArt } = await pool.query(`SELECT count(*)::int AS n, count(*) FILTER (WHERE a.review_state = 'reviewed')::int AS r FROM artifacts a JOIN agent_runs x ON x.id = a.run_id WHERE x.agent_id = 'technology-selection'`);
+  assert.equal(ts.artifacts, dbArt[0].n);
+  assert.equal(ts.reviewed, dbArt[0].r);
+  assert.equal(ts.review_rate, dbArt[0].n ? dbArt[0].r / dbArt[0].n : null);
+  const { rows: dbTotal } = await pool.query(`SELECT count(*)::int AS n FROM agent_runs`);
+  assert.equal(m.data.totals.total, dbTotal[0].n);
+  assert.equal(Object.values(m.data.by_status).reduce((a, b) => a + b, 0), dbTotal[0].n);
+  assert.ok(typeof m.data.totals.ai_cost === 'number');
+  // 期間フィルタ: 全 Run を 40 日前に動かすと 30d では 0 件、all では残る
+  await pool.query(`UPDATE agent_runs SET created_at = created_at - interval '40 days'`);
+  const m30 = await call('/api/agent-runs/metrics?range=30d', { cookie: adminCookie });
+  assert.equal(m30.data.totals.total, 0);
+  assert.deepEqual(m30.data.agents, []);
+  assert.equal((await call('/api/agent-runs/metrics?range=all', { cookie: adminCookie })).data.totals.total, dbTotal[0].n);
+  assert.equal((await call('/api/agent-runs/metrics?range=bogus', { cookie: adminCookie })).data.range, '30d', '不正な range は既定 30d');
+  await pool.query(`UPDATE agent_runs SET created_at = created_at + interval '40 days'`);
+});
