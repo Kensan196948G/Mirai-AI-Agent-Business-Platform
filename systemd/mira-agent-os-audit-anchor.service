@@ -1,0 +1,15 @@
+# /etc/systemd/system/mira-agent-os-audit-anchor.service
+# 監査ログの日次アンカー（F-30）。本番 → MVP の順に実行し、チェーンを検証して末尾を DB 内外に固定する。
+[Unit]
+Description=Mirai AgentOS audit log daily anchor (mira_agent_os / mira_agent_os_mvp)
+After=postgresql.service
+[Service]
+Type=oneshot
+User=kensan
+Group=kensan
+WorkingDirectory=/home/kensan/Projects/Mirai-DX-Project/Mirai-AI-Agent-Business-Platform/app
+Environment=AUDIT_ANCHOR_DIR=/home/kensan/backups/mira-agent-os
+ExecStart=/home/kensan/.nvm/versions/node/v22.22.3/bin/node audit-anchor.mjs .env
+ExecStart=/home/kensan/.nvm/versions/node/v22.22.3/bin/node audit-anchor.mjs .env.mvp
+NoNewPrivileges=true
+PrivateTmp=true

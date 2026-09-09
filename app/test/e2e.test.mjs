@@ -19,15 +19,14 @@ import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { app } from '../src/server.js';
 import { hashPassword } from '../src/lib/auth.js';
+import { assertTestDatabaseUrl } from '../src/lib/test-db-guard.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 if (!process.env.DATABASE_URL || !process.env.SESSION_SECRET) {
   throw new Error('DATABASE_URL / SESSION_SECRET を使い捨てテスト用DBに設定してから実行すること');
 }
-if (!/test/.test(process.env.DATABASE_URL)) {
-  throw new Error('安全のため DATABASE_URL に "test" を含む使い捨てDBのみ許可する');
-}
+assertTestDatabaseUrl(process.env.DATABASE_URL); // F-34: DB 名・ロールの許可リスト
 
 const ALL_TABLES = [
   'worker_heartbeats', 'artifact_citations', 'artifacts', 'effect_ledger', 'budget_reservations', 'run_events', 'agent_runs',
@@ -35,7 +34,7 @@ const ALL_TABLES = [
   'chat_messages', 'chat_conversations', 'task_tool_calls', 'tasks', 'knowledge_candidates',
   'approval_steps', 'approval_requests', 'project_kpis', 'projects', 'requests',
   'integrations', 'agents_config', 'skills_registry', 'model_router',
-  'audit_log', 'users', 'schema_migrations',
+  'audit_anchors', 'audit_log', 'users', 'schema_migrations',
 ];
 
 let server;

@@ -64,3 +64,30 @@ test('verifyChain: prev_hash が直前のhashと不一致なら breaks を報告
   assert.equal(result.ok, false);
   assert.ok(result.breaks.some((b) => b.id === 2));
 });
+
+test('F-30: 新規行は SHA-256（hash_version=2）で、旧行（version 1）と混在したチェーンも検証できる', async () => {
+  const { hashFor, sha256, canonicalize, verifyChain, computeAnchorHash, CURRENT_HASH_VERSION } = await import('../src/lib/audit.js');
+  assert.equal(CURRENT_HASH_VERSION, 2);
+  assert.equal(hashFor(2, 'abc'), sha256('abc'));
+  assert.equal(sha256('abc').length, 64);
+  const e1 = { actorType: 'user', actorName: 'a', action: 'x', resourceType: 't', resourceId: '1', detail: {} };
+  const e2 = { actorType: 'user', actorName: 'b', action: 'y', resourceType: 't', resourceId: '2', detail: { k: 1 } };
+  const h1 = hashFor(1, '00000000' + canonicalize(e1));           // 旧行（djb2）
+  const h2 = hashFor(2, h1 + canonicalize(e2));                    // 新行（sha256）。prev は旧行の 8 桁 hash
+  const rows = [
+    { id: 1, prev_hash: '00000000', hash: h1, hash_version: 1, actor_type: 'user', actor_name: 'a', action: 'x', resource_type: 't', resource_id: '1', detail: {} },
+    { id: 2, prev_hash: h1, hash: h2, hash_version: 2, actor_type: 'user', actor_name: 'b', action: 'y', resource_type: 't', resource_id: '2', detail: { k: 1 } },
+  ];
+  const r = verifyChain(rows);
+  assert.equal(r.ok, true);
+  assert.deepEqual(r.versions, { 1: 1, 2: 1 });
+  assert.equal(r.lastHash, h2);
+  const tampered = verifyChain([rows[0], { ...rows[1], detail: { k: 2 } }]);
+  assert.equal(tampered.ok, false);
+  // 途中からの検証（アンカー以降）
+  assert.equal(verifyChain([rows[1]], { startPrev: h1 }).ok, true);
+  assert.equal(verifyChain([rows[1]], { startPrev: 'wrong' }).ok, false);
+  const a1 = computeAnchorHash({ prevAnchorHash: null, lastAuditId: 2, lastHash: h2, entryCount: 2 });
+  assert.equal(a1.length, 64);
+  assert.notEqual(a1, computeAnchorHash({ prevAnchorHash: a1, lastAuditId: 2, lastHash: h2, entryCount: 2 }));
+});

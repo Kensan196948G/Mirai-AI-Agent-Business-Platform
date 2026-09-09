@@ -2,6 +2,7 @@ import express from 'express';
 import { PORT, PUBLIC_DIR } from './lib/config.js';
 import { getPool } from './lib/db.js';
 import { collectHealth, evaluateHealth } from './lib/health.js';
+import { csrfGuard } from './middleware/csrf.js';
 
 import authRoutes from './routes/auth.js';
 import requestRoutes from './routes/requests.js';
@@ -22,6 +23,7 @@ import sourceRoutes from './routes/sources.js';
 
 const app = express();
 app.disable('x-powered-by');
+app.use('/api', csrfGuard); // 更新系 API の Origin 検証（F-31）
 app.use(express.json({ limit: '64kb' }));
 app.use(express.static(PUBLIC_DIR));
 

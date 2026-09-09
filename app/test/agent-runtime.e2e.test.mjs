@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { app } from '../src/server.js';
 import { hashPassword } from '../src/lib/auth.js';
+import { assertTestDatabaseUrl } from '../src/lib/test-db-guard.js';
 import { syncAgent } from '../src/agent-runtime/registry.js';
 import { executeNextStep } from '../src/agent-runtime/workflow-engine.js';
 import { validateCitations } from '../src/agent-runtime/evidence-validator.js';
@@ -31,9 +32,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 if (!process.env.DATABASE_URL || !process.env.SESSION_SECRET) {
   throw new Error('DATABASE_URL / SESSION_SECRET を使い捨てテスト用DBに設定してから実行すること');
 }
-if (!/test/.test(process.env.DATABASE_URL)) {
-  throw new Error('安全のため DATABASE_URL に "test" を含む使い捨てDBのみ許可する');
-}
+assertTestDatabaseUrl(process.env.DATABASE_URL); // F-34: DB 名・ロールの許可リスト
 
 const ALL_TABLES = [
   'skill_evaluations', 'artifact_revisions', 'worker_heartbeats', 'artifact_citations', 'artifacts', 'effect_ledger', 'budget_reservations', 'run_events', 'agent_runs',
@@ -41,7 +40,7 @@ const ALL_TABLES = [
   'chat_messages', 'chat_conversations', 'task_tool_calls', 'tasks', 'knowledge_candidates',
   'approval_steps', 'approval_requests', 'project_kpis', 'projects', 'requests',
   'integrations', 'agents_config', 'skills_registry', 'model_router',
-  'audit_log', 'users', 'schema_migrations',
+  'audit_anchors', 'audit_log', 'users', 'schema_migrations',
 ];
 
 let server;
@@ -1043,4 +1042,90 @@ test('外部連携の実状態（D 基盤）: Integrations は環境変数の有
   const detail = await call(`/api/approvals/${apr[0].id}`, { cookie: adminCookie });
   assert.equal(detail.data.approval.external_ref, 'NEO-2026-000123');
   assert.equal((await call(`/api/approvals/${apr[0].id}/external-ref`, { method: 'PATCH', cookie: viewerCookie, body: { externalRef: 'x' } })).status, 403);
+});
+
+test('F-30 監査ログ: 新規行は SHA-256、旧版（djb2）と混在しても検証が通り、アンカーが DB 外ファイルと一致する', async () => {
+  const { recordAnchor, verifyAnchors, hash, canonicalize } = await import('../src/lib/audit.js');
+  // 旧版の行を 1 件、チェーンの末尾に「当時の方式」で追記（既存データの再現）
+  await withTransaction(async (client) => {
+    const { rows } = await client.query('SELECT hash FROM audit_log ORDER BY id DESC LIMIT 1');
+    const prev = rows[0]?.hash || '00000000';
+    const entry = { actorType: 'service', actorName: 'legacy', action: 'legacy.event', resourceType: 'x', resourceId: '0', detail: {} };
+    const h = hash(prev + canonicalize(entry));
+    await client.query(`INSERT INTO audit_log (actor_type, actor_name, action, target_type, resource_type, resource_id, detail, prev_hash, hash, hash_version) VALUES ('service','legacy','legacy.event','x','x','0','{}',$1,$2,1)`, [prev, h]);
+  });
+  // 新規行（sha256）を続けて記録
+  await call('/api/integrations/neo/check', { method: 'POST', cookie: adminCookie });
+  const v = await call('/api/audit/verify', { cookie: adminCookie });
+  assert.equal(v.status, 200);
+  assert.equal(v.data.ok, true, JSON.stringify(v.data.breaks.slice(0, 3)));
+  assert.ok(v.data.versions['1'] >= 1 && v.data.versions['2'] >= 1, '版が混在');
+  assert.equal(v.data.current_hash_version, 2);
+  const { rows: last } = await pool.query(`SELECT hash, hash_version FROM audit_log ORDER BY id DESC LIMIT 1`);
+  assert.equal(last[0].hash_version, 2); assert.equal(last[0].hash.length, 64);
+  // アンカー: 記録 → 検証 OK → 対象行を改変すると検出
+  const a1 = await withTransaction((client) => recordAnchor(client, { externalRef: '/tmp/e2e-anchor.log' }));
+  assert.equal(a1.verified.ok, true); assert.equal(a1.anchor.chain_ok, true);
+  await call('/api/integrations/neo/check', { method: 'POST', cookie: adminCookie });
+  const a2 = await withTransaction((client) => recordAnchor(client));
+  assert.equal(a2.anchor.prev_anchor_hash, a1.anchor.anchor_hash);
+  assert.equal((await verifyAnchors(pool)).ok, true);
+  const anchors = await call('/api/audit/anchors', { cookie: adminCookie });
+  assert.ok(anchors.data.anchors.length >= 2);
+  await pool.query(`UPDATE audit_log SET detail = '{"tampered":true}' WHERE id = $1`, [a1.anchor.last_audit_id]);
+  const broken = await call('/api/audit/verify', { cookie: adminCookie });
+  assert.equal(broken.data.ok, false);
+  assert.ok(broken.data.breaks.length >= 1);
+  // 内容の改変はチェーン検証で検出（アンカーは hash 値を固定するもの）。hash 自体を書き換えた場合はアンカー検証で検出
+  assert.equal((await verifyAnchors(pool)).ok, true, '内容改変は chain 側で検出され、アンカーの hash 参照は一致したまま');
+  await pool.query(`UPDATE audit_log SET hash = repeat('0', 64) WHERE id = $1`, [a1.anchor.last_audit_id]);
+  const va = await verifyAnchors(pool);
+  assert.equal(va.ok, false);
+  assert.ok(va.problems.some((p) => /改変|hash/.test(p.problem)));
+  await pool.query(`DELETE FROM audit_log WHERE id = $1`, [a1.anchor.last_audit_id]);
+  assert.ok((await verifyAnchors(pool)).problems.some((p) => /削除/.test(p.problem)), '削除も検出');
+});
+
+test('F-31 CSRF: 更新系 API はクロスサイトの Origin を 403 で拒否し、自サイトの Origin と Origin 無しは通す', async () => {
+  const base = new URL(baseUrl);
+  const cross = await fetch(`${baseUrl}/api/agent-runs`, { method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: adminCookie, Origin: 'https://evil.example' }, body: JSON.stringify({ agentId: 'technology-selection', input: { query: 'x' } }) });
+  assert.equal(cross.status, 403);
+  const same = await fetch(`${baseUrl}/api/agent-runs/metrics`, { method: 'GET', headers: { Cookie: adminCookie, Origin: 'https://evil.example' } });
+  assert.equal(same.status, 200, 'GET は対象外');
+  const ok = await fetch(`${baseUrl}/api/agent-runs/metrics?range=all`, { headers: { Cookie: adminCookie, Origin: `http://${base.host}` } });
+  assert.equal(ok.status, 200);
+  const sameOriginPost = await fetch(`${baseUrl}/api/agent-runs/999999/cancel`, { method: 'POST', headers: { Cookie: adminCookie, Origin: `http://${base.host}` } });
+  assert.equal(sameOriginPost.status, 404, '自サイト Origin の更新系は通る（対象が無いので 404）');
+  const fetchSite = await fetch(`${baseUrl}/api/agent-runs/999999/cancel`, { method: 'POST', headers: { Cookie: adminCookie, 'Sec-Fetch-Site': 'cross-site' } });
+  assert.equal(fetchSite.status, 403);
+});
+
+test('F-32 レート制限: ログイン失敗が上限に達すると正しいパスワードでも一時ロック（429）、日次 Run 上限も 409', async () => {
+  const { resetAll } = await import('../src/lib/rate-limit.js');
+  const savedFail = process.env.LOGIN_FAILURE_LIMIT_PER_EMAIL; const savedDaily = process.env.AGENT_RUN_MAX_PER_USER_PER_DAY;
+  process.env.LOGIN_FAILURE_LIMIT_PER_EMAIL = '2';
+  try {
+    resetAll();
+    await createUser('e2e-lock@example.com', 'Lock', 'Developer', 'right-password'); // doc003-allow: 使い捨てテストDB専用の固定値
+    assert.equal((await call('/api/auth/login', { method: 'POST', body: { email: 'e2e-lock@example.com', password: 'wrong-1' } })).status, 401); // doc003-allow: ダミー
+    assert.equal((await call('/api/auth/login', { method: 'POST', body: { email: 'e2e-lock@example.com', password: 'wrong-2' } })).status, 401); // doc003-allow: ダミー
+    const locked = await call('/api/auth/login', { method: 'POST', body: { email: 'e2e-lock@example.com', password: 'right-password' } }); // doc003-allow: 使い捨てテストDB専用の固定値
+    assert.equal(locked.status, 429);
+    assert.match(locked.data.error, /ロック/);
+    resetAll();
+    assert.equal((await call('/api/auth/login', { method: 'POST', body: { email: 'e2e-lock@example.com', password: 'right-password' } })).status, 200, 'ウィンドウが明ければ入れる'); // doc003-allow: 使い捨てテストDB専用の固定値
+    // 日次上限: 本日の作成数 >= 上限で 409
+    process.env.AGENT_RUN_MAX_PER_USER_PER_DAY = '1';
+    const dev = await loginAs('e2e-lock@example.com', 'right-password'); // doc003-allow: 使い捨てテストDB専用の固定値
+    const first = await call('/api/agent-runs', { method: 'POST', cookie: dev, body: { agentId: 'technology-selection', input: { query: 'daily' } } });
+    assert.equal(first.status, 201);
+    const second = await call('/api/agent-runs', { method: 'POST', cookie: dev, body: { agentId: 'technology-selection', input: { query: 'daily' } } });
+    assert.equal(second.status, 409);
+    assert.match(second.data.error, /本日の Run 作成上限/);
+    await pool.query(`UPDATE agent_runs SET status = 'cancelled', finished_at = now() WHERE id = $1`, [first.data.run.id]);
+  } finally {
+    if (savedFail === undefined) delete process.env.LOGIN_FAILURE_LIMIT_PER_EMAIL; else process.env.LOGIN_FAILURE_LIMIT_PER_EMAIL = savedFail;
+    if (savedDaily === undefined) delete process.env.AGENT_RUN_MAX_PER_USER_PER_DAY; else process.env.AGENT_RUN_MAX_PER_USER_PER_DAY = savedDaily;
+    resetAll();
+  }
 });
