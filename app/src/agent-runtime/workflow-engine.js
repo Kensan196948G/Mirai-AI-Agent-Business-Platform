@@ -76,6 +76,12 @@ export async function executeNextStep(runId, { workerId }) {
         }
         const reservation = await jobStore.getActiveReservation(client, run.id);
         const result = await structuredComplete(opts);
+        if (result.degraded) {
+          await jobStore.appendEvent(client, run.id, {
+            type: 'llm_degraded', skillId: skillDef.skillId, skillVersion: freshSkillVersion.version, status: 'degraded',
+            detail: { reason: result.degradedReason, attempts: result.attempts, raw_head: result.rawHead },
+          });
+        }
         stepUsage.tokensIn += result.tokensIn || 0;
         stepUsage.tokensOut += result.tokensOut || 0;
         stepUsage.cost += result.cost || 0;

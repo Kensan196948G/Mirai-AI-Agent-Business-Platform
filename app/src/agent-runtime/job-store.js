@@ -3,11 +3,7 @@
  * Workerプロセスと、API（agent-runs.js）の両方から使われる。
  */
 import { getPool } from '../lib/db.js';
-
-async function nextRunCode(client) {
-  const { rows } = await client.query(`SELECT count(*)::int AS n FROM agent_runs`);
-  return `RUN-${1000 + rows[0].n + 1}`;
-}
+import { nextRunCode } from '../lib/codes.js';
 
 export async function createRun(client, { agentId, agentVersionId, projectId, requestedBy, inputJson, maxSteps }) {
   const runCode = await nextRunCode(client);

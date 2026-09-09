@@ -19,8 +19,9 @@ const MODEL = process.env.LLM_MODEL || 'deepseek-chat';
 const MONTHLY_CAP_USD = Number(process.env.LLM_MONTHLY_CAP_USD || '5');
 const PRICE_INPUT_PER_1M = Number(process.env.LLM_PRICE_INPUT_PER_1M || '0.27');
 const PRICE_OUTPUT_PER_1M = Number(process.env.LLM_PRICE_OUTPUT_PER_1M || '1.10');
-const MAX_TOKENS = 600;
-const TIMEOUT_MS = 15000;
+const MAX_TOKENS = 600;                       // AI相談（短い会話応答）の既定
+const STRUCTURED_MAX_TOKENS = Number(process.env.LLM_STRUCTURED_MAX_TOKENS || '4000'); // 業務Agent の構造化出力（JSON）用
+const TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS || '60000');
 const ENDPOINT = 'https://api.deepseek.com/chat/completions';
 
 const SYSTEM_PROMPT =
@@ -66,9 +67,17 @@ export function monthlyCapUsd() {
 /**
  * DeepSeek Chat Completions API を呼び出す。
  * messages: [{role: 'user'|'assistant', content: string}, ...]（会話履歴、古い順）
+ * options.maxTokens: 出力上限（既定 600。構造化出力は structuredMaxTokens() を使う）
+ * options.jsonMode: true なら response_format=json_object（DeepSeek の JSON モード。プロンプトに "JSON" を含めること）
+ * options.systemPrompt: 省略時は AI相談用の SYSTEM_PROMPT
+ * 戻り値に finishReason（'length' なら max_tokens で打ち切られている）を含める。
  * 失敗時は例外を投げる（呼び出し側でフォールバックすること）。
  */
-export async function complete(messages) {
+export function structuredMaxTokens() {
+  return STRUCTURED_MAX_TOKENS;
+}
+
+export async function complete(messages, { maxTokens = MAX_TOKENS, jsonMode = false, systemPrompt = SYSTEM_PROMPT } = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
@@ -80,9 +89,10 @@ export async function complete(messages) {
       },
       body: JSON.stringify({
         model: MODEL,
-        messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
-        max_tokens: MAX_TOKENS,
+        messages: [{ role: 'system', content: systemPrompt }, ...messages],
+        max_tokens: maxTokens,
         temperature: 0.4,
+        ...(jsonMode ? { response_format: { type: 'json_object' } } : {}),
       }),
       signal: controller.signal,
     });
@@ -95,7 +105,8 @@ export async function complete(messages) {
     if (!text) throw new Error('DeepSeek API: 応答本文が空です');
     const tokensIn = data.usage?.prompt_tokens ?? 0;
     const tokensOut = data.usage?.completion_tokens ?? 0;
-    return { text, tokensIn, tokensOut, cost: estimateCost(tokensIn, tokensOut), provider: 'deepseek', model: MODEL };
+    const finishReason = data.choices?.[0]?.finish_reason || null;
+    return { text, tokensIn, tokensOut, cost: estimateCost(tokensIn, tokensOut), provider: 'deepseek', model: MODEL, finishReason };
   } finally {
     clearTimeout(timer);
   }

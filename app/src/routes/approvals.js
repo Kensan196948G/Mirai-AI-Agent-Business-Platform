@@ -2,6 +2,7 @@ import express from 'express';
 import { getPool, withTransaction } from '../lib/db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { recordAudit } from '../lib/audit.js';
+import { nextApprovalCode } from '../lib/codes.js';
 
 const router = express.Router();
 
@@ -12,11 +13,6 @@ const STEP_PLANS = {
   github_merge: ['Reviewer', 'Approver'],
   budget: ['Approver'],
 };
-
-async function nextApprovalCode(client) {
-  const { rows } = await client.query(`SELECT count(*)::int AS n FROM approval_requests`);
-  return `APR-${100 + rows[0].n + 1}`;
-}
 
 export async function createApprovalWithSteps(client, { projectId, requestedBy, type, risk, target, targetStatus }) {
   const approvalCode = await nextApprovalCode(client);

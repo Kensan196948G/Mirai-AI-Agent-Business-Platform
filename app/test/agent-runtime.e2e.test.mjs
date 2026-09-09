@@ -599,3 +599,22 @@ test('出典取り込み（B-8〜B-12）: pending は検索されず、承認（
 
   await pool.query(`UPDATE agent_runs SET status = 'cancelled', finished_at = now() WHERE id = $1`, [run.id]);
 });
+
+test('採番: 草案を削除した後も artifact_code / run_code が既存と衝突しない（MAX+1 方式）', async () => {
+  const { nextArtifactCode, nextRunCode, nextKcCode, nextApprovalCode, nextTaskCode } = await import('../src/lib/codes.js');
+  const { rows: before } = await pool.query(`SELECT artifact_code FROM artifacts ORDER BY id`);
+  assert.ok(before.length >= 2, '前提: 草案が 2 件以上ある');
+  // 途中の 1 件を削除しても、次の採番は「最大値 + 1」で既存コードと重ならない
+  const victim = before[0].artifact_code;
+  await pool.query(`DELETE FROM artifact_citations WHERE artifact_id IN (SELECT id FROM artifacts WHERE artifact_code = $1)`, [victim]);
+  await pool.query(`DELETE FROM artifacts WHERE artifact_code = $1`, [victim]);
+  const next = await nextArtifactCode(pool);
+  const existing = (await pool.query(`SELECT artifact_code FROM artifacts`)).rows.map((r) => r.artifact_code);
+  assert.ok(!existing.includes(next), `${next} が既存 ${existing} と衝突`);
+  const maxExisting = Math.max(...existing.map((c) => Number(c.replace('ART-', ''))));
+  assert.equal(next, `ART-${maxExisting + 1}`);
+  assert.match(await nextRunCode(pool), /^RUN-\d{4,}$/);
+  assert.match(await nextKcCode(pool), /^KC-\d{4}$/);
+  assert.match(await nextApprovalCode(pool), /^APR-\d{4}$/);
+  assert.match(await nextTaskCode(pool), /^T-\d{4,}$/);
+});
