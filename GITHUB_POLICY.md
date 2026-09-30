@@ -1,6 +1,6 @@
 # DeepSeek-Harness-StartUpTools GitHub Policy
 
-状態: 2026-08-15 制定（v1）／2026-09-30 v2 発効（全リポジトリ auto-merge 統一。Approval #71 でユーザーが Y と承認。`docs/architecture/全リポジトリAutoMerge統一方針.md`）
+状態: 2026-08-15 制定（v1）／2026-09-30 v2 発効（全リポジトリ auto-merge 統一。Approval #71 でユーザーが Y と承認。`https://github.com/Kensan196948G/Deep-Seek-Harness-Project/blob/main/docs/architecture/全リポジトリAutoMerge統一方針.md`）
 
 ## 1. 目的
 
